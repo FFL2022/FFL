@@ -269,25 +269,13 @@ def build_dgl_graph(list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edg
                 cfg_test_r.append(test_id2idx[id])   
 
     graph_data = {
-        ('ast', 'astlink', 'ast'): (th.tensor(ast_ast_l), th.tensor(ast_ast_r)),
-        ('cfg', 'cfglink', 'cfg'): (th.tensor(cfg_cfg_l), th.tensor(cfg_cfg_r)),
-        ('ast', 'aclink', 'cfg'): (th.tensor(ast_cfg_l), th.tensor(ast_cfg_r)),
-        ('cfg', 'calink', 'ast'): (th.tensor(ast_cfg_r), th.tensor(ast_cfg_l)),
-        ('ast', 'atlink', 'test'): (th.tensor(ast_test_l), th.tensor(ast_test_r)),
-        ('test', 'talink', 'ast'): (th.tensor(ast_test_r), th.tensor(ast_test_l)),
+        ('cfg', 'cfglink_for', 'cfg'): (th.tensor(cfg_cfg_l), th.tensor(cfg_cfg_r)),
+        ('cfg', 'cfglink_back', 'cfg'): (th.tensor(cfg_cfg_r), th.tensor(cfg_cfg_l)),
         ('cfg', 'ctlink', 'test'): (th.tensor(cfg_test_l), th.tensor(cfg_test_r)),
         ('test', 'tclink', 'cfg'): (th.tensor(cfg_test_r), th.tensor(cfg_test_l))
     }
     g = dgl.heterograph(graph_data)
     
-    ###Get Features
-    #AST Feat
-    ast_feats = [None] * g.num_nodes("ast")
-    for key, value in list_ast_nodes.items():
-        feat, _ = value
-        ast_feats[ast_id2idx[key]] = feat
-    print(ast_feats)
-    # print(ast_feats)
     #CFG Featgit init
     cfg_feats = [None] * g.num_nodes("cfg")
     for key, feat in list_cfg_nodes.items():
