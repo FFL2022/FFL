@@ -6,46 +6,16 @@ import os
 from cfg import cfg, cfg2graphml, cfg_cdvfs_generator
 from cfg.cfg_nodes import CFGNode
 from pycparser import c_ast, plyparser
-def get_coverage(filename, nline_removed):
-    
-    def process_line(line):
-        tag, line_no, code = line.strip().split(':', 2)
-        return tag.strip(), int(line_no.strip()), code
-    
-    coverage = {}
-    with open(filename, "r") as f:
-        gcov_file = f.read()
-        for idx, line in enumerate(gcov_file.split('\n')):
-            if idx <= 4 or len(line.strip()) == 0:
-                continue
-            
-            try:
-                tag, line_no, code = process_line(line)
-            except:
-                print('idx:', idx, 'line:', line)
-                print(line.strip().split(':', 2))
-                raise
-            assert idx!=5 or line_no==1, gcov_file
-        
-            if tag == '-':
-                continue
-            elif tag == '#####':
-                coverage[line_no - nline_removed] = 0
-            else:  
-                tag = int(tag) 
-                coverage[line_no - nline_removed] = 1
-        return coverage
-
-def remove_lib(filename):
-    count = 0
-    with open(filename, "r") as f:
-        with open("temp.c", "w") as t:
-            for line in f:
-                if line[0] != "#":
-                    t.write(line)
-                else:
-                    count += 1
-    return count
+import fasttext
+import torch.nn.functional
+import pygraphviz as pgv
+import sqlite3
+import numpy
+import time
+from utils.preprocess_helpers import make_dir_if_not_exists as mkdir, write_to_file as write, remove_lib, get_coverage
+import numpy as np
+import subprocess
+from tqdm import tqdm
 
 def traverse_cfg(node, parent, list_callfunction, list_callfuncline):
     tmp_n = {}
@@ -205,7 +175,11 @@ def build_graph(problem_id, program_id, test_ids):
     print("Done !!!")
     return list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests
 
-def build_dgl_graph(list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests):
+def read_cfile(filename):
+    pass
+
+def build_dgl_graph(problem_id, program_id, test_ids, embedding_model):
+    list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests = build_graph(problem_id, program_id, test_ids)
     ast_id2idx = {}
     ast_idx2id = {}
     index = 0
@@ -275,16 +249,109 @@ def build_dgl_graph(list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edg
         ('test', 'tclink', 'cfg'): (th.tensor(cfg_test_r), th.tensor(cfg_test_l))
     }
     g = dgl.heterograph(graph_data)
-    
-    #CFG Featgit init
-    cfg_feats = [None] * g.num_nodes("cfg")
+    print(g.num_nodes("cfg"))
+    cfg_label_corpus = ["entry_node", "COMMON", "IF", "ELSE", "ELSE_IF", "END_IF", "FOR", "WHILE", "DO_WHILE", "PSEUDO", "CALL", "END"]
+    cfg_labels = [None] * g.num_nodes("cfg")
     for key, feat in list_cfg_nodes.items():
-        cfg_feats[cfg_id2idx[key]] = feat
-    print(cfg_feats)
-    print("Done !!!")
+        cfg_labels[cfg_id2idx[key]] = cfg_label_corpus.index(feat)
+    cfg_label_feats = th.nn.functional.one_hot(th.LongTensor(cfg_labels), len(cfg_label_corpus))
+    print(cfg_label_feats)
 
+    filename = "/home/thanhlc/thanhlc/Data/nbl_dataset/sources/{}/{}.c".format(problem_id,program_id)
+    code = []
+    with open(filename, "r") as f:
+        for line in f:
+            if line[0] != "#":
+                code.append(line)
+    cfg_content_feats = [None] * g.num_nodes("cfg")
+    for key, feat in list_cfg_nodes.items():
+        cfg_content_feats[cfg_id2idx[key]] = embedding_model.get_sentence_vector(code[key-1].replace("\n", ""))
+    print(cfg_content_feats)
+    g.nodes["cfg"].data['label'] = cfg_label_feats
+    g.nodes["cfg"].data['content'] = torch.FloatTensor(cfg_content_feats)
+    print("Done !!!")
     return g, ast_id2idx, cfg_id2idx, test_id2idx
+def split_data(root="/home/thanhlc/thanhlc/Data/nbl_dataset/"):
+    dataset = root + 'dataset.db'
+    destination = 'result/network_inputs/bugloc-%s/' % time.strftime("%d-%m")
+    mkdir(destination)
+    print(destination)
+
+    eval_set = np.load(root + 'data/eval_set.npy', allow_pickle=True).item()
+    eval_dict = {}
+    for problem_id in eval_set:
+        for program_id, row in eval_set[problem_id].items():
+            eval_dict[program_id] = row
+
+    eval_set_program_ids = set(eval_dict.keys())
+    for id in eval_set_program_ids:
+        print(id)
+        print(eval_dict[id])
+        break
+    # print(eval_set_program_ids.get(0))
+    # print(eval_dict[eval_set_program_ids[0]])
+    print('len(eval_set_program_ids):', len(eval_set_program_ids)) 
+
+    query='''SELECT p.program_id, program, test_id, t.verdict FROM 
+        programs p INNER JOIN orgsource o ON o.program_id = p.program_id
+        INNER JOIN problems q ON o.problem_id = q.problem_id 
+        INNER JOIN test_runs t ON t.program_id = p.program_id
+        INNER JOIN test_run_summary trs ON trs.program_id = p.program_id
+        WHERE trs.verdict<>"ALL_FAIL" AND q.problem_id=?;'''
+
+    max_programs_per_test_case_result = 700
+
+    test_wise_counts = {}
+    eval_test_wise_counts = {}
+    all_data = {}
+    all_eval_data = {}
+    test_id_to_problem_id_map = {}
+
+    with sqlite3.connect(dataset) as conn:
+        c = conn.cursor()
+    problem_ids = [str(row[0]) for row in c.execute('SELECT DISTINCT problem_id FROM orgsource;')]
+    print('len(problem_ids)', len(problem_ids), problem_ids[0])
+    
+    for problem_id in problem_ids:
+            all_data[problem_id] = {}
+            for row in c.execute(query, (problem_id,)):
+                program_id = row[0]
+                program = row[1]
+                test_id = str(row[2])
+                verdict = row[3]
+                if program_id in eval_set_program_ids:
+                    try:
+                        all_eval_data[program_id]["tests"].append(test_id)
+                        all_eval_data[program_id]["verdict"].append(verdict)
+                    except KeyError:
+                        all_eval_data[program_id] = {}
+                        all_eval_data[program_id]["tests"] = [test_id]
+                        all_eval_data[program_id]["verdict"] = [verdict]
+                else:
+                    try:
+                        all_data[problem_id][program_id]["tests"].append(test_id)
+                        all_data[problem_id][program_id]["verdict"].append(verdict)
+                    except KeyError:
+                        all_data[problem_id][program_id] = {}
+                        all_data[problem_id][program_id]["tests"] = [test_id]
+                        all_data[problem_id][program_id]["verdict"] = [verdict]
+    total = 0
+    for problem_id in all_data:
+        for program_id in all_data[problem_id]:
+            total += 1
+    print('total training data', total)
+    c.close()
+    conn.close()
+
+    return all_data, all_eval_data  
+
+def find_bug_localization():
+    pass
+
+
+
 
 if __name__ == '__main__':
-    list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests = build_graph("3055", "1049262", [ "40112","40439"])
-    G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests)
+    # model = fasttext.load_model('/home/thanhlc/thanhlc/Data/c_pretrained.bin')
+    # G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph("3055", "1049262", [ "40112","40439"], model)
+    split_data()
