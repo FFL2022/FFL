@@ -266,13 +266,13 @@ def build_dgl_graph(problem_id, program_id, test_ids, embedding_model):
     cfg_content_feats = [None] * g.num_nodes("cfg")
     for key, feat in list_cfg_nodes.items():
         cfg_content_feats[cfg_id2idx[key]] = embedding_model.get_sentence_vector(code[key-1].replace("\n", ""))
-    print(cfg_content_feats)
+    
+    (cfg_content_feats)
     g.nodes["cfg"].data['label'] = cfg_label_feats
     g.nodes["cfg"].data['content'] = torch.FloatTensor(cfg_content_feats)
     print("Done !!!")
     return g, ast_id2idx, cfg_id2idx, test_id2idx
     
 if __name__ == '__main__':
-    # model = fasttext.load_model('/home/thanhlc/thanhlc/Data/c_pretrained.bin')
-    # G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph("3055", "1049262", [ "40112","40439"], model)
-    split_data()
+    model = fasttext.load_model('/home/thanhlc/thanhlc/Data/c_pretrained.bin')
+    G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph("3055", "1049262", ["40112","40439"], model)
