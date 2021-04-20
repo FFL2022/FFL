@@ -16,6 +16,9 @@ from utils.preprocess_helpers import make_dir_if_not_exists as mkdir, write_to_f
 import numpy as np
 import subprocess
 from tqdm import tqdm
+import pickle as pkl
+from transcoder import code_tokenizer
+from coconut.tokenizer import Tokenizer
 
 def traverse_cfg(node, parent, list_callfunction, list_callfuncline):
     tmp_n = {}
@@ -108,7 +111,7 @@ def build_graph(problem_id, program_id, test_ids):
     # create CFG
     graph = cfg.CFG("temp.c")
     graph.make_cfg()
-    graph.show()
+    # graph.show()
 
     list_callfunction = [node._func_name for node in graph._entry_nodes]
     list_callfuncline = {}
@@ -155,7 +158,7 @@ def build_graph(problem_id, program_id, test_ids):
     print("Done !!!")
     print("======== Mapping tests-CFG ========")
     for test in test_ids:
-        covfile = "/home/thanhlc/thanhlc/Data/nbl_dataset/data/tests/{}/IN_{}.txt-{}.gcov".format(problem_id, test, program_id)
+        covfile = "/home/thanhlc/thanhlc/Data/nbl_dataset/data/tests/{}/{}-{}.gcov".format(problem_id, test, program_id)
         cfg_to_tests[test] = get_coverage(covfile, nline_removed)
     
     # print(cfg_to_tests)
@@ -178,7 +181,17 @@ def build_graph(problem_id, program_id, test_ids):
 def read_cfile(filename):
     pass
 
-def build_dgl_graph(problem_id, program_id, test_ids, embedding_model):
+
+def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph_opt = 1, tokenizer_opt = 1):
+    ### Graph option
+    # CFG + Test 
+    # CFG + Test + AST
+
+    ### Tokenizer option
+    # 1. A Thanh gui (https://github.com/dspinellis/tokenizer/)
+    # 2. TransCoder (https://github.com/facebookresearch/TransCoder/blob/master/preprocessing/src/code_tokenizer.py)
+    # 3. CoCoNuT (https://github.com/lin-tan/CoCoNut-Artifact/blob/master/fairseq-context/fairseq/tokenizer.py)
+    test_ids = list(test_verdict.keys())
     list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests = build_graph(problem_id, program_id, test_ids)
     ast_id2idx = {}
     ast_idx2id = {}
@@ -203,8 +216,6 @@ def build_dgl_graph(problem_id, program_id, test_ids, embedding_model):
         test_id2idx[test_id] = index
         test_idx2id[index] = test_id
 
-
-
     print("======== Buiding DGL Graph =========")
     ast_ast_l = []
     ast_ast_r = []
@@ -226,53 +237,76 @@ def build_dgl_graph(problem_id, program_id, test_ids, embedding_model):
             ast_cfg_l.append(ast_id2idx[node])
             ast_cfg_r.append(cfg_id2idx[cfg_node])
 
-    ast_test_l = []
-    ast_test_r = []
+    ast_ftest_l = []
+    ast_ftest_r = []
+    ast_ptest_l = []
+    ast_ptest_r = []
     for id, ast_nodes in ast_to_tests.items():
         for node, link in ast_nodes.items():
             if link == 1:
-                ast_test_l.append(ast_id2idx[node])
-                ast_test_r.append(test_id2idx[id])
-
-    cfg_test_l = []
-    cfg_test_r = []
+                if test_verdict[id]:
+                    ast_ptest_l.append(ast_id2idx[node])
+                    ast_ptest_r.append(test_id2idx[id])
+                else:
+                    ast_ftest_l.append(ast_id2idx[node])
+                    ast_ftest_r.append(test_id2idx[id])
+    cfg_ftest_l = []
+    cfg_ftest_r = []
+    cfg_ptest_l = []
+    cfg_ptest_r = []
     for id, cfg_nodes in cfg_to_tests.items():
         for node, link in cfg_nodes.items():
             if link == 1:
-                cfg_test_l.append(cfg_id2idx[node])
-                cfg_test_r.append(test_id2idx[id])   
+                if test_verdict[id]:
+                    cfg_ptest_l.append(cfg_id2idx[node])
+                    cfg_ptest_r.append(test_id2idx[id])
+                else:
+                    cfg_ftest_l.append(cfg_id2idx[node])
+                    cfg_ftest_r.append(test_id2idx[id])  
 
-    graph_data = {
+    if graph_opt == 1:
+        graph_data = {
         ('cfg', 'cfglink_for', 'cfg'): (th.tensor(cfg_cfg_l), th.tensor(cfg_cfg_r)),
         ('cfg', 'cfglink_back', 'cfg'): (th.tensor(cfg_cfg_r), th.tensor(cfg_cfg_l)),
-        ('cfg', 'ctlink', 'test'): (th.tensor(cfg_test_l), th.tensor(cfg_test_r)),
-        ('test', 'tclink', 'cfg'): (th.tensor(cfg_test_r), th.tensor(cfg_test_l))
-    }
-    g = dgl.heterograph(graph_data)
-    print(g.num_nodes("cfg"))
-    cfg_label_corpus = ["entry_node", "COMMON", "IF", "ELSE", "ELSE_IF", "END_IF", "FOR", "WHILE", "DO_WHILE", "PSEUDO", "CALL", "END"]
-    cfg_labels = [None] * g.num_nodes("cfg")
-    for key, feat in list_cfg_nodes.items():
-        cfg_labels[cfg_id2idx[key]] = cfg_label_corpus.index(feat)
-    cfg_label_feats = th.nn.functional.one_hot(th.LongTensor(cfg_labels), len(cfg_label_corpus))
-    print(cfg_label_feats)
+        ('cfg', 'cfg_passT_link', 'passing_test'): (th.tensor(cfg_ptest_l), th.tensor(cfg_ptest_r)),
+        ('passing_test', 'passT_cfg_link', 'cfg'): (th.tensor(cfg_ptest_r), th.tensor(cfg_ptest_l)),
+        ('cfg', 'ctlink', 'cfg_failT_link'): (th.tensor(cfg_ftest_l), th.tensor(cfg_ftest_r)),
+        ('failing_test', 'failT_cfg_link', 'cfg'): (th.tensor(cfg_ftest_r), th.tensor(cfg_ftest_l))
+        }
 
-    filename = "/home/thanhlc/thanhlc/Data/nbl_dataset/sources/{}/{}.c".format(problem_id,program_id)
-    code = []
-    with open(filename, "r") as f:
-        for line in f:
-            if line[0] != "#":
-                code.append(line)
-    cfg_content_feats = [None] * g.num_nodes("cfg")
-    for key, feat in list_cfg_nodes.items():
-        cfg_content_feats[cfg_id2idx[key]] = embedding_model.get_sentence_vector(code[key-1].replace("\n", ""))
+        g = dgl.heterograph(graph_data)
+        #CFG_feats
+        cfg_label_corpus = ["entry_node", "COMMON", "IF", "ELSE", "ELSE_IF", "END_IF", "FOR", "WHILE", "DO_WHILE", "PSEUDO", "CALL", "END"]
+        cfg_labels = [None] * g.num_nodes("cfg")
+        for key, feat in list_cfg_nodes.items():
+            cfg_labels[cfg_id2idx[key]] = cfg_label_corpus.index(feat)
+        cfg_label_feats = th.nn.functional.one_hot(th.LongTensor(cfg_labels), len(cfg_label_corpus))
+
+        filename = "/home/thanhlc/thanhlc/Data/nbl_dataset/sources/{}/{}.c".format(problem_id,program_id)
+        code = []
+        with open(filename, "r") as f:
+            for line in f:
+                if line[0] != "#":
+                    code.append(line)
+        cfg_content_feats = [None] * g.num_nodes("cfg")
+        for key, feat in list_cfg_nodes.items():
+            cfg_content_feats[cfg_id2idx[key]] = embedding_model.get_sentence_vector(code[key-1].replace("\n", ""))
     
-    (cfg_content_feats)
-    g.nodes["cfg"].data['label'] = cfg_label_feats
-    g.nodes["cfg"].data['content'] = torch.FloatTensor(cfg_content_feats)
-    print("Done !!!")
+        # (cfg_content_feats)
+        g.nodes["cfg"].data['label'] = cfg_label_feats
+        g.nodes["cfg"].data['content'] = torch.FloatTensor(cfg_content_feats)
+        print("Done !!!")
+
+    elif graph_opt == 2:
+        pass
+    else:
+        print("Invalid graph option")
+
     return g, ast_id2idx, cfg_id2idx, test_id2idx
     
 if __name__ == '__main__':
     model = fasttext.load_model('/home/thanhlc/thanhlc/Data/c_pretrained.bin')
-    G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph("3055", "1049262", ["40112","40439"], model)
+    with open("/home/thanhlc/thanhlc/Data/nbl_dataset/test_verdict.pkl", "rb") as f:
+        all_data = pkl.load(f)
+    test_verdict = all_data["3055"][1049262]
+    G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph("3055", "1049262", test_verdict, model, graph_opt= 1, tokenizer_opt = 1)
