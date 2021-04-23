@@ -19,6 +19,7 @@ from tqdm import tqdm
 import pickle as pkl
 from transcoder import code_tokenizer
 from coconut.tokenizer import Tokenizer
+from utils import ConfigClass
 
 def traverse_cfg(node, parent, list_callfunction, list_callfuncline):
     tmp_n = {}
@@ -84,7 +85,7 @@ def is_leaf(astnode):
     if isinstance(astnode, str):
         return True
     return len(astnode.children()) == 0
-        
+
 def traverse_ast(node, index, parent_index):
     tmp_n = {}
     tmp_e = {}
@@ -100,14 +101,15 @@ def traverse_ast(node, index, parent_index):
     return index, tmp_n, tmp_e
 
 def build_graph(problem_id, program_id, test_ids):
-    filename = "/home/thanhlc/thanhlc/Data/nbl_dataset/sources/{}/{}.c".format(problem_id,program_id)
-    
+    filename = "{}/{}/{}.c".format(ConfigClass.nbl_source_path,
+                                   problem_id,program_id)
+
     print("======== CFG ========")
     list_cfg_nodes = {}
     list_cfg_edges = {}
     #Remove headers
     nline_removed = remove_lib(filename)
-    
+
     # create CFG
     graph = cfg.CFG("temp.c")
     graph.make_cfg()
@@ -135,7 +137,7 @@ def build_graph(problem_id, program_id, test_ids):
         index, tmp_n, tmp_e = traverse_ast(funcdef, index, 0)
         list_ast_nodes.update(tmp_n)
         list_ast_edges.update(tmp_e)
-        
+
     # print(list_ast_node)
     # print(list_ast_edge)
     print("Done !!!")
@@ -158,14 +160,15 @@ def build_graph(problem_id, program_id, test_ids):
     print("Done !!!")
     print("======== Mapping tests-CFG ========")
     for test in test_ids:
-        covfile = "/home/thanhlc/thanhlc/Data/nbl_dataset/data/tests/{}/{}-{}.gcov".format(problem_id, test, program_id)
+        covfile = "{}/{}/{}-{}.gcov".format(ConfigClass.nbl_test_path,
+                                            problem_id, test, program_id)
         cfg_to_tests[test] = get_coverage(covfile, nline_removed)
-    
+
     # print(cfg_to_tests)
-    
+
     print("======== Mapping tests-AST ========")
     ast_to_tests = {}
-    
+
     for test in test_ids:
         ast_to_tests[test] = {}
         for line, ast_nodes in cfg_to_ast.items():
@@ -184,7 +187,7 @@ def read_cfile(filename):
 
 def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph_opt = 1, tokenizer_opt = 1):
     ### Graph option
-    # CFG + Test 
+    # CFG + Test
     # CFG + Test + AST
 
     ### Tokenizer option
@@ -200,7 +203,7 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
         ast_id2idx[id] = index
         ast_idx2id[index] = id
         index += 1
-    
+
     cfg_id2idx = {}
     cfg_idx2id = {}
     index = 0
@@ -262,7 +265,7 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
                     cfg_ptest_r.append(test_id2idx[id])
                 else:
                     cfg_ftest_l.append(cfg_id2idx[node])
-                    cfg_ftest_r.append(test_id2idx[id])  
+                    cfg_ftest_r.append(test_id2idx[id])
 
     if graph_opt == 1:
         graph_data = {
@@ -282,7 +285,8 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
             cfg_labels[cfg_id2idx[key]] = cfg_label_corpus.index(feat)
         cfg_label_feats = th.nn.functional.one_hot(th.LongTensor(cfg_labels), len(cfg_label_corpus))
 
-        filename = "/home/thanhlc/thanhlc/Data/nbl_dataset/sources/{}/{}.c".format(problem_id,program_id)
+        filename = "{}/{}/{}.c".format(ConfigClass.nbl_source_path,
+                                       problem_id,program_id)
         code = []
         with open(filename, "r") as f:
             for line in f:
@@ -291,7 +295,7 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
         cfg_content_feats = [None] * g.num_nodes("cfg")
         for key, feat in list_cfg_nodes.items():
             cfg_content_feats[cfg_id2idx[key]] = embedding_model.get_sentence_vector(code[key-1].replace("\n", ""))
-    
+
         # (cfg_content_feats)
         g.nodes["cfg"].data['label'] = cfg_label_feats
         g.nodes["cfg"].data['content'] = torch.FloatTensor(cfg_content_feats)
@@ -303,10 +307,11 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
         print("Invalid graph option")
 
     return g, ast_id2idx, cfg_id2idx, test_id2idx
-    
+
+
 if __name__ == '__main__':
-    model = fasttext.load_model('/home/thanhlc/thanhlc/Data/c_pretrained.bin')
-    with open("/home/thanhlc/thanhlc/Data/nbl_dataset/test_verdict.pkl", "rb") as f:
+    model = fasttext.load_model(ConfigClass.pretrained_fastext)
+    with open(ConfigClass.test_verdict_pickle, "rb") as f:
         all_data = pkl.load(f)
     test_verdict = all_data["3055"][1049262]
     G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph("3055", "1049262", test_verdict, model, graph_opt= 1, tokenizer_opt = 1)
