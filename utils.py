@@ -4,6 +4,9 @@ class ConfigClass(object):
     nbl_source_path = "/home/thanhlc/thanhlc/Data/nbl_dataset/sources"
     nbl_test_path = "/home/thanhlc/thanhlc/Data/nbl_dataset/data/tests"
 
+    # raw dir
+    raw_dir = "/home/thanhlc/thanhlc/Data/nbl_dataset"
+
     # For training
     train_cfgidx_map_json = "/home/thanhlc/thanhlc/Data/nbl_dataset/training_dat.json"
 

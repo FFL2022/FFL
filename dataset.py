@@ -269,12 +269,12 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
 
     if graph_opt == 1:
         graph_data = {
-        ('cfg', 'cfglink_for', 'cfg'): (th.tensor(cfg_cfg_l), th.tensor(cfg_cfg_r)),
-        ('cfg', 'cfglink_back', 'cfg'): (th.tensor(cfg_cfg_r), th.tensor(cfg_cfg_l)),
-        ('cfg', 'cfg_passT_link', 'passing_test'): (th.tensor(cfg_ptest_l), th.tensor(cfg_ptest_r)),
-        ('passing_test', 'passT_cfg_link', 'cfg'): (th.tensor(cfg_ptest_r), th.tensor(cfg_ptest_l)),
-        ('cfg', 'ctlink', 'cfg_failT_link'): (th.tensor(cfg_ftest_l), th.tensor(cfg_ftest_r)),
-        ('failing_test', 'failT_cfg_link', 'cfg'): (th.tensor(cfg_ftest_r), th.tensor(cfg_ftest_l))
+            ('cfg', 'cfglink_for', 'cfg'): (th.tensor(cfg_cfg_l), th.tensor(cfg_cfg_r)),
+            ('cfg', 'cfglink_back', 'cfg'): (th.tensor(cfg_cfg_r), th.tensor(cfg_cfg_l)),
+            ('cfg', 'cfg_passT_link', 'passing_test'): (th.tensor(cfg_ptest_l), th.tensor(cfg_ptest_r)),
+            ('passing_test', 'passT_cfg_link', 'cfg'): (th.tensor(cfg_ptest_r), th.tensor(cfg_ptest_l)),
+            ('cfg', 'ctlink', 'cfg_failT_link'): (th.tensor(cfg_ftest_l), th.tensor(cfg_ftest_r)),
+            ('failing_test', 'failT_cfg_link', 'cfg'): (th.tensor(cfg_ftest_r), th.tensor(cfg_ftest_l))
         }
 
         g = dgl.heterograph(graph_data)
@@ -310,7 +310,7 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
 
 
 if __name__ == '__main__':
-    model = fasttext.load_model(ConfigClass.pretrained_fastext)
+    model= fasttext.load_model(ConfigClass.pretrained_fastext)
     with open(ConfigClass.test_verdict_pickle, "rb") as f:
         all_data = pkl.load(f)
     test_verdict = all_data["3055"][1049262]
