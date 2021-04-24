@@ -77,6 +77,7 @@ class BugLocalizeGraphDataset(DGLDataset):
                     error_instance[problem_id] = []
                 error_instance[problem_id].append(program_id)
                 json.dump(error_instance, open('error_instance.json', 'w'))
+                continue
             self.gs.append(G)
             self.ast_id2idx.append(ast_id2idx)
             self.cfg_id2idx.append(cfg_id2idx)
