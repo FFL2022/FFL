@@ -19,7 +19,8 @@ from tqdm import tqdm
 import pickle as pkl
 from transcoder import code_tokenizer
 from coconut.tokenizer import Tokenizer
-from utils import ConfigClass
+from utils.utils import ConfigClass
+
 
 def traverse_cfg(node, parent, list_callfunction, list_callfuncline):
     tmp_n = {}
@@ -279,11 +280,15 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
 
         g = dgl.heterograph(graph_data)
         #CFG_feats
-        cfg_label_corpus = ["entry_node", "COMMON", "IF", "ELSE", "ELSE_IF", "END_IF", "FOR", "WHILE", "DO_WHILE", "PSEUDO", "CALL", "END"]
         cfg_labels = [None] * g.num_nodes("cfg")
+
         for key, feat in list_cfg_nodes.items():
-            cfg_labels[cfg_id2idx[key]] = cfg_label_corpus.index(feat)
-        cfg_label_feats = th.nn.functional.one_hot(th.LongTensor(cfg_labels), len(cfg_label_corpus))
+            cfg_labels[cfg_id2idx[key]] = ConfigClass.cfg_label_corpus.index(feat)
+
+        cfg_label_feats = th.nn.functional.one_hot(
+            th.LongTensor(cfg_labels),
+            len(ConfigClass.cfg_label_corpus)
+        )
 
         filename = "{}/{}/{}.c".format(ConfigClass.nbl_source_path,
                                        problem_id,program_id)

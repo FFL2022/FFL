@@ -1,3 +1,5 @@
+import os
+
 class ConfigClass(object):
     pretrained_fastext = '/home/thanhlc/thanhlc/Data/c_pretrained.bin'
     test_verdict_pickle = "/home/thanhlc/thanhlc/Data/nbl_dataset/test_verdict.pkl"
@@ -10,4 +12,16 @@ class ConfigClass(object):
     # For training
     train_cfgidx_map_json = "/home/thanhlc/thanhlc/Data/nbl_dataset/training_dat.json"
 
+    preprocess_dir = "./preprocessed"
+    trained_dir = './trained'
+
     n_epochs = 100
+    print_rate = 5
+    save_rate = 5
+
+    cfg_label_corpus = ["entry_node", "COMMON", "IF", "ELSE",
+                        "ELSE_IF", "END_IF", "FOR", "WHILE",
+                        "DO_WHILE", "PSEUDO", "CALL", "END"]
+
+if not os.path.exists(ConfigClass.trained_dir):
+    os.makedirs(ConfigClass.trained_dir)
