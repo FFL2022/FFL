@@ -20,7 +20,7 @@ class BugLocalizeGraphDataset(DGLDataset):
         super(BugLocalizeGraphDataset, self).__init__(
             name='key_value_dataset',
             url=None,
-            raw_dir=None,
+            raw_dir=raw_dir,
             save_dir=save_dir,
             force_reload=False,
             verbose=False)
@@ -54,12 +54,14 @@ class BugLocalizeGraphDataset(DGLDataset):
         self.ast_id2idx = []
         self.cfg_id2idx = []
         self.test_id2idx = []
+
+        model = fasttext.load_model(ConfigClass.pretrained_fastext)
         for i, key in enumerate(self.keys):
             # Get the mapping
             # Get the train index
             problem_id, uid, program_id = key.split("-")
             instance_verdict = test_verdict[problem_id][int(program_id)]
-            G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(problem_id, program_id, instance_verdict)
+            G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(problem_id, program_id, instance_verdict, model)
             self.gs.append(G)
             self.ast_id2idx.append(ast_id2idx)
             self.cfg_id2idx.append(cfg_id2idx)
@@ -82,7 +84,7 @@ class BugLocalizeGraphDataset(DGLDataset):
                                    'labels': self.lbs,
                                    'keys': self.keys,
                                    'cfg_id2idx': self.cfg_id2idx,
-                                   'test_id2idx': self.test_id2idx
+                                   'test_id2idx': self.test_id2idx,
                                    'cfg_content_feats': self.cfg_content_feats,
                                    'cfg_label_feats': self.cfg_label_feats
                                    }
@@ -104,5 +106,4 @@ class BugLocalizeGraphDataset(DGLDataset):
         return False
 
 
-model = fasttext.load_model(ConfigClass.pretrained_fastext)
 default_dataset = BugLocalizeGraphDataset()
