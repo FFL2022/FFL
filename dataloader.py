@@ -35,13 +35,18 @@ class BugLocalizeGraphDataset(DGLDataset):
         self.mode = 'val'
         self.active_idxs = self.val_idxs
 
+    def __len__(self):
+        return len(self.active_idxs)
+
     def __getitem__(self, i):
         i = self.active_idxs[i]
         g = self.gs[i]
         lbs = torch.zeros([g.num_nodes('cfg')])
         for j in self.lbs[i]:
+            print(self.cfg_id2idx[i])
+            print(self.lbs[i])
             lbs[self.cfg_id2idx[i][j]] = 1
-        return g, lbs
+        return g, lbs.long()
 
     def process(self):
         from dataset import build_dgl_graph

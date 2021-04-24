@@ -49,7 +49,7 @@ class HeteroMPNNPredictor(torch.nn.Module):
 
         self.h_process5 = HeteroMPNNBlockSimp(
             self.meta_graph, hidden_feats*4,
-            hidden_efeats, hidden_feats*4, device)
+            hidden_efeats, hidden_feats, device)
 
         self.decoder = torch.nn.Linear(hidden_feats, num_classes)
         if num_classes > 1:
@@ -64,7 +64,7 @@ class HeteroMPNNPredictor(torch.nn.Module):
         feats = self.decoder(nodes.data['h'])
         return {
             'logits': feats,
-            'pred': self.softmax(feats)
+            'pred': self.last_act(feats)
         }
 
 

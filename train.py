@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from dataloader import default_dataset
 from model import HeteroMPNNPredictor
 from utils.utils import ConfigClass
+import tqdm
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -95,14 +96,15 @@ def train(model, dataloader, n_epochs):
         f1_meter.reset()
         model.train()
 
-        for g, lb in dataloader:
+        for i in tqdm.trange(len(dataloader)):
+            g, lb = dataloader[i]
             g = g.to(device)
             # LB will be preprocessed to have
             lb = lb.to(device)
             model(g)
             # 2 scenario:
             # not using master node
-            logits = g.ndata['cfg']['logits']
+            logits = g.nodes['cfg'].data['logits']
             # using master node, to be implemented
             loss = F.cross_entropy(logits, lb)
             _, cal = torch.max(logits, dim=1)
@@ -131,7 +133,9 @@ def eval(model, dataloader):
     mean_acc = AverageMeter()
     f1_meter = BinFullMeter()
     model.eval()
-    for g, lb in dataloader:
+
+    for i in tqdm.trange(len(dataloader)):
+        g, lb = dataloader[i]
         g = g.to(device)
         # LB will be preprocessed to have
         lb = lb.to(device)
@@ -159,7 +163,7 @@ if __name__ == '__main__':
             ('cfg', 'cfglink_back', 'cfg'),
             ('cfg', 'cfg_passT_link', 'passing_test'),
             ('passing_test', 'passT_cfg_link', 'cfg'),
-            ('cfg', 'ctlink', 'cfg_failT_link'),
+            ('cfg', 'cfg_failT_link', 'failing_test'),
             ('failing_test', 'failT_cfg_link', 'cfg')]
 
     model = HeteroMPNNPredictor(default_dataset.cfg_label_feats,
