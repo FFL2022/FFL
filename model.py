@@ -70,15 +70,21 @@ class HeteroMPNNPredictor(torch.nn.Module):
 
     def forward(self, h_g):
         # GNN creation on the fly
-        h_g.nodes['cfg'].data['h'] = torch.cat(
-            self.cfg_label_encoder(h_g.nodes['cfg'].data['label']),
-            self.cfg_content_encoder(h_g.nodes['cfg'].data['content']),
+        h_g.nodes['cfg'].data['h'] = torch.cat((
+            self.cfg_label_encoder(h_g.nodes['cfg'].data['label'].float()),
+            self.cfg_content_encoder(h_g.nodes['cfg'].data['content'].float())),
             dim=-1)
         h_g.nodes['passing_test'].data['h'] = torch.cat(
-            h_g.number_of_nodes('passing_test') * [self.ptest_embedding])
+            h_g.number_of_nodes('passing_test') * [self.ptest_embedding.unsqueeze(0)])
 
         h_g.nodes['failing_test'].data['h'] = torch.cat(
-            h_g.number_of_nodes('failing_test') * [self.ptest_embedding])
+            h_g.number_of_nodes('failing_test') * [self.ftest_embedding.unsqueeze(0)])
+
+        for cetype in self.meta_graph:
+            etype = cetype[1]
+            h_g.edges[etype].data['h'] = torch.cat(
+                    h_g.number_of_edges(etype) * [self.etypes_params[etype].unsqueeze(0)])
+
         # Let's cache stuffs here
         # Passing message
         h_g = self.h_process1(h_g)

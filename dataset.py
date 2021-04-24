@@ -274,7 +274,7 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
             ('cfg', 'cfglink_back', 'cfg'): (th.tensor(cfg_cfg_r), th.tensor(cfg_cfg_l)),
             ('cfg', 'cfg_passT_link', 'passing_test'): (th.tensor(cfg_ptest_l), th.tensor(cfg_ptest_r)),
             ('passing_test', 'passT_cfg_link', 'cfg'): (th.tensor(cfg_ptest_r), th.tensor(cfg_ptest_l)),
-            ('cfg', 'ctlink', 'cfg_failT_link'): (th.tensor(cfg_ftest_l), th.tensor(cfg_ftest_r)),
+            ('cfg', 'cfg_failT_link', 'failing_test'): (th.tensor(cfg_ftest_l), th.tensor(cfg_ftest_r)),
             ('failing_test', 'failT_cfg_link', 'cfg'): (th.tensor(cfg_ftest_r), th.tensor(cfg_ftest_l))
         }
 

@@ -1,4 +1,3 @@
-from dataset import build_dgl_graph
 from dgl.data import DGLDataset
 from dgl import save_graphs, load_graphs
 from dgl.data.utils import makedirs, save_info, load_info
@@ -40,10 +39,12 @@ class BugLocalizeGraphDataset(DGLDataset):
         i = self.active_idxs[i]
         g = self.gs[i]
         lbs = torch.zeros([g.num_nodes('cfg')])
-        lbs[self.cfg_id2idx[i][self.lbs[i]]] = 1
+        for j in self.lbs[i]:
+            lbs[self.cfg_id2idx[i][j]] = 1
         return g, lbs
 
     def process(self):
+        from dataset import build_dgl_graph
         train_map = json.load(open(
             os.path.join(self.raw_dir, 'training_dat.json'), 'r'))
         test_verdict = pkl.load(open(
@@ -100,13 +101,13 @@ class BugLocalizeGraphDataset(DGLDataset):
                   )
 
     def load(self):
-        self.gs = load_graphs(self.graph_save_path)
+        self.gs, _ = load_graphs(self.graph_save_path)
         info_dict = load_info(self.info_path)
         self.lbs = info_dict['labels']
         self.keys = info_dict['keys']
         self.cfg_id2idx = info_dict['cfg_id2idx']
         self.cfg_content_feats = info_dict['cfg_content_feats']
-        self.cfg_label_feats = info_dict['cfg_content_feats']
+        self.cfg_label_feats = info_dict['cfg_label_feats']
 
     def has_cache(self):
         if os.path.exists(self.graph_save_path) and\
