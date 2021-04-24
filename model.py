@@ -26,7 +26,7 @@ class HeteroMPNNPredictor(torch.nn.Module):
         self.ftest_embedding = nn.Parameter(torch.FloatTensor(hidden_feats))
 
         self.meta_graph = meta_graph
-        self.etypes_params = torch.nn.ModuleDict()
+        self.etypes_params = torch.nn.ParameterDict()
         for cetype in self.meta_graph:
             etype = cetype[1]
             self.etypes_params[etype] = nn.Parameter(

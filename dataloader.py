@@ -37,7 +37,7 @@ class BugLocalizeGraphDataset(DGLDataset):
         self.active_idxs = self.val_idxs
 
     def __getitem__(self, i):
-        i = active_idxs[i]
+        i = self.active_idxs[i]
         g = self.gs[i]
         lbs = torch.zeros([g.num_nodes('cfg')])
         lbs[self.cfg_id2idx[i][self.lbs[i]]] = 1
@@ -56,13 +56,21 @@ class BugLocalizeGraphDataset(DGLDataset):
         self.test_id2idx = []
 
         model = fasttext.load_model(ConfigClass.pretrained_fastext)
+        error_instance = {}
         for i, key in enumerate(self.keys):
             # Get the mapping
             # Get the train index
             problem_id, uid, program_id = key.split("-")
             instance_verdict = test_verdict[problem_id][int(program_id)]
             print("Program id {}, problem id {}".format(program_id, problem_id))
-            G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(problem_id, program_id, instance_verdict, model)
+            # Temporary only:
+            try:
+                G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(problem_id, program_id, instance_verdict, model)
+            except:
+                if problem_id not in error_instance.keys():
+                    error_instance[problem_id] = []
+                error_instance[problem_id].append(program_id)
+                json.dump(error_instance, open('error_instance.json', 'w'))
             self.gs.append(G)
             self.ast_id2idx.append(ast_id2idx)
             self.cfg_id2idx.append(cfg_id2idx)
