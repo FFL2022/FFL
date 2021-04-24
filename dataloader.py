@@ -54,16 +54,17 @@ class BugLocalizeGraphDataset(DGLDataset):
             os.path.join(self.raw_dir, 'training_dat.json'), 'r'))
         test_verdict = pkl.load(open(
             os.path.join(self.raw_dir, 'test_verdict.pkl'), 'rb'))
-        self.keys = list(train_map.keys())
+        self.temp_keys = list(train_map.keys())
         self.gs = []
         self.lbs = []
         self.ast_id2idx = []
         self.cfg_id2idx = []
         self.test_id2idx = []
+        self.keys = []
 
         model = fasttext.load_model(ConfigClass.pretrained_fastext)
         error_instance = {}
-        for i, key in enumerate(self.keys):
+        for i, key in enumerate(self.temp_keys):
             # Get the mapping
             # Get the train index
             problem_id, uid, program_id = key.split("-")
@@ -78,6 +79,7 @@ class BugLocalizeGraphDataset(DGLDataset):
                 error_instance[problem_id].append(program_id)
                 json.dump(error_instance, open('error_instance.json', 'w'))
                 continue
+            self.keys.append(key)
             self.gs.append(G)
             self.ast_id2idx.append(ast_id2idx)
             self.cfg_id2idx.append(cfg_id2idx)
