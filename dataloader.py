@@ -42,10 +42,15 @@ class BugLocalizeGraphDataset(DGLDataset):
         i = self.active_idxs[i]
         g = self.gs[i]
         lbs = torch.zeros([g.num_nodes('cfg')])
-        for j in self.lbs[i]:
-            print(self.cfg_id2idx[i])
-            print(self.lbs[i])
-            lbs[self.cfg_id2idx[i][j]] = 1
+        try:
+            for j in self.lbs[i]:
+                # print(self.cfg_id2idx[i])
+                # print(self.lbs[i])
+                lbs[self.cfg_id2idx[i][j]] = 1
+        except:
+            print(self.keys[i])
+            return None, None
+
         return g, lbs.long()
 
     def process(self):

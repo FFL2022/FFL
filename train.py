@@ -98,6 +98,8 @@ def train(model, dataloader, n_epochs):
 
         for i in tqdm.trange(len(dataloader)):
             g, lb = dataloader[i]
+            if g is None or lb is None:
+                continue
             g = g.to(device)
             # LB will be preprocessed to have
             lb = lb.to(device)
@@ -121,10 +123,11 @@ def train(model, dataloader, n_epochs):
             print(f1_meter.get())
         if epoch % ConfigClass.save_rate == 0:
             l_eval, acc_eval, f1_eval = eval(model, dataloader)
-            if f1_eval > best_f1:
-                best_f1 = f1_eval
-                torch.save(model.state_dict(), os.path.join(
-                    ConfigClass.trained_dir, 'model_{}.pth'.format(epoch)))
+            if f1_eval != "unk":
+                if f1_eval > best_f1:
+                    best_f1 = f1_eval
+                    torch.save(model.state_dict(), os.path.join(
+                        ConfigClass.trained_dir, 'model_{}.pth'.format(epoch)))
 
 
 def eval(model, dataloader):
@@ -136,13 +139,15 @@ def eval(model, dataloader):
 
     for i in tqdm.trange(len(dataloader)):
         g, lb = dataloader[i]
+        if g is None or lb is None:
+            continue
         g = g.to(device)
         # LB will be preprocessed to have
         lb = lb.to(device)
         model(g)
         # 2 scenario:
         # not using master node
-        logits = g.ndata['cfg']['logits']
+        logits = g.nodes['cfg'].data['logits']
         # using master node, to be implemented
         loss = F.cross_entropy(logits, lb)
         _, cal = torch.max(logits, dim=1)
