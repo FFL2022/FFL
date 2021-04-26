@@ -110,6 +110,7 @@ def train(model, dataloader, n_epochs):
             # using master node, to be implemented
             loss = F.cross_entropy(logits, lb)
             _, cal = torch.max(logits, dim=1)
+            print(loss.item())
             mean_loss.update(loss.item(), g.number_of_nodes('cfg'))
             mean_acc.update(torch.sum(cal == lb).item(),
                             g.number_of_nodes('cfg'))

@@ -20,9 +20,16 @@ class HeteroMPNNPredictor(torch.nn.Module):
                  num_classes,
                  device=device):
         super(HeteroMPNNPredictor, self).__init__()
+        # Passing test overlapp
+        # Failing test: often only one, so more important!
+        # Intuition is failing test is rare, so it might contains more information
+        # Similar to TD-IDF intuition
+
         self.cfg_label_encoder = nn.Linear(cfg_label_feats, hidden_feats//2)
         self.cfg_content_encoder = nn.Linear(cfg_content_feats, hidden_feats//2)
+
         self.ptest_embedding = nn.Parameter(torch.FloatTensor(hidden_feats))
+
         self.ftest_embedding = nn.Parameter(torch.FloatTensor(hidden_feats))
 
         self.meta_graph = meta_graph

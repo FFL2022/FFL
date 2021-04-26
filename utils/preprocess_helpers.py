@@ -44,11 +44,16 @@ def get_coverage(filename, nline_removed):
 
 def remove_lib(filename):
     count = 0
+    start = False
     with open(filename, "r") as f:
         with open("temp.c", "w") as t:
             for line in f:
-                if line[0] != "#":
-                    t.write(line)
-                else:
+                if line[0] in ("#") or len(line.strip()) == 0 and not start:
                     count += 1
+                else:
+                    t.write(line)
+                    if not start:
+                        start = True
+        # with open("temp.c", "r") as x:
+        #     print(x.read())
     return count

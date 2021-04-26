@@ -82,8 +82,11 @@ class CFGAstVisitor(object):
         """ A new block was found and must be created a node for it
         """
         self._create_new_node = True
-        for stmt in n.block_items:
-            self.visit(stmt)
+        if n.block_items != None:
+            for stmt in n.block_items:
+                self.visit(stmt)
+        # except TypeError:
+        #     print(n.block_items)
 
     def visit_If(self, n):
         if n.cond is None: return
