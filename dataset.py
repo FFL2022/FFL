@@ -116,18 +116,12 @@ def traverse_ast(node, index, parent_index):
             tmp_n.update(n)
     return index, tmp_n, tmp_e
 
-<<<<<<< HEAD
 def build_graph(problem_id, program_id, test_ids):
     filename = "{}/{}/{}.c".format(ConfigClass.nbl_source_path,
                                    problem_id,program_id)
 
-    print("======== CFG ========")
-=======
-def build_graph(problem_id, user_id, program_id, test_ids):
-    filename = "/home/thanhlc/thanhlc/Data/nbl_dataset/data/sources/{}/{}/{}.c".format(problem_id, user_id, program_id)
-    
     # print("======== CFG ========")
->>>>>>> origin/thanh
+
     list_cfg_nodes = {}
     list_cfg_edges = {}
     #Remove headers
@@ -186,16 +180,8 @@ def build_graph(problem_id, user_id, program_id, test_ids):
         covfile = "{}/{}/{}-{}.gcov".format(ConfigClass.nbl_test_path,
                                             problem_id, test, program_id)
         cfg_to_tests[test] = get_coverage(covfile, nline_removed)
-<<<<<<< HEAD
-
-    # print(cfg_to_tests)
-
-    print("======== Mapping tests-AST ========")
-=======
-    
-    
+   
     # print("======== Mapping tests-AST ========")
->>>>>>> origin/thanh
     ast_to_tests = {}
 
     for test in test_ids:
@@ -303,21 +289,12 @@ def build_dgl_graph(problem_id, user_id, program_id, test_verdict, graph_opt = 1
 
     if graph_opt == 1:
         graph_data = {
-<<<<<<< HEAD
             ('cfg', 'cfglink_for', 'cfg'): (th.tensor(cfg_cfg_l), th.tensor(cfg_cfg_r)),
             ('cfg', 'cfglink_back', 'cfg'): (th.tensor(cfg_cfg_r), th.tensor(cfg_cfg_l)),
             ('cfg', 'cfg_passT_link', 'passing_test'): (th.tensor(cfg_ptest_l), th.tensor(cfg_ptest_r)),
             ('passing_test', 'passT_cfg_link', 'cfg'): (th.tensor(cfg_ptest_r), th.tensor(cfg_ptest_l)),
             ('cfg', 'cfg_failT_link', 'failing_test'): (th.tensor(cfg_ftest_l), th.tensor(cfg_ftest_r)),
             ('failing_test', 'failT_cfg_link', 'cfg'): (th.tensor(cfg_ftest_r), th.tensor(cfg_ftest_l))
-=======
-        ('cfg', 'cfglink_for', 'cfg'): (th.tensor(cfg_cfg_l), th.tensor(cfg_cfg_r)),
-        ('cfg', 'cfglink_back', 'cfg'): (th.tensor(cfg_cfg_r), th.tensor(cfg_cfg_l)),
-        ('cfg', 'cfg_passT_link', 'passing_test'): (th.tensor(cfg_ptest_l, dtype=torch.int32), th.tensor(cfg_ptest_r, dtype=torch.int32)),
-        ('passing_test', 'passT_cfg_link', 'cfg'): (th.tensor(cfg_ptest_r, dtype=torch.int32), th.tensor(cfg_ptest_l, dtype=torch.int32)),
-        ('cfg', 'ctlink', 'cfg_failT_link'): (th.tensor(cfg_ftest_l, dtype=torch.int32), th.tensor(cfg_ftest_r, dtype=torch.int32)),
-        ('failing_test', 'failT_cfg_link', 'cfg'): (th.tensor(cfg_ftest_r, dtype=torch.int32), th.tensor(cfg_ftest_l, dtype=torch.int32))
->>>>>>> origin/thanh
         }
 
         g = dgl.heterograph(graph_data)
@@ -357,19 +334,12 @@ def build_dgl_graph(problem_id, user_id, program_id, test_verdict, graph_opt = 1
 
 
 if __name__ == '__main__':
-<<<<<<< HEAD
-    model= fasttext.load_model(ConfigClass.pretrained_fastext)
+    embedding_model = fasttext.load_model(ConfigClass.pretrained_fastext)
     with open(ConfigClass.test_verdict_pickle, "rb") as f:
-        all_data = pkl.load(f)
-    test_verdict = all_data["3055"][1049262]
-    G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph("3055", "1049262", test_verdict, model, graph_opt= 1, tokenizer_opt = 1)
-=======
-    embedding_model = fasttext.load_model('/home/thanhlc/thanhlc/Data/c_pretrained.bin')
-    with open("/home/thanhlc/thanhlc/Data/nbl_dataset/test_verdict.pkl", "rb") as f:
         all_test_verdict = pkl.load(f)
-    with open("/home/thanhlc/thanhlc/Data/nbl_dataset/training_data.pkl", "rb") as f:
+    with open(ConfigClass.train_cfgidx_map_pkl, "rb") as f:
         training_data = pkl.load(f)
-    with open("/home/thanhlc/thanhlc/Data/nbl_dataset/bug_lines_info.pkl", "rb") as f:
+    with open(ConfigClass.bug_lines_info_pkl, "rb") as f:
         bug_lines_info = pkl.load(f)
     count = 0
     count_error = 0
@@ -398,4 +368,3 @@ if __name__ == '__main__':
     # print(cfg_id2idx)
     # test_ids = test_verdict.keys()
     # list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests = build_graph("3024", "u50313", "1044916", test_ids)
->>>>>>> origin/thanh

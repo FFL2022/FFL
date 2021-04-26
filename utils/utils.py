@@ -11,6 +11,9 @@ class ConfigClass(object):
 
     # For training
     train_cfgidx_map_json = "/home/thanhlc/thanhlc/Data/nbl_dataset/training_dat.json"
+    train_cfgidx_map_pkl = "/home/thanhlc/thanhlc/Data/nbl_dataset/training_data.pkl"
+
+    bug_lines_info_pkl = "/home/thanhlc/thanhlc/Data/nbl_dataset/bug_lines_info.pkl"
 
     preprocess_dir = "./preprocessed"
     trained_dir = './trained'

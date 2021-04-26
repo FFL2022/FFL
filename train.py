@@ -9,6 +9,7 @@ from dataloader import default_dataset
 from model import HeteroMPNNPredictor
 from utils.utils import ConfigClass
 import tqdm
+import json
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -87,6 +88,12 @@ def train(model, dataloader, n_epochs):
 
     mean_loss = AverageMeter()
     mean_acc = AverageMeter()
+
+    top_1_meter = AverageMeter()
+    top_2_meter = AverageMeter()
+    top_5_meter = AverageMeter()
+    top_10_meter = AverageMeter()
+
     f1_meter = BinFullMeter()
     best_f1 = 0.0
     for epoch in range(n_epochs):
@@ -94,6 +101,11 @@ def train(model, dataloader, n_epochs):
         mean_loss.reset()
         mean_acc.reset()
         f1_meter.reset()
+        top_10_meter.reset()
+        top_5_meter.reset()
+        top_2_meter.reset()
+        top_1_meter.reset()
+
         model.train()
 
         for i in tqdm.trange(len(dataloader)):
@@ -109,8 +121,29 @@ def train(model, dataloader, n_epochs):
             logits = g.nodes['cfg'].data['logits']
             # using master node, to be implemented
             loss = F.cross_entropy(logits, lb)
+
             _, cal = torch.max(logits, dim=1)
-            print(loss.item())
+
+            lbidxs = torch.nonzero(lb)[1].item()
+
+            preds = g.nodes['cfg'].data['pred'][:, 1]
+            k = min(g.number_of_nodes('cfg'), 10)
+            _, indices = torch.top_k(preds, k)
+            top_10_val = indices[:k].item()
+            top_10_meter.update(int(any([idx in lbidxs for idx in top_10_val])), 1)
+
+            k = min(g.number_of_nodes('cfg'), 5)
+            top_5_val = indices[:k].item()
+            top_5_meter.update(int(any([idx in lbidxs for idx in top_5_val])), 1)
+
+            k = min(g.number_of_nodes('cfg'), 2)
+            top_2_val = indices[:k].item()
+            top_2_meter.update(int(any([idx in lbidxs for idx in top_2_val])), 1)
+
+            k = min(g.number_of_nodes('cfg'), 1)
+            top_1_val = indices[:k].item()
+            top_1_meter.update(int(top_1_val[0] in lbidxs), 1)
+
             mean_loss.update(loss.item(), g.number_of_nodes('cfg'))
             mean_acc.update(torch.sum(cal == lb).item(),
                             g.number_of_nodes('cfg'))
@@ -120,7 +153,8 @@ def train(model, dataloader, n_epochs):
             opt.step()
 
         if epoch % ConfigClass.print_rate == 0:
-            print("loss: {}, acc: {}".format(mean_loss.avg, mean_acc.avg))
+            print("loss: {}, acc: {}, top 10 acc: {}, top 5 acc: {}, top 2 acc {}".format(mean_loss.avg, mean_acc.avg,
+                top_10_meter.avg, top_5_meter.avg, top_2_meter.avg))
             print(f1_meter.get())
         if epoch % ConfigClass.save_rate == 0:
             l_eval, acc_eval, f1_eval = eval(model, dataloader)
@@ -136,8 +170,12 @@ def eval(model, dataloader):
     mean_loss = AverageMeter()
     mean_acc = AverageMeter()
     f1_meter = BinFullMeter()
+    top_1_meter = AverageMeter()
+    top_2_meter = AverageMeter()
+    top_5_meter = AverageMeter()
+    top_10_meter = AverageMeter()
     model.eval()
-
+    out_dict = {}
     for i in tqdm.trange(len(dataloader)):
         g, lb = dataloader[i]
         if g is None or lb is None:
@@ -146,6 +184,27 @@ def eval(model, dataloader):
         # LB will be preprocessed to have
         lb = lb.to(device)
         model(g)
+        lbidxs = torch.nonzero(lb)[1].item()
+
+        preds = g.nodes['cfg'].data['pred'][:, 1]
+        k = min(g.number_of_nodes('cfg'), 10)
+        _, indices = torch.top_k(preds, k)
+        top_10_val = indices[:k].item()
+        top_10_meter.update(int(any([idx in lbidxs for idx in top_10_val.item()])), 1)
+
+        k = min(g.number_of_nodes('cfg'), 5)
+        top_5_val = indices[:k].item()
+        top_5_meter.update(int(any([idx in lbidxs for idx in top_5_val.item()])), 1)
+
+        k = min(g.number_of_nodes('cfg'), 2)
+        top_2_val = indices[:k].item()
+        top_2_meter.update(int(any([idx in lbidxs for idx in top_2_val.item()])), 1)
+
+        k = min(g.number_of_nodes('cfg'), 1)
+        top_1_val = indices[:k].item()
+        top_1_meter.update(int(top_1_val[0] in lbidxs), 1)
+
+
         # 2 scenario:
         # not using master node
         logits = g.nodes['cfg'].data['logits']
@@ -156,8 +215,16 @@ def eval(model, dataloader):
         mean_acc.update(torch.sum(cal == lb).item(),
                         g.number_of_nodes('cfg'))
         f1_meter.update(cal, lb)
-    print("loss: {}, acc: {}".format(mean_loss.avg, mean_acc.avg))
-    print(f1_meter.get())
+    out_dict['top_1'] = top_1_meter.avg
+    out_dict['top_2'] = top_2_meter.avg
+    out_dict['top_5'] = top_5_meter.avg
+    out_dict['top_10'] = top_10_meter.avg
+    out_dict['mean_acc'] = mean_acc.avg
+    out_dict['mean_loss'] = mean_loss.avg
+    out_dict['f1'] = f1_meter.get()
+    with open('eval_dict.json', 'w') as f:
+        json.dump(out_dict, f, indent=2)
+    print(out_dict)
     return mean_loss.avg, mean_acc.avg, f1_meter.get()['aux_f1']
 
 
