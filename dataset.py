@@ -122,7 +122,8 @@ def build_graph(problem_id, user_id, program_id, test_ids):
     list_cfg_edges = {}
     #Remove headers
     nline_removed = remove_lib(filename)
-    
+    print(nline_removed)
+    quit()
     # create CFG
     graph = cfg.CFG("temp.c")
     graph.make_cfg()
@@ -285,22 +286,13 @@ def build_dgl_graph(problem_id, user_id, program_id, test_verdict, graph_opt = 1
         graph_data = {
         ('cfg', 'cfglink_for', 'cfg'): (th.tensor(cfg_cfg_l), th.tensor(cfg_cfg_r)),
         ('cfg', 'cfglink_back', 'cfg'): (th.tensor(cfg_cfg_r), th.tensor(cfg_cfg_l)),
-        ('cfg', 'cfg_passT_link', 'passing_test'): (th.tensor(cfg_ptest_l), th.tensor(cfg_ptest_r)),
-        ('passing_test', 'passT_cfg_link', 'cfg'): (th.tensor(cfg_ptest_r), th.tensor(cfg_ptest_l)),
-        ('cfg', 'ctlink', 'cfg_failT_link'): (th.tensor(cfg_ftest_l), th.tensor(cfg_ftest_r)),
-        ('failing_test', 'failT_cfg_link', 'cfg'): (th.tensor(cfg_ftest_r), th.tensor(cfg_ftest_l))
+        ('cfg', 'cfg_passT_link', 'passing_test'): (th.tensor(cfg_ptest_l, dtype=torch.int32), th.tensor(cfg_ptest_r, dtype=torch.int32)),
+        ('passing_test', 'passT_cfg_link', 'cfg'): (th.tensor(cfg_ptest_r, dtype=torch.int32), th.tensor(cfg_ptest_l, dtype=torch.int32)),
+        ('cfg', 'ctlink', 'cfg_failT_link'): (th.tensor(cfg_ftest_l, dtype=torch.int32), th.tensor(cfg_ftest_r, dtype=torch.int32)),
+        ('failing_test', 'failT_cfg_link', 'cfg'): (th.tensor(cfg_ftest_r, dtype=torch.int32), th.tensor(cfg_ftest_l, dtype=torch.int32))
         }
 
-        try:
-            g = dgl.heterograph(graph_data)
-        except:
-            print(th.tensor(cfg_cfg_l))
-            print(th.tensor(cfg_cfg_r))
-            print(th.tensor(cfg_ptest_l))
-            print(th.tensor(cfg_ptest_r))
-            print(th.tensor(cfg_ftest_l))
-            print(th.tensor(cfg_ftest_r))
-            quit()
+        g = dgl.heterograph(graph_data)
         #CFG_feats
         cfg_label_corpus = ["entry_node", "COMMON", "IF", "ELSE", "ELSE_IF", "END_IF", "FOR", "WHILE", "DO_WHILE", "PSEUDO", "CALL", "END"]
         cfg_labels = [None] * g.num_nodes("cfg")
@@ -339,27 +331,25 @@ if __name__ == '__main__':
     with open("/home/thanhlc/thanhlc/Data/nbl_dataset/bug_lines_info.pkl", "rb") as f:
         bug_lines_info = pkl.load(f)
     count = 0
-    for key, value in training_data.items():
-        info = key.split("-")
-        problem_id = info[0]
-        user_id = info[1]
-        program_id = info[2]
-        test_verdict = all_test_verdict[problem_id][int(program_id)]
-        try:
-            G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(problem_id, user_id, program_id, test_verdict, model = embedding_model)
-            count += 1
-        except TypeError:
-            pass
-        except KeyError:
-            pass
-    print(count)   
-        # for line in value:
-        #     if line not in cfg_id2idx.keys():
-        #         print("Problem id:", problem_id, "User id", user_id, "Program id: ", program_id)
-        #         print(bug_lines_info[key][line])
+    # for key, value in training_data.items():
+    #     info = key.split("-")
+    #     problem_id = info[0]
+    #     user_id = info[1]
+    #     program_id = info[2]
+    #     test_verdict = all_test_verdict[problem_id][int(program_id)]
+    #     try:
+    #         G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(problem_id, user_id, program_id, test_verdict, model = embedding_model)
+    #         count += 1
+    #     except:
+    #         pass
+    # print(count)   
+    #     # for line in value:
+    #     #     if line not in cfg_id2idx.keys():
+    #     #         print("Problem id:", problem_id, "User id", user_id, "Program id: ", program_id)
+    #     #         print(bug_lines_info[key][line])
 
-    # test_verdict = all_test_verdict["3024"][1028087]
-    # print(training_data["{}-{}-{}".format(3024,"u50249",1028087)])
-    # print(bug_lines_info["{}-{}-{}".format(3024,"u50249",1028087)])
-    # G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph("3024", "1028087", test_verdict, model= embedding_model)
-    # print(cfg_id2idx)
+    test_verdict = all_test_verdict["3024"][1028087]
+    print(training_data["{}-{}-{}".format(3024,"u50249",1028087)])
+    print(bug_lines_info["{}-{}-{}".format(3024,"u50249",1028087)])
+    G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph("3024", "u50249", "1028087", test_verdict, model= embedding_model)
+    print(cfg_id2idx)
