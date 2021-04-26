@@ -114,8 +114,8 @@ def traverse_ast(node, index, parent_index):
             tmp_n.update(n)
     return index, tmp_n, tmp_e
 
-def build_graph(problem_id, program_id, test_ids):
-    filename = "/home/thanhlc/thanhlc/Data/nbl_dataset/sources/{}/{}.c".format(problem_id,program_id)
+def build_graph(problem_id, user_id, program_id, test_ids):
+    filename = "/home/thanhlc/thanhlc/Data/nbl_dataset/data/sources/{}/{}/{}.c".format(problem_id, user_id, program_id)
     
     # print("======== CFG ========")
     list_cfg_nodes = {}
@@ -196,7 +196,7 @@ def read_cfile(filename):
     pass
 
 
-def build_dgl_graph(problem_id, program_id, test_verdict, graph_opt = 1, tokenizer_opt = 1, model = None):
+def build_dgl_graph(problem_id, user_id, program_id, test_verdict, graph_opt = 1, tokenizer_opt = 1, model = None):
     ### Graph option
     # CFG + Test 
     # CFG + Test + AST
@@ -210,7 +210,7 @@ def build_dgl_graph(problem_id, program_id, test_verdict, graph_opt = 1, tokeniz
         embedding_model = model
 
     test_ids = list(test_verdict.keys())
-    list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests = build_graph(problem_id, program_id, test_ids)
+    list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests = build_graph(problem_id, user_id, program_id, test_ids)
     print(list_cfg_nodes)
     ast_id2idx = {}
     ast_idx2id = {}
@@ -338,18 +338,25 @@ if __name__ == '__main__':
         training_data = pkl.load(f)
     with open("/home/thanhlc/thanhlc/Data/nbl_dataset/bug_lines_info.pkl", "rb") as f:
         bug_lines_info = pkl.load(f)
-
+    count = 0
     for key, value in training_data.items():
         info = key.split("-")
         problem_id = info[0]
         user_id = info[1]
         program_id = info[2]
         test_verdict = all_test_verdict[problem_id][int(program_id)]
-        G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(problem_id, program_id, test_verdict, model = embedding_model)
-        for line in value:
-            if line not in cfg_id2idx.keys():
-                print("Problem id:", problem_id, "User id", user_id, "Program id: ", program_id)
-                print(bug_lines_info[key][line])
+        try:
+            G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(problem_id, user_id, program_id, test_verdict, model = embedding_model)
+            count += 1
+        except TypeError:
+            pass
+        except KeyError:
+            pass
+    print(count)   
+        # for line in value:
+        #     if line not in cfg_id2idx.keys():
+        #         print("Problem id:", problem_id, "User id", user_id, "Program id: ", program_id)
+        #         print(bug_lines_info[key][line])
 
     # test_verdict = all_test_verdict["3024"][1028087]
     # print(training_data["{}-{}-{}".format(3024,"u50249",1028087)])
