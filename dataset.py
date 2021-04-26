@@ -116,7 +116,7 @@ def traverse_ast(node, index, parent_index):
             tmp_n.update(n)
     return index, tmp_n, tmp_e
 
-def build_graph(problem_id, program_id, test_ids):
+def build_graph(problem_id, user_id, program_id, test_ids):
     filename = "{}/{}/{}.c".format(ConfigClass.nbl_source_path,
                                    problem_id,program_id)
 

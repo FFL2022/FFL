@@ -50,8 +50,8 @@ class BugLocalizeGraphDataset(DGLDataset):
 
     def process(self):
         from dataset import build_dgl_graph
-        train_map = json.load(open(
-            os.path.join(self.raw_dir, 'training_dat.json'), 'r'))
+        train_map = pkl.load(open(
+            ConfigClass.train_cfgidx_map_pkl, 'rb'))
         test_verdict = pkl.load(open(
             os.path.join(self.raw_dir, 'test_verdict.pkl'), 'rb'))
         self.temp_keys = list(train_map.keys())
@@ -72,7 +72,7 @@ class BugLocalizeGraphDataset(DGLDataset):
             print("Program id {}, problem id {}".format(program_id, problem_id))
             # Temporary only:
             try:
-                G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(problem_id, program_id, instance_verdict, model)
+                G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(problem_id, uid, program_id, instance_verdict, model=model)
             except:
                 if problem_id not in error_instance.keys():
                     error_instance[problem_id] = []
@@ -97,6 +97,7 @@ class BugLocalizeGraphDataset(DGLDataset):
     def save(self):
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
+        print(len(self.gs))
         save_graphs(self.graph_save_path, self.gs)
         save_info(self.info_path, {'ast_id2idx': self.ast_id2idx,
                                    'labels': self.lbs,

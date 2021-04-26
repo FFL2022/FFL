@@ -112,8 +112,12 @@ def train(model, dataloader, n_epochs):
             g, lb = dataloader[i]
             if g is None or lb is None:
                 continue
-            g = g.to(device)
             # LB will be preprocessed to have
+            non_zeros_lbs = torch.nonzero(lb)
+            if non_zeros_lbs.shape[0] == 0:
+                continue
+            g = g.to(device)
+            lbidxs = torch.flatten(non_zeros_lbs).tolist()
             lb = lb.to(device)
             model(g)
             # 2 scenario:
@@ -124,28 +128,27 @@ def train(model, dataloader, n_epochs):
 
             _, cal = torch.max(logits, dim=1)
 
-            lbidxs = torch.nonzero(lb)[1].item()
 
             preds = g.nodes['cfg'].data['pred'][:, 1]
             k = min(g.number_of_nodes('cfg'), 10)
-            _, indices = torch.top_k(preds, k)
-            top_10_val = indices[:k].item()
+            _, indices = torch.topk(preds, k)
+            top_10_val = indices[:k].tolist()
             top_10_meter.update(int(any([idx in lbidxs for idx in top_10_val])), 1)
 
             k = min(g.number_of_nodes('cfg'), 5)
-            top_5_val = indices[:k].item()
+            top_5_val = indices[:k].tolist()
             top_5_meter.update(int(any([idx in lbidxs for idx in top_5_val])), 1)
 
             k = min(g.number_of_nodes('cfg'), 2)
-            top_2_val = indices[:k].item()
+            top_2_val = indices[:k].tolist()
             top_2_meter.update(int(any([idx in lbidxs for idx in top_2_val])), 1)
 
             k = min(g.number_of_nodes('cfg'), 1)
-            top_1_val = indices[:k].item()
+            top_1_val = indices[:k].tolist()
             top_1_meter.update(int(top_1_val[0] in lbidxs), 1)
 
             mean_loss.update(loss.item(), g.number_of_nodes('cfg'))
-            mean_acc.update(torch.sum(cal == lb).item(),
+            mean_acc.update(torch.sum(cal == lb).item()/g.number_of_nodes('cfg'),
                             g.number_of_nodes('cfg'))
             f1_meter.update(cal, lb)
             opt.zero_grad()
@@ -180,28 +183,33 @@ def eval(model, dataloader):
         g, lb = dataloader[i]
         if g is None or lb is None:
             continue
+
+        non_zeros_lbs = torch.nonzero(lb)
+        if non_zeros_lbs.shape[0] == 0:
+            continue
+
         g = g.to(device)
         # LB will be preprocessed to have
         lb = lb.to(device)
         model(g)
-        lbidxs = torch.nonzero(lb)[1].item()
+        lbidxs = torch.flatten(non_zeros_lbs).tolist()
 
         preds = g.nodes['cfg'].data['pred'][:, 1]
         k = min(g.number_of_nodes('cfg'), 10)
-        _, indices = torch.top_k(preds, k)
-        top_10_val = indices[:k].item()
-        top_10_meter.update(int(any([idx in lbidxs for idx in top_10_val.item()])), 1)
+        _, indices = torch.topk(preds, k)
+        top_10_val = indices[:k].tolist()
+        top_10_meter.update(int(any([idx in lbidxs for idx in top_10_val])), 1)
 
         k = min(g.number_of_nodes('cfg'), 5)
-        top_5_val = indices[:k].item()
-        top_5_meter.update(int(any([idx in lbidxs for idx in top_5_val.item()])), 1)
+        top_5_val = indices[:k].tolist()
+        top_5_meter.update(int(any([idx in lbidxs for idx in top_5_val])), 1)
 
         k = min(g.number_of_nodes('cfg'), 2)
-        top_2_val = indices[:k].item()
-        top_2_meter.update(int(any([idx in lbidxs for idx in top_2_val.item()])), 1)
+        top_2_val = indices[:k].tolist()
+        top_2_meter.update(int(any([idx in lbidxs for idx in top_2_val])), 1)
 
         k = min(g.number_of_nodes('cfg'), 1)
-        top_1_val = indices[:k].item()
+        top_1_val = indices[:k].tolist()
         top_1_meter.update(int(top_1_val[0] in lbidxs), 1)
 
 
@@ -212,7 +220,7 @@ def eval(model, dataloader):
         loss = F.cross_entropy(logits, lb)
         _, cal = torch.max(logits, dim=1)
         mean_loss.update(loss.item(), g.number_of_nodes('cfg'))
-        mean_acc.update(torch.sum(cal == lb).item(),
+        mean_acc.update(torch.sum(cal == lb).item()/g.number_of_nodes('cfg'),
                         g.number_of_nodes('cfg'))
         f1_meter.update(cal, lb)
     out_dict['top_1'] = top_1_meter.avg
