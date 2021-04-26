@@ -92,17 +92,32 @@ def traverse_ast(node, index, parent_index):
         tmp_e[(parent_index, index+1)] = 1
     index += 1
     curr_index = index
-    tmp_n[index] = [get_token(node), node.coord.line]
+    node_token = get_token(node)
+    if node_token == "TypeDecl":
+        coord_line = node.type.coord.line
+    else:
+        coord_line = node.coord.line
+
+    tmp_n[index] = [node_token, coord_line]
+    # try: 
+    #     tmp_n[index] = [get_token(node), node.coord.line]
+    # except AttributeError:
+    #     print(node.children())
+    #     # print(node.declname)
+    #     # print(node.quals)
+    #     # print(node.type.names)
+    #     # print(node.type.coord)
     for edgetype, child in node.children():
-        index, n, e = traverse_ast(child, index, curr_index)
-        tmp_e.update(e)
-        tmp_n.update(n)
+        if child != None:
+            index, n, e = traverse_ast(child, index, curr_index)
+            tmp_e.update(e)
+            tmp_n.update(n)
     return index, tmp_n, tmp_e
 
 def build_graph(problem_id, program_id, test_ids):
     filename = "/home/thanhlc/thanhlc/Data/nbl_dataset/sources/{}/{}.c".format(problem_id,program_id)
     
-    print("======== CFG ========")
+    # print("======== CFG ========")
     list_cfg_nodes = {}
     list_cfg_edges = {}
     #Remove headers
@@ -125,8 +140,8 @@ def build_graph(problem_id, program_id, test_ids):
             list_cfg_edges.update(e)
     # print(list_cfg_nodes)
     # print(list_cfg_edges)
-    print("Done !!!")
-    print("======== AST ========")
+    # print("Done !!!")
+    # print("======== AST ========")
     index = 0
     list_ast_nodes = {}
     list_ast_edges = {}
@@ -138,8 +153,8 @@ def build_graph(problem_id, program_id, test_ids):
         
     # print(list_ast_node)
     # print(list_ast_edge)
-    print("Done !!!")
-    print("======== Mapping AST-CFG ========")
+    # print("Done !!!")
+    # print("======== Mapping AST-CFG ========")
     cfg_to_ast = {}
     for id, value in list_ast_nodes.items():
         _, line = value
@@ -155,15 +170,14 @@ def build_graph(problem_id, program_id, test_ids):
 
     os.remove("temp.c")
     cfg_to_tests = {}
-    print("Done !!!")
-    print("======== Mapping tests-CFG ========")
+    # print("Done !!!")
+    # print("======== Mapping tests-CFG ========")
     for test in test_ids:
         covfile = "/home/thanhlc/thanhlc/Data/nbl_dataset/data/tests/{}/{}-{}.gcov".format(problem_id, test, program_id)
         cfg_to_tests[test] = get_coverage(covfile, nline_removed)
     
-    # print(cfg_to_tests)
     
-    print("======== Mapping tests-AST ========")
+    # print("======== Mapping tests-AST ========")
     ast_to_tests = {}
     
     for test in test_ids:
@@ -175,14 +189,14 @@ def build_graph(problem_id, program_id, test_ids):
                 except KeyError:
                     pass
     # print(ast_to_tests)
-    print("Done !!!")
+    # print("Done !!!")
     return list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests
 
 def read_cfile(filename):
     pass
 
 
-def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph_opt = 1, tokenizer_opt = 1):
+def build_dgl_graph(problem_id, program_id, test_verdict, graph_opt = 1, tokenizer_opt = 1, model = None):
     ### Graph option
     # CFG + Test 
     # CFG + Test + AST
@@ -191,8 +205,13 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
     # 1. A Thanh gui (https://github.com/dspinellis/tokenizer/)
     # 2. TransCoder (https://github.com/facebookresearch/TransCoder/blob/master/preprocessing/src/code_tokenizer.py)
     # 3. CoCoNuT (https://github.com/lin-tan/CoCoNut-Artifact/blob/master/fairseq-context/fairseq/tokenizer.py)
+    print("======== Buiding DGL Graph of {} =========".format(program_id))
+    if model != None:
+        embedding_model = model
+
     test_ids = list(test_verdict.keys())
     list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests = build_graph(problem_id, program_id, test_ids)
+    print(list_cfg_nodes)
     ast_id2idx = {}
     ast_idx2id = {}
     index = 0
@@ -216,13 +235,11 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
         test_id2idx[test_id] = index
         test_idx2id[index] = test_id
 
-    print("======== Buiding DGL Graph =========")
     ast_ast_l = []
     ast_ast_r = []
     for l, r in list_ast_edges:
         ast_ast_l.append(ast_id2idx[l])
         ast_ast_r.append(ast_id2idx[r])
-    # num_nodes = len(list_ast_nodes.keys())
 
     cfg_cfg_l = []
     cfg_cfg_r = []
@@ -243,7 +260,7 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
     ast_ptest_r = []
     for id, ast_nodes in ast_to_tests.items():
         for node, link in ast_nodes.items():
-            if link == 1:
+            if link == 1 and node in ast_id2idx:
                 if test_verdict[id]:
                     ast_ptest_l.append(ast_id2idx[node])
                     ast_ptest_r.append(test_id2idx[id])
@@ -256,7 +273,7 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
     cfg_ptest_r = []
     for id, cfg_nodes in cfg_to_tests.items():
         for node, link in cfg_nodes.items():
-            if link == 1:
+            if link == 1 and node in cfg_id2idx:
                 if test_verdict[id]:
                     cfg_ptest_l.append(cfg_id2idx[node])
                     cfg_ptest_r.append(test_id2idx[id])
@@ -274,7 +291,16 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
         ('failing_test', 'failT_cfg_link', 'cfg'): (th.tensor(cfg_ftest_r), th.tensor(cfg_ftest_l))
         }
 
-        g = dgl.heterograph(graph_data)
+        try:
+            g = dgl.heterograph(graph_data)
+        except:
+            print(th.tensor(cfg_cfg_l))
+            print(th.tensor(cfg_cfg_r))
+            print(th.tensor(cfg_ptest_l))
+            print(th.tensor(cfg_ptest_r))
+            print(th.tensor(cfg_ftest_l))
+            print(th.tensor(cfg_ftest_r))
+            quit()
         #CFG_feats
         cfg_label_corpus = ["entry_node", "COMMON", "IF", "ELSE", "ELSE_IF", "END_IF", "FOR", "WHILE", "DO_WHILE", "PSEUDO", "CALL", "END"]
         cfg_labels = [None] * g.num_nodes("cfg")
@@ -305,8 +331,28 @@ def build_dgl_graph(problem_id, program_id, test_verdict, embedding_model, graph
     return g, ast_id2idx, cfg_id2idx, test_id2idx
     
 if __name__ == '__main__':
-    model = fasttext.load_model('/home/thanhlc/thanhlc/Data/c_pretrained.bin')
+    embedding_model = fasttext.load_model('/home/thanhlc/thanhlc/Data/c_pretrained.bin')
     with open("/home/thanhlc/thanhlc/Data/nbl_dataset/test_verdict.pkl", "rb") as f:
-        all_data = pkl.load(f)
-    test_verdict = all_data["3055"][1049262]
-    G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph("3055", "1049262", test_verdict, model, graph_opt= 1, tokenizer_opt = 1)
+        all_test_verdict = pkl.load(f)
+    with open("/home/thanhlc/thanhlc/Data/nbl_dataset/training_data.pkl", "rb") as f:
+        training_data = pkl.load(f)
+    with open("/home/thanhlc/thanhlc/Data/nbl_dataset/bug_lines_info.pkl", "rb") as f:
+        bug_lines_info = pkl.load(f)
+
+    for key, value in training_data.items():
+        info = key.split("-")
+        problem_id = info[0]
+        user_id = info[1]
+        program_id = info[2]
+        test_verdict = all_test_verdict[problem_id][int(program_id)]
+        G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(problem_id, program_id, test_verdict, model = embedding_model)
+        for line in value:
+            if line not in cfg_id2idx.keys():
+                print("Problem id:", problem_id, "User id", user_id, "Program id: ", program_id)
+                print(bug_lines_info[key][line])
+
+    # test_verdict = all_test_verdict["3024"][1028087]
+    # print(training_data["{}-{}-{}".format(3024,"u50249",1028087)])
+    # print(bug_lines_info["{}-{}-{}".format(3024,"u50249",1028087)])
+    # G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph("3024", "1028087", test_verdict, model= embedding_model)
+    # print(cfg_id2idx)
