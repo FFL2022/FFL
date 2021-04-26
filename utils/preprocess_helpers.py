@@ -54,4 +54,6 @@ def remove_lib(filename):
                     t.write(line)
                     if not start:
                         start = True
+        # with open("temp.c", "r") as x:
+        #     print(x.read())
     return count

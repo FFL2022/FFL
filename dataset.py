@@ -249,10 +249,12 @@ def build_dgl_graph(problem_id, user_id, program_id, test_verdict, graph_opt = 1
 
     ast_cfg_l = []
     ast_cfg_r = []
+    
     for cfg_node, ast_nodes in cfg_to_ast.items():
-        for node in ast_nodes:
-            ast_cfg_l.append(ast_id2idx[node])
-            ast_cfg_r.append(cfg_id2idx[cfg_node])
+        if cfg_node in cfg_id2idx:
+            for node in ast_nodes:
+                ast_cfg_l.append(ast_id2idx[node])
+                ast_cfg_r.append(cfg_id2idx[cfg_node])
 
     ast_ftest_l = []
     ast_ftest_r = []
@@ -329,25 +331,30 @@ if __name__ == '__main__':
         training_data = pkl.load(f)
     with open("/home/thanhlc/thanhlc/Data/nbl_dataset/bug_lines_info.pkl", "rb") as f:
         bug_lines_info = pkl.load(f)
-    # count = 0
-    # for key, value in training_data.items():
-    #     info = key.split("-")
-    #     problem_id = info[0]
-    #     user_id = info[1]
-    #     program_id = info[2]
-    #     test_verdict = all_test_verdict[problem_id][int(program_id)]
-    #     G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(problem_id, user_id, program_id, test_verdict, model = embedding_model)
-
-    # print(count)   
+    count = 0
+    count_error = 0
+    for key, value in training_data.items():
+        info = key.split("-")
+        problem_id = info[0]
+        user_id = info[1]
+        program_id = info[2]
+        test_verdict = all_test_verdict[problem_id][int(program_id)]
+        try:
+            G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(problem_id, user_id, program_id, test_verdict, model = embedding_model)
+        except FileNotFoundError:
+            print("Missing coverage file")
+        except plyparser.ParseError:
+            count_error += 1
+        
         # for line in value:
         #     if line not in cfg_id2idx.keys():
         #         print("Problem id:", problem_id, "User id", user_id, "Program id: ", program_id)
         #         print(bug_lines_info[key][line])
 
-    test_verdict = all_test_verdict["3024"][1044916]
-    print(training_data["{}-{}-{}".format(3024,"u50456",1044916)])
-    print(bug_lines_info["{}-{}-{}".format(3024,"u50456",1044916)])
-    G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph("3024", "u50456", "1030095", test_verdict, model= embedding_model)
-    print(cfg_id2idx)
-    test_ids = test_verdict.keys()
-    list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests = build_graph("3024", "u50313", "1030095", test_ids)
+    # test_verdict = all_test_verdict["3024"][1044916]
+    # print(training_data["{}-{}-{}".format(3024,"u50456",1044916)])
+    # print(bug_lines_info["{}-{}-{}".format(3024,"u50456",1044916)])
+    # G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph("3024", "u50456", "1044916", test_verdict, model= embedding_model)
+    # print(cfg_id2idx)
+    # test_ids = test_verdict.keys()
+    # list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests = build_graph("3024", "u50313", "1044916", test_ids)
