@@ -88,6 +88,44 @@ class MPNNBlockSingleEdge(torch.nn.Module):
         return g
 
 
+class MPNNBlockMultSingleEtype(torch.nn.Module):
+    def __init__(self, hidden_dim, out_dim, activation=nn.ReLU()):
+        super(MPNNBlockMultSingleEtype, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.activation = activation
+        self.edge_transform = nn.Linear(hidden_dim, out_dim,
+                                        bias=False)
+        # self.bias = nn.Parameter(torch.FloatTensor(out_dim))
+        self.aggregator = dgl.function.mean
+        self.out_dim = out_dim
+        self.self_loop = nn.Linear(hidden_dim, out_dim)
+        # TODO: add self loop to: each type of edge, add linear, etc
+        # TODO: sigmoid weight
+
+    def compute_send_messages(self, edges, device):
+        x_src = edges.src['h']  # N_n, hidden_dim
+        msg = self.edge_transform(x_src)
+        return {'msg': msg}
+
+    def activate_node(self, nodes, name_in, name_out):
+        return {name_out: self.activation(nodes.data[name_in])}
+
+    def add_self_loop(self, nodes):
+        if 'h1' in nodes.data:
+            return {'h': self.self_loop(nodes.data['h']) + nodes.data['h1']}
+        return {'h': self.self_loop(nodes.data['h'])}
+
+    def forward(self, g: dgl.DGLGraph):
+        if g.number_of_edges() > 0:
+            g.update_all(lambda edges: self.compute_send_messages(edges, g.device),
+                         self.aggregator('msg', 'h1'),
+                         )
+        g.apply_nodes(self.add_self_loop)
+        g.apply_nodes(lambda nodes: self.activate_node(nodes, 'h', 'h'))
+        return g
+
+
+
 class HeteroMPNNBlockSimp(torch.nn.Module):
     ''' Propagate infor through each type of edge'''
     def __init__(self, meta_graph,
@@ -103,7 +141,7 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
             # etype is a tuple of node type, etype, dst type
             t_src, t_e, t_dst = c_etype
             # 2. for each meta graph, create a mpnn block
-            per_type_linear[t_e] = MPNNBlockSingleEdge(hidden_dim,
+            per_type_linear[t_e] = MPNNBlockMultSingleEtype(hidden_dim,
                                                  hidden_edim, out_dim)
             self.funcs[t_e] = (per_type_linear[t_e].compute_send_messages,
                                per_type_linear[t_e].aggregator('msg', 'h'))
