@@ -99,6 +99,8 @@ class MPNNBlockMultSingleEtype(torch.nn.Module):
         self.aggregator = dgl.function.mean
         self.out_dim = out_dim
         self.self_loop = nn.Linear(hidden_dim, out_dim)
+        nn.init.xavier_normal(self.edge_transform.weight)
+        nn.init.xavier_normal(self.self_loop.weight)
         # TODO: add self loop to: each type of edge, add linear, etc
         # TODO: sigmoid weight
 
@@ -140,6 +142,7 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
         self.funcs = {}
         self.act = nn.ReLU()
         self.bias = nn.Parameter(torch.FloatTensor(1, out_dim))
+        nn.init.xavier_normal(self.bias)
         for c_etype in self.meta_graph:
             # etype is a tuple of node type, etype, dst type
             t_src, t_e, t_dst = c_etype
@@ -152,8 +155,8 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
         self.per_type_linear = torch.nn.ModuleDict(per_type_linear)
 
     def add_self_loop_act(self, nodes):
-        print(nodes)
-        return {'h': self.act(nodes.data['h'] + self.bias)}
+        if nodes.batch_size > 0:
+            return {'h': self.act(nodes.data['h'] + self.bias)}
 
     def forward(self, h_g):
         # 4. Passing message through each of these sub graph onces each
