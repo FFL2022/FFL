@@ -122,9 +122,10 @@ class HeteroMPNNPredictor(torch.nn.Module):
         h_g = self.h_process2(h_g)
         h_g.nodes['cfg'].data['h'] = torch.cat((
             cfg_feats, h_g.nodes['cfg'].data['h']), -1)
+
         if self.ast_label_encoder != None and self.ast_content_encoder != None:
             h_g.nodes['ast'].data['h'] = torch.cat((
-                ast_feats, h_g.nodes['ast'].data['h']), -1)    
+                ast_feats, h_g.nodes['ast'].data['h']), -1)
         if h_g.number_of_nodes('passing_test') > 0:
             h_g.nodes['passing_test'].data['h'] = torch.cat((
                 ptest_feats, h_g.nodes['passing_test'].data['h']), -1)

@@ -104,6 +104,7 @@ class MPNNBlockMultSingleEtype(torch.nn.Module):
 
     def compute_send_messages(self, edges):
         x_src = edges.src['h']  # N_n, hidden_dim
+        print(x_src.shape)
         msg = self.edge_transform(x_src)
         return {'msg': msg}
 
