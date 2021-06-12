@@ -138,6 +138,8 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
         self.meta_graph = meta_graph
         per_type_linear = {}
         self.funcs = {}
+        self.act = nn.ReLU()
+        self.bias = nn.Parameter(torch.FloatTensor(1, out_dim))
         for c_etype in self.meta_graph:
             # etype is a tuple of node type, etype, dst type
             t_src, t_e, t_dst = c_etype
@@ -159,4 +161,5 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
             else:
                 temp_func[c_etype[1]] = (lambda x: {}, lambda x: {})
         h_g.multi_update_all(temp_func, 'sum')
+        h_g.apply_nodes(lambda nodes: {'h': self.act(nodes.data['h'] + self.bias)})
         return h_g
