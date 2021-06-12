@@ -48,7 +48,9 @@ def remove_lib(filename):
     with open(filename, "r") as f:
         with open("temp.c", "w") as t:
             for line in f:
-                if line[0] in ("#") or len(line.strip()) == 0 and not start:
+                if ((line.strip() != '' and line.strip()[0] == "#") or
+                    (line.strip() != '' and line.strip()[:1] in ('//')) or
+                     line.strip() == '' and not start):
                     count += 1
                 else:
                     t.write(line)

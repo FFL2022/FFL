@@ -11,10 +11,13 @@ import torch
 
 class BugLocalizeGraphDataset(DGLDataset):
     def __init__(self, raw_dir=ConfigClass.raw_dir,
-                 save_dir=ConfigClass.preprocess_dir):
+                 save_dir=ConfigClass.preprocess_dir,
+                 dataset_opt='nbl', graph_opt=1):
         self.graph_save_path = os.path.join(save_dir, 'dgl_graphs.bin')
         self.info_path = os.path.join(save_dir, 'info.pkl')
         self.mode = 'train'
+        self.dataset_opt = dataset_opt
+        self.graph_opt = graph_opt
 
         super(BugLocalizeGraphDataset, self).__init__(
             name='key_value_dataset',
@@ -50,10 +53,17 @@ class BugLocalizeGraphDataset(DGLDataset):
 
     def process(self):
         from dataset import build_dgl_graph
-        train_map = pkl.load(open(
-            ConfigClass.train_cfgidx_map_pkl, 'rb'))
-        test_verdict = pkl.load(open(
-            os.path.join(self.raw_dir, 'test_verdict.pkl'), 'rb'))
+        
+        if self.dataset_opt == 'nbl':
+            train_map = pkl.load(open(
+                ConfigClass.train_cfgidx_map_pkl, 'rb'))
+            test_verdict = pkl.load(open(
+                os.path.join(self.raw_dir, 'test_verdict.pkl'), 'rb'))
+        if self.dataset_opt == 'codeflaws':
+            train_map = pkl.load(open(
+                "/home/minhld/codeflaws/training_data.pkl", 'rb'))
+            test_verdict = pkl.load(open(
+                "/home/minhld/codeflaws/test_verdict.pkl", 'rb'))
         self.temp_keys = list(train_map.keys())
         self.gs = []
         self.lbs = []
@@ -63,20 +73,27 @@ class BugLocalizeGraphDataset(DGLDataset):
         self.keys = []
 
         model = fasttext.load_model(ConfigClass.pretrained_fastext)
-        error_instance = {}
+        error_instance = []
         for i, key in enumerate(self.temp_keys):
-            # Get the mapping
-            # Get the train index
-            problem_id, uid, program_id = key.split("-")
-            instance_verdict = test_verdict[problem_id][int(program_id)]
-            print("Program id {}, problem id {}".format(program_id, problem_id))
-            # Temporary only:
+            nbl, codeflaws = None, None
+            if self.dataset_opt == 'nbl':
+                problem_id, uid, program_id = key.split("-")
+                nbl = {}
+                nbl['problem_id'] = problem_id
+                nbl['uid'] = uid
+                nbl['program_id'] = program_id
+                nbl['test_verdict'] = test_verdict[problem_id][int(program_id)]
+            if self.dataset_opt == 'codeflaws':
+                info = key.split("-")
+                codeflaws = {}
+                codeflaws['container'] = key
+                codeflaws['c_source'] = "{}-{}-{}".format(info[0], info[1], info[3])
+                codeflaws['test_verdict'] = test_verdict["{}-{}".format(info[0], info[1])][info[3]]
             try:
-                G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(problem_id, uid, program_id, instance_verdict, model=model)
+                G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(nbl=nbl, codeflaws=codeflaws, model=model, graph_opt=self.graph_opt)
             except:
-                if problem_id not in error_instance.keys():
-                    error_instance[problem_id] = []
-                error_instance[problem_id].append(program_id)
+                if key not in error_instance:
+                    error_instance.append(key)
                 json.dump(error_instance, open('error_instance.json', 'w'))
                 continue
             self.keys.append(key)
@@ -87,6 +104,9 @@ class BugLocalizeGraphDataset(DGLDataset):
             if i == 0:
                 self.cfg_label_feats = G.nodes['cfg'].data['label'].shape[-1]
                 self.cfg_content_feats = G.nodes['cfg'].data['content'].shape[-1]
+                if (self.graph_opt == 2):
+                    self.ast_label_feats = G.nodes['ast'].data['label'].shape[-1]
+                    self.ast_content_feats = G.nodes['ast'].data['content'].shape[-1]
             # Process label
             # or not
             self.lbs.append(train_map[key])
@@ -97,17 +117,30 @@ class BugLocalizeGraphDataset(DGLDataset):
     def save(self):
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
-        print(len(self.gs))
+        # print(len(self.gs))
         save_graphs(self.graph_save_path, self.gs)
-        save_info(self.info_path, {'ast_id2idx': self.ast_id2idx,
-                                   'labels': self.lbs,
-                                   'keys': self.keys,
-                                   'cfg_id2idx': self.cfg_id2idx,
-                                   'test_id2idx': self.test_id2idx,
-                                   'cfg_content_feats': self.cfg_content_feats,
-                                   'cfg_label_feats': self.cfg_label_feats
-                                   }
-                  )
+        if (self.graph_opt == 1):
+            save_info(self.info_path, {'ast_id2idx': self.ast_id2idx,
+                                    'labels': self.lbs,
+                                    'keys': self.keys,
+                                    'cfg_id2idx': self.cfg_id2idx,
+                                    'test_id2idx': self.test_id2idx,
+                                    'cfg_content_feats': self.cfg_content_feats,
+                                    'cfg_label_feats': self.cfg_label_feats,
+                                    }
+                    )
+        if (self.graph_opt == 2):
+            save_info(self.info_path, {'ast_id2idx': self.ast_id2idx,
+                                    'labels': self.lbs,
+                                    'keys': self.keys,
+                                    'cfg_id2idx': self.cfg_id2idx,
+                                    'test_id2idx': self.test_id2idx,
+                                    'cfg_content_feats': self.cfg_content_feats,
+                                    'cfg_label_feats': self.cfg_label_feats,
+                                    'ast_content_feats': self.ast_content_feats,
+                                    'ast_label_feats': self.ast_label_feats
+                                    }
+                    )
 
     def load(self):
         self.gs, _ = load_graphs(self.graph_save_path)
@@ -117,6 +150,9 @@ class BugLocalizeGraphDataset(DGLDataset):
         self.cfg_id2idx = info_dict['cfg_id2idx']
         self.cfg_content_feats = info_dict['cfg_content_feats']
         self.cfg_label_feats = info_dict['cfg_label_feats']
+        if (self.graph_opt == 2):
+            self.ast_content_feats = info_dict['ast_content_feats']
+            self.ast_label_feats = info_dict['ast_label_feats']
 
     def has_cache(self):
         if os.path.exists(self.graph_save_path) and\
@@ -125,4 +161,4 @@ class BugLocalizeGraphDataset(DGLDataset):
         return False
 
 
-default_dataset = BugLocalizeGraphDataset()
+# default_dataset = BugLocalizeGraphDataset()

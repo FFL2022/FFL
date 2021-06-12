@@ -345,10 +345,13 @@ def tokenize_cpp(s, keep_comments=False):
                     if len(com) > 0:
                         tokens.append(com)
                 else:
-                    tokens.append(process_string(
-                        tok, CPP_CHAR2TOKEN, CPP_TOKEN2CHAR, False))
+                    tokens.extend(tok.split())
             else:
-                tokens.append(tok)
+                count = len(re.findall(r'[A-Z]', tok))
+                if count==2 and len(tok) > 2 and tok[0].isupper():
+                    tokens.extend(re.findall('[A-Z][^A-Z]*', tok))
+                else:
+                    tokens.append(tok)
         return tokens
     except KeyboardInterrupt:
         raise

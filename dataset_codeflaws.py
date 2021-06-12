@@ -8,20 +8,52 @@ from cfg.cfg_nodes import CFGNode
 from pycparser import c_ast, plyparser
 import fasttext
 import torch.nn.functional
-import pygraphviz as pgv
+# import pygraphviz as pgv
 import sqlite3
 import numpy
 import time
-from utils.preprocess_helpers import make_dir_if_not_exists as mkdir, write_to_file as write, remove_lib, get_coverage
+# from utils.preprocess_helpers import make_dir_if_not_exists as mkdir, write_to_file as write, remove_lib, get_coverage
 import numpy as np
 import subprocess
 from tqdm import tqdm
 import pickle as pkl
 from transcoder import code_tokenizer
 from coconut.tokenizer import Tokenizer
-from utils.utils import ConfigClass
+import pickle as pickle
+import json
 from sklearn.preprocessing import MultiLabelBinarizer
+from utils.utils import ConfigClass
 
+def get_coverage(filename, nline_removed):
+    
+    def process_line(line):
+        tag, line_no, code = line.strip().split(':', 2)
+        return tag.strip(), int(line_no.strip()), code
+    
+    coverage = {}
+    with open(filename, "r") as f:
+        gcov_file = f.read()
+        for idx, line in enumerate(gcov_file.split('\n')):
+            print(line)
+            if idx <= 4 or len(line.strip()) == 0:
+                continue
+            
+            try:
+                tag, line_no, code = process_line(line)
+            except:
+                print('idx:', idx, 'line:', line)
+                print(line.strip().split(':', 2))
+                raise
+            assert idx!=5 or line_no==1, gcov_file
+        
+            if tag == '-':
+                continue
+            elif tag == '#####':
+                coverage[line_no - nline_removed] = 0
+            else:  
+                tag = int(tag) 
+                coverage[line_no - nline_removed] = 1
+    return coverage
 
 def traverse_cfg(graph):
     list_cfg_nodes = {}
@@ -114,6 +146,17 @@ def is_leaf(astnode):
         return True
     return len(astnode.children()) == 0
 
+def remove_lib(filename):
+    count = 0
+    with open(filename, "r") as f:
+        with open("temp.c", "w") as t:
+            for line in f:
+                if (line.strip() == '') or (line.strip() != '' and line.strip()[0] != "#"):
+                    t.write(line)
+                else:
+                    count += 1
+    return count
+        
 def traverse_ast(node, index, parent, parent_index):
     tmp_n = {}
     tmp_e = {}
@@ -139,18 +182,17 @@ def traverse_ast(node, index, parent, parent_index):
             tmp_n.update(n)
     return index, tmp_n, tmp_e
 
-def build_graph(nbl=None, codeflaws=None):
-    if nbl != None:
-        filename = "{}/{}/{}.c".format(ConfigClass.nbl_source_path, nbl['problem_id'],nbl['program_id'])
-    if codeflaws != None:
-        filename = "{}/{}/{}.c".format(ConfigClass.codeflaws_data_path, codeflaws['container'], codeflaws['c_source'])
-
+def build_graph(data, data_opt):
+    # TODO: Duong dan den source code
+    if data_opt == 'codeflaws':
+        filename = "{}/{}/{}.c".format(ConfigClass.codeflaws_data_path, data['container'], data['c_source'])
+    
     # print("======== CFG ========")
-
     list_cfg_nodes = {}
     list_cfg_edges = {}
     #Remove headers
     nline_removed = remove_lib(filename)
+    print(nline_removed)
 
     # create CFG
     graph = cfg.CFG("temp.c")
@@ -159,7 +201,7 @@ def build_graph(nbl=None, codeflaws=None):
     list_cfg_nodes, list_cfg_edges = traverse_cfg(graph)
     # print(list_cfg_nodes)
     # print(list_cfg_edges)
-    # print("Done !!!")
+
     # print("======== AST ========")
     index = 0
     list_ast_nodes = {}
@@ -170,9 +212,6 @@ def build_graph(nbl=None, codeflaws=None):
         list_ast_nodes.update(tmp_n)
         list_ast_edges.update(tmp_e)
 
-    # print(list_ast_nodes)
-    # print(list_ast_edges)
-    # print("Done !!!")
     # print("======== Mapping AST-CFG ========")
     cfg_to_ast = {}
     for id, value in list_ast_nodes.items():
@@ -191,80 +230,47 @@ def build_graph(nbl=None, codeflaws=None):
     cfg_to_tests = {}
     # print("Done !!!")
     # print("======== Mapping tests-CFG ========")
-    if codeflaws == None:
-        tests_list = list(nbl['test_verdict'].keys())
-
-        for test in tests_list:
-            covfile = "{}/{}/{}-{}.gcov".format(ConfigClass.nbl_test_path, nbl['problem_id'], test, nbl['program_id'])
-            cfg_to_tests[test] = get_coverage(covfile, nline_removed)
+    for test in list(data['test_verdict'].keys()):
+        covfile = "{}/{}/{}.gcov".format(ConfigClass.codeflaws_data_path, data['container'], test)
+        cfg_to_tests[test] = get_coverage(covfile, nline_removed)
     
-        # print("======== Mapping tests-AST ========")
-        ast_to_tests = {}
-
-        for test in tests_list:
-            ast_to_tests[test] = {}
-            for line, ast_nodes in cfg_to_ast.items():
-                for node in ast_nodes:
-                    try:
-                        ast_to_tests[test][node] = cfg_to_tests[test][line]
-                    except KeyError:
-                        pass
+    print(nline_removed, list_cfg_nodes)
+    print(cfg_to_tests.values())
     
-    else:
-        tests_list = list(codeflaws['test_verdict'].keys())
-
-        for test in tests_list:
-            covfile = "{}/{}/{}.gcov".format(ConfigClass.codeflaws_data_path, codeflaws['container'], test)
-            cfg_to_tests[test] = get_coverage(covfile, nline_removed)
+    # print("======== Mapping tests-AST ========")
+    ast_to_tests = {}
     
-        # print("======== Mapping tests-AST ========")
-        ast_to_tests = {}
-
-        for test in tests_list:
-            ast_to_tests[test] = {}
-            for line, ast_nodes in cfg_to_ast.items():
-                for node in ast_nodes:
-                    try:
-                        ast_to_tests[test][node] = cfg_to_tests[test][line]
-                    except KeyError:
-                        pass
-
+    for test in list(data['test_verdict'].keys()):
+        ast_to_tests[test] = {}
+        for line, ast_nodes in cfg_to_ast.items():
+            for node in ast_nodes:
+                try:
+                    ast_to_tests[test][node] = cfg_to_tests[test][line]
+                except KeyError:
+                    pass
+    # print(ast_to_tests)
+    # print("Done !!!")
     return list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests
 
-def tokenize(input, tokenizer_opt):
-    if (tokenizer_opt == 1):
-        tokenized_ast_feats = list(map(int, subprocess.run(["/home/minhld/tokenizer/src/tokenizer"], stdout=subprocess.PIPE, text=True, input=input).stdout.strip().split("\t")))
-        ###One-hot encode then convert to tensor
-        # one_hot_ast_feats = th.zeros(len(tokenized_ast_feats), max(tokenized_ast_feats)+1)
-        # one_hot_ast_feats[th.arange(len(tokenized_ast_feats)), th.tensor(tokenized_ast_feats)] = 1
-    elif (tokenizer_opt == 2):
-        # Install needed dependencies: conda install -c powerai sacrebleu
-        tokenized_ast_feats = code_tokenizer.tokenize_cpp(input)
-    else:
-        vocab = ()
-        tokenized_ast_feats = Tokenizer.tokenize(input, vocab, add_if_not_exist=False)
-    
-    return tokenized_ast_feats
+def read_cfile(filename):
+    pass
 
-def build_dgl_graph(nbl=None, codeflaws=None, graph_opt = 1, tokenizer_opt = 2, model = None):
+
+def build_dgl_graph(data, data_opt='nbl', graph_opt=2, tokenizer_opt=2, model=None):
     ### Graph option
-    # CFG + Test
+    # CFG + Test 
     # CFG + Test + AST
 
     ### Tokenizer option
     # 1. A Thanh gui (https://github.com/dspinellis/tokenizer/)
     # 2. TransCoder (https://github.com/facebookresearch/TransCoder/blob/master/preprocessing/src/code_tokenizer.py)
     # 3. CoCoNuT (https://github.com/lin-tan/CoCoNut-Artifact/blob/master/fairseq-context/fairseq/tokenizer.py)
-    if nbl != None:
-        print("======== Buiding DGL Graph of {}-{}-{} =========".format(nbl['problem_id'], nbl['uid'], nbl['program_id']))
-        test_verdict = nbl['test_verdict']
-    if codeflaws != None:
-        print("======== Buiding DGL Graph of {} =========".format(codeflaws['container']))
-        test_verdict = codeflaws['test_verdict']
+    # print("======== Buiding DGL Graph of {}.c =========".format(c_source))
     if model != None:
         embedding_model = model
 
-    list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests = build_graph(nbl, codeflaws)
+    list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests = build_graph(data, data_opt)
+    # print(list_cfg_nodes)
     ast_id2idx = {}
     ast_idx2id = {}
     index = 0
@@ -272,7 +278,7 @@ def build_dgl_graph(nbl=None, codeflaws=None, graph_opt = 1, tokenizer_opt = 2, 
         ast_id2idx[id] = index
         ast_idx2id[index] = id
         index += 1
-
+    
     cfg_id2idx = {}
     cfg_idx2id = {}
     index = 0
@@ -280,6 +286,8 @@ def build_dgl_graph(nbl=None, codeflaws=None, graph_opt = 1, tokenizer_opt = 2, 
         cfg_id2idx[id] = index
         cfg_idx2id[index] = id
         index += 1
+
+    print(cfg_id2idx, cfg_idx2id)
 
     test_id2idx = {}
     test_idx2id = {}
@@ -316,7 +324,7 @@ def build_dgl_graph(nbl=None, codeflaws=None, graph_opt = 1, tokenizer_opt = 2, 
     for id, ast_nodes in ast_to_tests.items():
         for node, link in ast_nodes.items():
             if link == 1 and node in ast_id2idx:
-                if test_verdict[id]:
+                if data['test_verdict'][id]:
                     ast_ptest_l.append(ast_id2idx[node])
                     ast_ptest_r.append(test_id2idx[id])
                 else:
@@ -329,17 +337,12 @@ def build_dgl_graph(nbl=None, codeflaws=None, graph_opt = 1, tokenizer_opt = 2, 
     for id, cfg_nodes in cfg_to_tests.items():
         for node, link in cfg_nodes.items():
             if link == 1 and node in cfg_id2idx:
-                if test_verdict[id]:
+                if data['test_verdict'][id]:
                     cfg_ptest_l.append(cfg_id2idx[node])
                     cfg_ptest_r.append(test_id2idx[id])
                 else:
                     cfg_ftest_l.append(cfg_id2idx[node])
-                    cfg_ftest_r.append(test_id2idx[id])
-
-    if nbl != None:
-        filename = "{}/{}/{}.c".format(ConfigClass.nbl_source_path, nbl['problem_id'],nbl['program_id'])
-    if codeflaws != None:
-        filename = "{}/{}/{}.c".format(ConfigClass.codeflaws_data_path, codeflaws['container'], codeflaws['c_source'])
+                    cfg_ftest_r.append(test_id2idx[id])  
 
     if graph_opt == 1:
         graph_data = {
@@ -347,22 +350,20 @@ def build_dgl_graph(nbl=None, codeflaws=None, graph_opt = 1, tokenizer_opt = 2, 
         ('cfg', 'cfglink_back', 'cfg'): (th.tensor(cfg_cfg_r), th.tensor(cfg_cfg_l)),
         ('cfg', 'cfg_passT_link', 'passing_test'): (th.tensor(cfg_ptest_l, dtype=torch.int32), th.tensor(cfg_ptest_r, dtype=torch.int32)),
         ('passing_test', 'passT_cfg_link', 'cfg'): (th.tensor(cfg_ptest_r, dtype=torch.int32), th.tensor(cfg_ptest_l, dtype=torch.int32)),
-        ('cfg', 'cfg_failT_link', 'failing_test'): (th.tensor(cfg_ftest_l, dtype=torch.int32), th.tensor(cfg_ftest_r, dtype=torch.int32)),
+        ('cfg', 'ctlink', 'cfg_failT_link'): (th.tensor(cfg_ftest_l, dtype=torch.int32), th.tensor(cfg_ftest_r, dtype=torch.int32)),
         ('failing_test', 'failT_cfg_link', 'cfg'): (th.tensor(cfg_ftest_r, dtype=torch.int32), th.tensor(cfg_ftest_l, dtype=torch.int32))
         }
 
         g = dgl.heterograph(graph_data)
         #CFG_feats
+        cfg_label_corpus = ["entry_node", "COMMON", "IF", "ELSE", "ELSE_IF", "END_IF", "FOR", "WHILE", "DO_WHILE", "PSEUDO", "CALL", "END"]
         cfg_labels = [None] * g.num_nodes("cfg")
-
         for key, feat in list_cfg_nodes.items():
-            cfg_labels[cfg_id2idx[key]] = ConfigClass.cfg_label_corpus.index(feat)
+            cfg_labels[cfg_id2idx[key]] = cfg_label_corpus.index(feat)
+        cfg_label_feats = th.nn.functional.one_hot(th.LongTensor(cfg_labels), len(cfg_label_corpus))
 
-        cfg_label_feats = th.nn.functional.one_hot(
-            th.LongTensor(cfg_labels),
-            len(ConfigClass.cfg_label_corpus)
-        )
-
+        if data_opt == 'codeflaws':
+            filename = "{}/{}/{}.c".format(ConfigClass.codeflaws_data_path, data['container'], data['c_source'])
         code = []
         with open(filename, "r") as f:
             for line in f:
@@ -371,7 +372,7 @@ def build_dgl_graph(nbl=None, codeflaws=None, graph_opt = 1, tokenizer_opt = 2, 
         cfg_content_feats = [None] * g.num_nodes("cfg")
         for key, feat in list_cfg_nodes.items():
             cfg_content_feats[cfg_id2idx[key]] = embedding_model.get_sentence_vector(code[key-1].replace("\n", ""))
-
+    
         # (cfg_content_feats)
         g.nodes["cfg"].data['label'] = cfg_label_feats
         g.nodes["cfg"].data['content'] = torch.FloatTensor(cfg_content_feats)
@@ -383,7 +384,7 @@ def build_dgl_graph(nbl=None, codeflaws=None, graph_opt = 1, tokenizer_opt = 2, 
             ('cfg', 'cfglink_back', 'cfg'): (th.tensor(cfg_cfg_r), th.tensor(cfg_cfg_l)),
             ('cfg', 'cfg_passT_link', 'passing_test'): (th.tensor(cfg_ptest_l, dtype=torch.int32), th.tensor(cfg_ptest_r, dtype=torch.int32)),
             ('passing_test', 'passT_cfg_link', 'cfg'): (th.tensor(cfg_ptest_r, dtype=torch.int32), th.tensor(cfg_ptest_l, dtype=torch.int32)),
-            ('cfg', 'cfg_failT_link', 'failing_test'): (th.tensor(cfg_ftest_l, dtype=torch.int32), th.tensor(cfg_ftest_r, dtype=torch.int32)),
+            ('cfg', 'ctlink', 'cfg_failT_link'): (th.tensor(cfg_ftest_l, dtype=torch.int32), th.tensor(cfg_ftest_r, dtype=torch.int32)),
             ('failing_test', 'failT_cfg_link', 'cfg'): (th.tensor(cfg_ftest_r, dtype=torch.int32), th.tensor(cfg_ftest_l, dtype=torch.int32)),
 
             ('ast', 'astlink_for', 'ast'): (th.tensor(ast_ast_l), th.tensor(ast_ast_r)),
@@ -399,16 +400,13 @@ def build_dgl_graph(nbl=None, codeflaws=None, graph_opt = 1, tokenizer_opt = 2, 
 
         g = dgl.heterograph(graph_data)
         #CFG_feats
+        cfg_label_corpus = ["entry_node", "COMMON", "IF", "ELSE", "ELSE_IF", "END_IF", "FOR", "WHILE", "DO_WHILE", "PSEUDO", "CALL", "END"]
         cfg_labels = [None] * g.num_nodes("cfg")
-
         for key, feat in list_cfg_nodes.items():
-            cfg_labels[cfg_id2idx[key]] = ConfigClass.cfg_label_corpus.index(feat)
+            cfg_labels[cfg_id2idx[key]] = cfg_label_corpus.index(feat)
+        cfg_label_feats = th.nn.functional.one_hot(th.LongTensor(cfg_labels), len(cfg_label_corpus))
 
-        cfg_label_feats = th.nn.functional.one_hot(
-            th.LongTensor(cfg_labels),
-            len(ConfigClass.cfg_label_corpus)
-        )
-
+        filename = "{}/{}/{}.c".format(ConfigClass.codeflaws_data_path, data['container'], data['c_source'])
         code = []
         with open(filename, "r") as f:
             for line in f:
@@ -417,7 +415,7 @@ def build_dgl_graph(nbl=None, codeflaws=None, graph_opt = 1, tokenizer_opt = 2, 
         cfg_content_feats = [None] * g.num_nodes("cfg")
         for key, feat in list_cfg_nodes.items():
             cfg_content_feats[cfg_id2idx[key]] = embedding_model.get_sentence_vector(code[key-1].replace("\n", ""))
-
+    
         # (cfg_content_feats)
         g.nodes["cfg"].data['label'] = cfg_label_feats
         g.nodes["cfg"].data['content'] = torch.FloatTensor(cfg_content_feats)
@@ -429,76 +427,59 @@ def build_dgl_graph(nbl=None, codeflaws=None, graph_opt = 1, tokenizer_opt = 2, 
             feat, _ = value
             ast_feats[ast_id2idx[key]] = feat
 
-        vocab_dict = {}
-        if nbl != None:
-            vocab_file = open('/home/minhld/GNN4FL/nbl_vocab.txt', 'r')
-        if codeflaws != None:
-            vocab_file = open('/home/minhld/GNN4FL/codeflaws_vocab.txt', 'r')
-        for line in vocab_file:
-            key, value = line.split()
-            vocab_dict[key] = value
+        ###Tokenize
+        tokenized_ast_feats = tokenize(input=' '.join(ast_feats), option=2)
+        tokens = list(dict.fromkeys(tokenized_ast_feats))
 
-        ###One-hot encode then convert to tensor
-        tokens_ast_feats = [tokenize(input=feat, tokenizer_opt=tokenizer_opt) for feat in ast_feats]
-        # print("\n👉 tokens_ast_feats (%d)\n\t" % len(tokens_ast_feats))
-        # print(tokens_ast_feats)
-        token_ids = [[vocab_dict[token] for token in tokens_ast_feat] for tokens_ast_feat in tokens_ast_feats]
-        # print("\n👉 token_ids (%d)\n\t" % len(token_ids))
-        # print(token_ids)
-
-        # Install needed dependencies: conda install -c conda-forge scikit-learn
-        ast_label_feats = th.tensor(MultiLabelBinarizer(classes=list(vocab_dict.values())).fit_transform(token_ids))
-
-        g.nodes["ast"].data['label'] = ast_label_feats
-        g.nodes["ast"].data['content'] = torch.FloatTensor([embedding_model.get_sentence_vector(feat) for feat in ast_feats])
-        # print(g.nodes["ast"])
-        print("Done !!!")
+        ast_feats_tensor = one_hot_encode(ast_feats)
+        # print("\n👉 input: ast_feats (%d)\n\t" % len(ast_feats))
+        # print(ast_feats)
+        # print("\n👉 one_hot_encode(ast_feats):", ast_feats_tensor.size(), ast_feats_tensor.dtype)
+        # print("\n", ast_feats_tensor)
 
     else:
         print("Invalid graph option")
 
-    return g, ast_id2idx, cfg_id2idx, test_id2idx
+    return g, ast_id2idx, cfg_id2idx, test_id2idx, tokens
 
+def tokenize(input, option):
+    # 1. A Thanh gui (https://github.com/dspinellis/tokenizer/)
+    # 2. TransCoder (https://github.com/facebookresearch/TransCoder/blob/master/preprocessing/src/code_tokenizer.py)
+    # 3. CoCoNuT (https://github.com/lin-tan/CoCoNut-Artifact/blob/master/fairseq-context/fairseq/tokenizer.py)
+    if (option == 1):
+        tokenized_ast_feats = list(map(int, subprocess.run(["/home/minhld/tokenizer/src/tokenizer"], stdout=subprocess.PIPE, text=True, input=input).stdout.strip().split("\t")))
+    elif (option == 2):
+        # Dependencies: conda install -c powerai sacrebleu
+        tokenized_ast_feats = code_tokenizer.tokenize_cpp(input)
+    else:
+        vocab = {}
+        tokenized_ast_feats = Tokenizer.tokenize(input, vocab, add_if_not_exist=False)
 
-if __name__ == '__main__':
+    return tokenized_ast_feats
+
+def get_file_names_with_strings(str, full_list):
+    final_list = [nm for nm in full_list if str in nm]
+
+    return final_list
+
+def build_vocab_dict():
     embedding_model = fasttext.load_model('/home/thanhlc/thanhlc/Data/c_pretrained.bin')
-
-    ### NBL_debug
-    with open("/home/thanhlc/thanhlc/Data/nbl_dataset/test_verdict.pkl", "rb") as f:
-        all_nbl_test_verdict = pkl.load(f)
-    with open("/home/thanhlc/thanhlc/Data/nbl_dataset/training_data.pkl", "rb") as f:
-        training_data = pkl.load(f)
-    with open("/home/thanhlc/thanhlc/Data/nbl_dataset/bug_lines_info.pkl", "rb") as f:
-        bug_lines_info = pkl.load(f)
+    vocab_list = []
     with open('/home/minhld/codeflaws/test_verdict.pkl', 'rb') as handle:
-        all_codeflaws_test_verdict = pkl.load(handle)
+        all_test_verdict = pickle.load(handle)
+    # print(json.dumps(all_test_verdict, indent = 4))
 
-    # nbl = {}
-    # nbl['problem_id'] = "3029"
-    # nbl['uid'] = "u50747"
-    # nbl['program_id'] = "1044240"
-    # nbl['test_verdict'] = all_nbl_test_verdict["3029"][1044240]
-    # G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(nbl=nbl, model=embedding_model)
-    
-    ### Codeflaws_debug
-    # container = "474-A-bug-14683024-14683054"
-    # info = container.split('-')
-    # codeflaws = {}
-    # codeflaws['container'] = container
-    # codeflaws['c_source'] = info[0] + '-' + info[1] + '-' + info[3]
-    # codeflaws['test_verdict'] = all_codeflaws_test_verdict["{}-{}".format(info[0], info[1])][info[3]]
-    # G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(codeflaws=codeflaws, model=embedding_model)
-
+    # conda install -c conda-forge tqdm
     count, keyError, parseError, gcovMissingError = 0, 0, 0, 0
-    for container in os.listdir("/home/minhld/codeflaws/data/"):
-        if os.path.isdir("{}/".format(ConfigClass.codeflaws_data_path) + container) == False: continue 
-        info = container.split('-')
-        codeflaws = {}
-        codeflaws['container'] = container
-        codeflaws['c_source'] = info[0] + '-' + info[1] + '-' + info[3]
-        codeflaws['test_verdict'] = all_codeflaws_test_verdict["{}-{}".format(info[0], info[1])][info[3]]
+    for dir in tqdm(os.listdir("{}/".format(ConfigClass.codeflaws_data_path)), desc="Tokenizing..."):
+    # for dir in os.listdir("/home/minhld/codeflaws/data/"):
+        if os.path.isdir("{}/".format(ConfigClass.codeflaws_data_path) + dir) == False: continue 
+        info = dir.split('-')
+        c_source = info[0] + '-' + info[1] + '-' + info[3]
         try:
-            G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(codeflaws=codeflaws, model=embedding_model)
+            test_verdict = all_test_verdict["{}-{}".format(info[0], info[1])][info[3]]
+            G, ast_id2idx, cfg_id2idx, test_id2idx, tokens = build_dgl_graph(dir, c_source, test_verdict, model=embedding_model)
+            vocab_list = vocab_list + list(set(tokens) - set(vocab_list))
             count+=1
         except KeyError:
             keyError+=1
@@ -508,3 +489,53 @@ if __name__ == '__main__':
             gcovMissingError+=1
 
     print("OK: ", count, "\nkeyError: ", keyError, "\nparseError: ", parseError, "\ngcovMissingError", gcovMissingError)
+    
+    if vocab_list:
+        with open('/home/minhld/GNN4FL/codeflaws_vocab.txt', 'w') as file_handler:
+            for index, item in enumerate(vocab_list):
+                file_handler.write("{} {}\n".format(item, index + 1))
+
+    return {k: v for v, k in enumerate(vocab_list)}  
+
+def one_hot_encode(ast_feats, tokenizer_opt=2):
+    # vocab_dict = build_vocab_dict()
+    assert isinstance(ast_feats, list), "\n  Input is not a list\n"
+    vocab_dict = {}
+    vocab_file = open('/home/minhld/GNN4FL/codeflaws_vocab.txt', 'r')
+    for line in vocab_file:
+        key, value = line.split()
+        vocab_dict[key] = value
+
+    # print("\n====== vocab_dict (%d) ======" % len(vocab_dict))
+    # print(vocab_dict)
+
+    ###One-hot encode then convert to tensor
+    tokens_ast_feats = [tokenize(input=feat, option=tokenizer_opt) for feat in ast_feats]
+    token_ids = [[vocab_dict[token] for token in tokens_ast_feat] for tokens_ast_feat in tokens_ast_feats]
+    # print("\n👉 tokens_ast_feats (%d)\n\t" % len(tokens_ast_feats))
+    # print(tokens_ast_feats)
+    # print("\n👉 token_ids (%d)\n\t" % len(token_ids))
+    # print(token_ids)
+
+    # conda install -c conda-forge scikit-learn
+    return th.tensor(MultiLabelBinarizer(classes=list(vocab_dict.values())).fit_transform(token_ids))
+    
+if __name__ == '__main__':
+    # vocab_dict = build_vocab_dict()
+
+    embedding_model = fasttext.load_model('/home/thanhlc/thanhlc/Data/c_pretrained.bin')
+    with open('/home/minhld/codeflaws/test_verdict.pkl', 'rb') as handle:
+        all_test_verdict = pickle.load(handle)
+    # print(json.dumps(all_test_verdict, indent = 4))
+
+    container = "471-A-bug-17550066-17550110"
+    info = container.split('-')
+    data = {}
+    data['container'] = container
+    data['c_source'] = info[0] + '-' + info[1] + '-' + info[3]
+    data['test_verdict'] = all_test_verdict["{}-{}".format(info[0], info[1])][info[3]]
+    G, ast_id2idx, cfg_id2idx, test_id2idx, tokens = build_dgl_graph(
+        data=data,
+        data_opt='codeflaws',
+        model=embedding_model
+    )

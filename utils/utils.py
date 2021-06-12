@@ -5,6 +5,7 @@ class ConfigClass(object):
     test_verdict_pickle = "/home/thanhlc/thanhlc/Data/nbl_dataset/test_verdict.pkl"
     nbl_source_path = "/home/thanhlc/thanhlc/Data/nbl_dataset/sources"
     nbl_test_path = "/home/thanhlc/thanhlc/Data/nbl_dataset/data/tests"
+    codeflaws_data_path = "/home/minhld/codeflaws/data"
 
     # raw dir
     raw_dir = "/home/thanhlc/thanhlc/Data/nbl_dataset"
@@ -19,8 +20,8 @@ class ConfigClass(object):
     trained_dir = './trained'
 
     n_epochs = 100
-    print_rate = 5
-    save_rate = 5
+    print_rate = 1
+    save_rate = 3
 
     cfg_label_corpus = ["entry_node", "COMMON", "IF", "ELSE",
                         "ELSE_IF", "END_IF", "FOR", "WHILE",

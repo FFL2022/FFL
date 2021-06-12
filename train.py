@@ -5,7 +5,7 @@ import time
 import torch
 import os
 import torch.nn.functional as F
-from dataloader import default_dataset
+from dataloader import BugLocalizeGraphDataset
 from model import HeteroMPNNPredictor
 from utils.utils import ConfigClass
 import tqdm
@@ -237,17 +237,41 @@ def eval(model, dataloader):
 
 
 if __name__ == '__main__':
+    # config
+    dataset_opt = 'codeflaws' # nbl, codeflaws
+    graph_opt = 1 # 1, 2
     # loaddataset
-    dataloader = default_dataset
+    data_loader = BugLocalizeGraphDataset(dataset_opt=dataset_opt, graph_opt=graph_opt)
     # model
-    meta_graph = [('cfg', 'cfglink_for', 'cfg'),
+    if graph_opt == 1:
+        meta_graph = [('cfg', 'cfglink_for', 'cfg'),
             ('cfg', 'cfglink_back', 'cfg'),
             ('cfg', 'cfg_passT_link', 'passing_test'),
             ('passing_test', 'passT_cfg_link', 'cfg'),
             ('cfg', 'cfg_failT_link', 'failing_test'),
             ('failing_test', 'failT_cfg_link', 'cfg')]
-
-    model = HeteroMPNNPredictor(default_dataset.cfg_label_feats,
-                                default_dataset.cfg_content_feats,
+        model = HeteroMPNNPredictor(data_loader.cfg_label_feats,
+                                data_loader.cfg_content_feats,
                                 256, 32, meta_graph, 2, device)
-    train(model, dataloader, ConfigClass.n_epochs)
+    if graph_opt == 2:
+        meta_graph = [('cfg', 'cfglink_for', 'cfg'),
+                ('cfg', 'cfglink_back', 'cfg'),
+                ('cfg', 'cfg_passT_link', 'passing_test'),
+                ('passing_test', 'passT_cfg_link', 'cfg'),
+                ('cfg', 'cfg_failT_link', 'failing_test'),
+                ('failing_test', 'failT_cfg_link', 'cfg'),
+                ('ast', 'astlink_for', 'ast'),
+                ('ast', 'astlink_back', 'ast'),
+                ('ast', 'ast_passT_link', 'passing_test'),
+                ('passing_test', 'passT_ast_link', 'ast'),
+                ('ast', 'ast_failT_link', 'failing_test'),
+                ('failing_test', 'failT_ast_link', 'ast'),
+                ('ast', 'ast_cfg_link', 'cfg'),
+                ('cfg', 'cfg_ast_link', 'ast')]
+        model = HeteroMPNNPredictor(data_loader.cfg_label_feats,
+                                data_loader.cfg_content_feats,
+                                256, 32, meta_graph, 2, device,
+                                data_loader.ast_label_feats,
+                                data_loader.ast_content_feats)
+
+    train(model, data_loader, ConfigClass.n_epochs)
