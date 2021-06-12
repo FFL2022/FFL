@@ -142,7 +142,7 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
         self.funcs = {}
         self.act = nn.ReLU()
         self.self_loop = nn.Linear(hidden_dim, out_dim)
-        nn.init.xavier_normal_(self.self_loop.weights)
+        nn.init.xavier_normal_(self.self_loop.weight)
         nn.init.normal_(self.self_loop.bias)
         for c_etype in self.meta_graph:
             # etype is a tuple of node type, etype, dst type
