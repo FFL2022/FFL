@@ -40,10 +40,10 @@ class HeteroMPNNPredictor(torch.nn.Module):
             self.ast_content_encoder = None
 
         self.ptest_embedding = nn.Parameter(torch.FloatTensor(hidden_feats))
-        nn.init.xavier_normal(self.ptest_embedding)
+        nn.init.xavier_normal(self.ptest_embedding.data)
 
         self.ftest_embedding = nn.Parameter(torch.FloatTensor(hidden_feats))
-        nn.init.xavier_normal(self.ftest_embedding)
+        nn.init.xavier_normal(self.ftest_embedding.data)
 
         self.meta_graph = meta_graph
         '''
