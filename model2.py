@@ -95,11 +95,13 @@ class HeteroMPNNPredictor(torch.nn.Module):
                 self.ast_content_encoder(h_g.nodes['ast'].data['content'].float())),
                 dim=-1)
 
-        h_g.nodes['passing_test'].data['h'] = torch.cat(
-            h_g.number_of_nodes('passing_test') * [self.ptest_embedding.unsqueeze(0)])
+        if h_g.number_of_nodes('passing_test') > 0:
+            h_g.nodes['passing_test'].data['h'] = torch.cat(
+                h_g.number_of_nodes('passing_test') * [self.ptest_embedding.unsqueeze(0)])
 
-        h_g.nodes['failing_test'].data['h'] = torch.cat(
-            h_g.number_of_nodes('failing_test') * [self.ftest_embedding.unsqueeze(0)])
+        if h_g.number_of_nodes('failing_test') > 0:
+            h_g.nodes['failing_test'].data['h'] = torch.cat(
+                h_g.number_of_nodes('failing_test') * [self.ftest_embedding.unsqueeze(0)])
 
         for cetype in self.meta_graph:
             etype = cetype[1]
@@ -112,8 +114,10 @@ class HeteroMPNNPredictor(torch.nn.Module):
         cfg_feats = h_g.nodes['cfg'].data['h']
         if self.ast_label_encoder != None and self.ast_content_encoder != None:
             ast_feats = h_g.nodes['ast'].data['h']
-        ptest_feats = h_g.nodes['passing_test'].data['h']
-        ftest_feats = h_g.nodes['failing_test'].data['h']
+        if h_g.number_of_nodes('passing_test') > 0:
+            ptest_feats = h_g.nodes['passing_test'].data['h']
+        if h_g.number_of_nodes('failing_test') > 0:
+            ftest_feats = h_g.nodes['failing_test'].data['h']
 
         h_g = self.h_process2(h_g)
         h_g.nodes['cfg'].data['h'] = torch.cat((
@@ -121,18 +125,22 @@ class HeteroMPNNPredictor(torch.nn.Module):
         if self.ast_label_encoder != None and self.ast_content_encoder != None:
             h_g.nodes['ast'].data['h'] = torch.cat((
                 ast_feats, h_g.nodes['ast'].data['h']), -1)    
-        h_g.nodes['passing_test'].data['h'] = torch.cat((
-            ptest_feats, h_g.nodes['passing_test'].data['h']), -1)
-        h_g.nodes['failing_test'].data['h'] = torch.cat((
-            ftest_feats, h_g.nodes['failing_test'].data['h']), -1)
+        if h_g.number_of_nodes('passing_test') > 0:
+            h_g.nodes['passing_test'].data['h'] = torch.cat((
+                ptest_feats, h_g.nodes['passing_test'].data['h']), -1)
+        if h_g.number_of_nodes('failing_test') > 0:
+            h_g.nodes['failing_test'].data['h'] = torch.cat((
+                ftest_feats, h_g.nodes['failing_test'].data['h']), -1)
 
         h_g = self.h_process3(h_g)
 
         cfg_feats = h_g.nodes['cfg'].data['h']
         if self.ast_label_encoder != None and self.ast_content_encoder != None:
             ast_feats = h_g.nodes['ast'].data['h']
-        ptest_feats = h_g.nodes['passing_test'].data['h']
-        ftest_feats = h_g.nodes['failing_test'].data['h']
+        if h_g.number_of_nodes('passing_test') > 0:
+            ptest_feats = h_g.nodes['passing_test'].data['h']
+        if h_g.number_of_nodes('failing_test') > 0:
+            ftest_feats = h_g.nodes['failing_test'].data['h']
 
         h_g = self.h_process4(h_g)
 
@@ -141,10 +149,12 @@ class HeteroMPNNPredictor(torch.nn.Module):
         if self.ast_label_encoder != None and self.ast_content_encoder != None:
             h_g.nodes['ast'].data['h'] = torch.cat((
                 ast_feats, h_g.nodes['ast'].data['h']), -1)
-        h_g.nodes['passing_test'].data['h'] = torch.cat((
-            ptest_feats, h_g.nodes['passing_test'].data['h']), -1)
-        h_g.nodes['failing_test'].data['h'] = torch.cat((
-            ftest_feats, h_g.nodes['failing_test'].data['h']), -1)
+        if h_g.number_of_nodes('passing_test') > 0:
+            h_g.nodes['passing_test'].data['h'] = torch.cat((
+                ptest_feats, h_g.nodes['passing_test'].data['h']), -1)
+        if h_g.number_of_nodes('failing_test') > 0:
+            h_g.nodes['failing_test'].data['h'] = torch.cat((
+                ftest_feats, h_g.nodes['failing_test'].data['h']), -1)
 
         h_g = self.h_process5(h_g)
         h_g.apply_nodes(self.decode_node_func, ntype='cfg')
