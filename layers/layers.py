@@ -140,9 +140,10 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
         self.meta_graph = meta_graph
         per_type_linear = {}
         self.funcs = {}
-        self.act = nn.ReLU()
-        self.bias = nn.Parameter(torch.FloatTensor(1, out_dim))
-        nn.init.xavier_normal_(self.bias)
+        self.act = nn.ReLU(hidden_dim, out_dim)
+        self.self_loop = nn.Linear(hidden_dim, out_dim)
+        nn.init.xavier_normal_(self.self_loop.weights)
+        nn.init.normal_(self.self_loop.bias)
         for c_etype in self.meta_graph:
             # etype is a tuple of node type, etype, dst type
             t_src, t_e, t_dst = c_etype
@@ -150,13 +151,13 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
             per_type_linear[t_e] = MPNNBlockMultSingleEtype(hidden_dim,
                                                             out_dim)
             self.funcs[t_e] = (per_type_linear[t_e].compute_send_messages,
-                               per_type_linear[t_e].aggregator('msg', 'h'))
+                               per_type_linear[t_e].aggregator('msg', 'h1'))
 
         self.per_type_linear = torch.nn.ModuleDict(per_type_linear)
 
     def add_self_loop_act(self, nodes):
         if nodes.batch_size() > 0:
-            return {'h': self.act(nodes.data['h'] + self.bias)}
+            return {'h': self.act(self.self_loop(nodes.data['h']) + nodes.data['h1'])}
 
     def forward(self, h_g):
         # 4. Passing message through each of these sub graph onces each
