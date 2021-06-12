@@ -151,6 +151,10 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
 
         self.per_type_linear = torch.nn.ModuleDict(per_type_linear)
 
+    def add_self_loop_act(self, nodes):
+        print(nodes)
+        return {'h': self.act(nodes.data['h'] + self.bias)}
+
     def forward(self, h_g):
         # 4. Passing message through each of these sub graph onces each
         # TODO: Beware of gradient explodes
@@ -160,6 +164,5 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
                 temp_func[c_etype[1]] = self.funcs[c_etype[1]]
             else:
                 temp_func[c_etype[1]] = (lambda x: {}, lambda x: {})
-        h_g.multi_update_all(temp_func, 'sum',
-                             lambda nodes: {'h': self.act(nodes.data['h'] + self.bias)})
+        h_g.multi_update_all(temp_func, 'sum', self.add_self_loop_act)
         return h_g
