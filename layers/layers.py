@@ -160,6 +160,6 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
                 temp_func[c_etype[1]] = self.funcs[c_etype[1]]
             else:
                 temp_func[c_etype[1]] = (lambda x: {}, lambda x: {})
-        h_g.multi_update_all(temp_func, 'sum')
-        h_g.apply_nodes(lambda nodes: {'h': self.act(nodes.data['h'] + self.bias)})
+        h_g.multi_update_all(temp_func, 'sum',
+                             lambda nodes: {'h': self.act(nodes.data['h'] + self.bias)})
         return h_g
