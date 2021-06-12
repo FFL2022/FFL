@@ -40,11 +40,13 @@ class HeteroMPNNPredictor(torch.nn.Module):
         self.ftest_embedding = nn.Parameter(torch.FloatTensor(hidden_feats))
 
         self.meta_graph = meta_graph
+        '''
         self.etypes_params = torch.nn.ParameterDict()
         for cetype in self.meta_graph:
             etype = cetype[1]
             self.etypes_params[etype] = nn.Parameter(
                 torch.FloatTensor(hidden_efeats))
+        '''
 
         self.h_process1 = HeteroMPNNBlockSimp(
             self.meta_graph, hidden_feats,
@@ -103,10 +105,12 @@ class HeteroMPNNPredictor(torch.nn.Module):
             h_g.nodes['failing_test'].data['h'] = torch.cat(
                 h_g.number_of_nodes('failing_test') * [self.ftest_embedding.unsqueeze(0)])
 
+        '''
         for cetype in self.meta_graph:
             etype = cetype[1]
             h_g.edges[etype].data['h'] = torch.cat(
                     h_g.number_of_edges(etype) * [self.etypes_params[etype].unsqueeze(0)])
+        '''
 
         # Let's cache stuffs here
         # Passing message

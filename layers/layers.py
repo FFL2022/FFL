@@ -143,7 +143,7 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
             t_src, t_e, t_dst = c_etype
             # 2. for each meta graph, create a mpnn block
             per_type_linear[t_e] = MPNNBlockMultSingleEtype(hidden_dim,
-                                                 hidden_edim, out_dim)
+                                                            out_dim)
             self.funcs[t_e] = (per_type_linear[t_e].compute_send_messages,
                                per_type_linear[t_e].aggregator('msg', 'h'))
 
