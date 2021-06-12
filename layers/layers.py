@@ -102,7 +102,7 @@ class MPNNBlockMultSingleEtype(torch.nn.Module):
         # TODO: add self loop to: each type of edge, add linear, etc
         # TODO: sigmoid weight
 
-    def compute_send_messages(self, edges, device):
+    def compute_send_messages(self, edges):
         x_src = edges.src['h']  # N_n, hidden_dim
         msg = self.edge_transform(x_src)
         return {'msg': msg}
@@ -117,7 +117,7 @@ class MPNNBlockMultSingleEtype(torch.nn.Module):
 
     def forward(self, g: dgl.DGLGraph):
         if g.number_of_edges() > 0:
-            g.update_all(lambda edges: self.compute_send_messages(edges, g.device),
+            g.update_all(lambda edges: self.compute_send_messages(edges),
                          self.aggregator('msg', 'h1'),
                          )
         g.apply_nodes(self.add_self_loop)
