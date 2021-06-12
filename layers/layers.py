@@ -140,7 +140,7 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
         self.meta_graph = meta_graph
         per_type_linear = {}
         self.funcs = {}
-        self.act = nn.ReLU(hidden_dim, out_dim)
+        self.act = nn.ReLU()
         self.self_loop = nn.Linear(hidden_dim, out_dim)
         nn.init.xavier_normal_(self.self_loop.weights)
         nn.init.normal_(self.self_loop.bias)
