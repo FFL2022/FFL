@@ -32,9 +32,9 @@ class HeteroMPNNPredictor(torch.nn.Module):
             self.ast_label_encoder = nn.Linear(ast_label_feats, hidden_feats//2)
             self.ast_content_encoder = nn.Linear(ast_content_feats, hidden_feats//2)
             nn.init.xavier_normal_(self.ast_label_encoder.weight)
-            nn.init.xavier_normal_(self.ast_label_encoder.bias)
+            nn.init.normal_(self.ast_label_encoder.bias)
             nn.init.xavier_normal_(self.ast_content_encoder.weight)
-            nn.init.xavier_normal_(self.ast_content_encoder.bias)
+            nn.init.normal_(self.ast_content_encoder.bias)
         else:
             self.ast_label_encoder = None
             self.ast_content_encoder = None
