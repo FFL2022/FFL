@@ -26,8 +26,13 @@ class BugLocalizeGraphDataset(DGLDataset):
             save_dir=save_dir,
             force_reload=False,
             verbose=False)
-        self.train_idxs = range(int(len(self.gs)*0.8))
-        self.val_idxs = range(int(len(self.gs)*0.8), len(self.gs))
+        if self.dataset_opt == "codeflaws":
+            self.train_idxs = range(int(len(self.gs)*0.8))
+            self.val_idxs = range(int(len(self.gs)*0.8), len(self.gs))
+        else:
+            self.train_idxs = range(int(self.total_train))
+            self.val_idxs = range(self.total_train, len(self.gs))
+        
         self.active_idxs = self.train_idxs
 
     def train(self):
@@ -53,10 +58,12 @@ class BugLocalizeGraphDataset(DGLDataset):
 
     def process(self):
         from dataset import build_dgl_graph
-        
+        self.total_train = 0 
         if self.dataset_opt == 'nbl':
             train_map = pkl.load(open(
                 ConfigClass.train_cfgidx_map_pkl, 'rb'))
+            eval_map = pkl.load(open(
+                ConfigClass.eval_cfgidx_map_pkl, 'rb'))
             test_verdict = pkl.load(open(
                 os.path.join(self.raw_dir, 'test_verdict.pkl'), 'rb'))
         if self.dataset_opt == 'codeflaws':
@@ -110,6 +117,33 @@ class BugLocalizeGraphDataset(DGLDataset):
             # Process label
             # or not
             self.lbs.append(train_map[key])
+        self.total_train = len(self.gs)
+
+        if self.dataset_opt == "nbl":
+            self.temp_keys = list(eval_map.keys())
+            for i, key in enumerate(self.temp_keys):
+                nbl, codeflaws = None, None
+                if self.dataset_opt == 'nbl':
+                    problem_id, uid, program_id = key.split("-")
+                    nbl = {}
+                    nbl['problem_id'] = problem_id
+                    nbl['uid'] = uid
+                    nbl['program_id'] = program_id
+                    nbl['test_verdict'] = test_verdict[problem_id][int(program_id)]
+
+                try:
+                    G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(nbl=nbl, codeflaws=codeflaws, model=model, graph_opt=self.graph_opt)
+                except:
+                    if key not in error_instance:
+                        error_instance.append(key)
+                    json.dump(error_instance, open('error_instance.json', 'w'))
+                    continue
+                self.keys.append(key)
+                self.gs.append(G)
+                self.ast_id2idx.append(ast_id2idx)
+                self.cfg_id2idx.append(cfg_id2idx)
+                self.test_id2idx.append(test_id2idx)
+                self.lbs.append(eval_map[key])
 
     def download(self):
         pass
@@ -127,6 +161,7 @@ class BugLocalizeGraphDataset(DGLDataset):
                                     'test_id2idx': self.test_id2idx,
                                     'cfg_content_feats': self.cfg_content_feats,
                                     'cfg_label_feats': self.cfg_label_feats,
+                                    'total_train': self.total_train
                                     }
                     )
         if (self.graph_opt == 2):
@@ -138,7 +173,9 @@ class BugLocalizeGraphDataset(DGLDataset):
                                     'cfg_content_feats': self.cfg_content_feats,
                                     'cfg_label_feats': self.cfg_label_feats,
                                     'ast_content_feats': self.ast_content_feats,
-                                    'ast_label_feats': self.ast_label_feats
+                                    'ast_label_feats': self.ast_label_feats,
+                                    'total_train': self.total_train
+
                                     }
                     )
 
@@ -150,6 +187,7 @@ class BugLocalizeGraphDataset(DGLDataset):
         self.cfg_id2idx = info_dict['cfg_id2idx']
         self.cfg_content_feats = info_dict['cfg_content_feats']
         self.cfg_label_feats = info_dict['cfg_label_feats']
+        self.total_train = info_dict['total_train']
         if (self.graph_opt == 2):
             self.ast_content_feats = info_dict['ast_content_feats']
             self.ast_label_feats = info_dict['ast_label_feats']

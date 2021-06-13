@@ -96,6 +96,8 @@ def train(model, dataloader, n_epochs):
 
     f1_meter = BinFullMeter()
     best_f1 = 0.0
+    # model.load_state_dict(torch.load("trained/model_27.pth"))
+    # eval(model, dataloader)
     for epoch in range(n_epochs):
         dataloader.train()
         mean_loss.reset()
@@ -156,11 +158,21 @@ def train(model, dataloader, n_epochs):
             opt.step()
 
         if epoch % ConfigClass.print_rate == 0:
+            out_dict = {}
+            out_dict['top_1'] = top_1_meter.avg
+            out_dict['top_2'] = top_2_meter.avg
+            out_dict['top_5'] = top_5_meter.avg
+            out_dict['top_10'] = top_10_meter.avg
+            out_dict['mean_acc'] = mean_acc.avg
+            out_dict['mean_loss'] = mean_loss.avg
+            out_dict['f1'] = f1_meter.get()
+            with open('result/training_dict_e{}.json'.format(epoch), 'w') as f:
+                json.dump(out_dict, f, indent=2)
             print("loss: {}, acc: {}, top 10 acc: {}, top 5 acc: {}, top 2 acc {}".format(mean_loss.avg, mean_acc.avg,
                 top_10_meter.avg, top_5_meter.avg, top_2_meter.avg))
             print(f1_meter.get())
         if epoch % ConfigClass.save_rate == 0:
-            l_eval, acc_eval, f1_eval = eval(model, dataloader)
+            l_eval, acc_eval, f1_eval = eval(model, dataloader,epoch)
             if f1_eval != "unk":
                 if f1_eval > best_f1:
                     best_f1 = f1_eval
@@ -168,7 +180,7 @@ def train(model, dataloader, n_epochs):
                         ConfigClass.trained_dir, 'model_{}.pth'.format(epoch)))
 
 
-def eval(model, dataloader):
+def eval(model, dataloader, epoch):
     dataloader.val()
     mean_loss = AverageMeter()
     mean_acc = AverageMeter()
@@ -230,7 +242,7 @@ def eval(model, dataloader):
     out_dict['mean_acc'] = mean_acc.avg
     out_dict['mean_loss'] = mean_loss.avg
     out_dict['f1'] = f1_meter.get()
-    with open('eval_dict.json', 'w') as f:
+    with open('result/eval_dict_e{}.json'.format(epoch), 'w') as f:
         json.dump(out_dict, f, indent=2)
     print(out_dict)
     return mean_loss.avg, mean_acc.avg, f1_meter.get()['aux_f1']
@@ -238,7 +250,7 @@ def eval(model, dataloader):
 
 if __name__ == '__main__':
     # config
-    dataset_opt = 'codeflaws' # nbl, codeflaws
+    dataset_opt = 'nbl' # nbl, codeflaws
     graph_opt = 1 # 1, 2
     # loaddataset
     data_loader = BugLocalizeGraphDataset(dataset_opt=dataset_opt, graph_opt=graph_opt)
