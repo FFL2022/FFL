@@ -166,7 +166,7 @@ def train(model, dataloader, n_epochs):
             out_dict['mean_acc'] = mean_acc.avg
             out_dict['mean_loss'] = mean_loss.avg
             out_dict['f1'] = f1_meter.get()
-            with open('result/training_dict_e{}.json'.format(epoch), 'w') as f:
+            with open(ConfigClass.result_dir + '/training_dict_e{}.json'.format(epoch), 'w') as f:
                 json.dump(out_dict, f, indent=2)
             print("loss: {}, acc: {}, top 10 acc: {}, top 5 acc: {}, top 2 acc {}".format(mean_loss.avg, mean_acc.avg,
                 top_10_meter.avg, top_5_meter.avg, top_2_meter.avg))
@@ -242,7 +242,7 @@ def eval(model, dataloader, epoch):
     out_dict['mean_acc'] = mean_acc.avg
     out_dict['mean_loss'] = mean_loss.avg
     out_dict['f1'] = f1_meter.get()
-    with open('result/eval_dict_e{}.json'.format(epoch), 'w') as f:
+    with open(ConfigClass.result_dir + '/eval_dict_e{}.json'.format(epoch), 'w') as f:
         json.dump(out_dict, f, indent=2)
     print(out_dict)
     return mean_loss.avg, mean_acc.avg, f1_meter.get()['aux_f1']
@@ -250,8 +250,8 @@ def eval(model, dataloader, epoch):
 
 if __name__ == '__main__':
     # config
-    dataset_opt = 'nbl' # nbl, codeflaws
-    graph_opt = 1 # 1, 2
+    dataset_opt = 'codeflaws' # nbl, codeflaws
+    graph_opt = 2 # 1, 2
     # loaddataset
     data_loader = BugLocalizeGraphDataset(dataset_opt=dataset_opt, graph_opt=graph_opt)
     # model
@@ -285,5 +285,5 @@ if __name__ == '__main__':
                                 256, 32, meta_graph, 2, device,
                                 data_loader.ast_label_feats,
                                 data_loader.ast_content_feats)
-
+    ConfigClass.preprocess_dir = "{}/{}/{}".format(ConfigClass.preprocess_dir, dataset_opt, graph_opt)
     train(model, data_loader, ConfigClass.n_epochs)

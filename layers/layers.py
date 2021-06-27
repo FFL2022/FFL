@@ -168,7 +168,7 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
                 temp_func[c_etype[1]] = self.funcs[c_etype[1]]
             else:
                 temp_func[c_etype[1]] = (lambda x: {}, lambda x: {})
-        h_g.multi_update_all(temp_func, 'sum')
+        h_g.multi_update_all(temp_func, 'mean')
         for ntype in h_g.ntypes:
             if h_g.number_of_nodes(ntype) > 0:
                 h_g.apply_nodes(self.add_self_loop_act, ntype=ntype)
