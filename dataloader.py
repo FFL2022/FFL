@@ -26,12 +26,9 @@ class BugLocalizeGraphDataset(DGLDataset):
             save_dir=save_dir,
             force_reload=False,
             verbose=False)
-        if self.dataset_opt == "codeflaws":
-            self.train_idxs = range(int(len(self.gs)*0.8))
-            self.val_idxs = range(int(len(self.gs)*0.8), len(self.gs))
-        else:
-            self.train_idxs = range(int(self.total_train))
-            self.val_idxs = range(self.total_train, len(self.gs))
+
+        self.train_idxs = range(int(self.total_train))
+        self.val_idxs = range(self.total_train, len(self.gs))
         
         self.active_idxs = self.train_idxs
 
@@ -68,9 +65,11 @@ class BugLocalizeGraphDataset(DGLDataset):
                 os.path.join(self.raw_dir, 'test_verdict.pkl'), 'rb'))
         if self.dataset_opt == 'codeflaws':
             train_map = pkl.load(open(
-                "/home/minhld/codeflaws/training_data.pkl", 'rb'))
+                ConfigClass.codeflaws_train_cfgidx_map_pkl, 'rb'))
+            eval_map = pkl.load(open(
+                ConfigClass.codeflaws_eval_cfgidx_map_pkl, 'rb'))
             test_verdict = pkl.load(open(
-                "/home/minhld/codeflaws/test_verdict.pkl", 'rb'))
+                ConfigClass.codeflaws_test_verdict_pickle, 'rb'))
         self.temp_keys = list(train_map.keys())
         self.gs = []
         self.lbs = []
@@ -119,31 +118,43 @@ class BugLocalizeGraphDataset(DGLDataset):
             self.lbs.append(train_map[key])
         self.total_train = len(self.gs)
 
-        if self.dataset_opt == "nbl":
-            self.temp_keys = list(eval_map.keys())
-            for i, key in enumerate(self.temp_keys):
-                nbl, codeflaws = None, None
-                if self.dataset_opt == 'nbl':
-                    problem_id, uid, program_id = key.split("-")
-                    nbl = {}
-                    nbl['problem_id'] = problem_id
-                    nbl['uid'] = uid
-                    nbl['program_id'] = program_id
-                    nbl['test_verdict'] = test_verdict[problem_id][int(program_id)]
-
-                try:
-                    G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(nbl=nbl, codeflaws=codeflaws, model=model, graph_opt=self.graph_opt)
-                except:
-                    if key not in error_instance:
-                        error_instance.append(key)
-                    json.dump(error_instance, open('error_instance.json', 'w'))
-                    continue
-                self.keys.append(key)
-                self.gs.append(G)
-                self.ast_id2idx.append(ast_id2idx)
-                self.cfg_id2idx.append(cfg_id2idx)
-                self.test_id2idx.append(test_id2idx)
-                self.lbs.append(eval_map[key])
+        self.temp_keys = list(eval_map.keys())
+        for i, key in enumerate(self.temp_keys):
+            nbl, codeflaws = None, None
+            if self.dataset_opt == 'nbl':
+                problem_id, uid, program_id = key.split("-")
+                nbl = {}
+                nbl['problem_id'] = problem_id
+                nbl['uid'] = uid
+                nbl['program_id'] = program_id
+                nbl['test_verdict'] = test_verdict[problem_id][int(program_id)]
+            if self.dataset_opt == 'codeflaws':
+                info = key.split("-")
+                codeflaws = {}
+                codeflaws['container'] = key
+                codeflaws['c_source'] = "{}-{}-{}".format(info[0], info[1], info[3])
+                codeflaws['test_verdict'] = test_verdict["{}-{}".format(info[0], info[1])][info[3]]
+            try:
+                G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(nbl=nbl, codeflaws=codeflaws, model=model, graph_opt=self.graph_opt)
+            except:
+                if key not in error_instance:
+                    error_instance.append(key)
+                json.dump(error_instance, open('error_instance.json', 'w'))
+                continue
+            self.keys.append(key)
+            self.gs.append(G)
+            self.ast_id2idx.append(ast_id2idx)
+            self.cfg_id2idx.append(cfg_id2idx)
+            self.test_id2idx.append(test_id2idx)
+            if i == 0:
+                self.cfg_label_feats = G.nodes['cfg'].data['label'].shape[-1]
+                self.cfg_content_feats = G.nodes['cfg'].data['content'].shape[-1]
+                if (self.graph_opt == 2):
+                    self.ast_label_feats = G.nodes['ast'].data['label'].shape[-1]
+                    self.ast_content_feats = G.nodes['ast'].data['content'].shape[-1]
+            # Process label
+            # or not
+            self.lbs.append(eval_map[key])
 
     def download(self):
         pass
@@ -154,7 +165,8 @@ class BugLocalizeGraphDataset(DGLDataset):
         # print(len(self.gs))
         save_graphs(self.graph_save_path, self.gs)
         if (self.graph_opt == 1):
-            save_info(self.info_path, {'ast_id2idx': self.ast_id2idx,
+            save_info(self.info_path, {
+                                    # 'ast_id2idx': self.ast_id2idx,
                                     'labels': self.lbs,
                                     'keys': self.keys,
                                     'cfg_id2idx': self.cfg_id2idx,
@@ -175,7 +187,6 @@ class BugLocalizeGraphDataset(DGLDataset):
                                     'ast_content_feats': self.ast_content_feats,
                                     'ast_label_feats': self.ast_label_feats,
                                     'total_train': self.total_train
-
                                     }
                     )
 
@@ -189,6 +200,7 @@ class BugLocalizeGraphDataset(DGLDataset):
         self.cfg_label_feats = info_dict['cfg_label_feats']
         self.total_train = info_dict['total_train']
         if (self.graph_opt == 2):
+            self.ast_id2idx = info_dict['ast_id2idx']
             self.ast_content_feats = info_dict['ast_content_feats']
             self.ast_label_feats = info_dict['ast_label_feats']
 
