@@ -223,7 +223,7 @@ def build_nx_ast(ast):
     g = nx.MultiDiGraph()
     ast2nx = {ast: 0}
 
-    g.add_node(0, name=ast.name, ntype=ast.__class__.__name__,
+    g.add_node(0, ntype=ast.__class__.__name__,
                token=get_token(ast), coord_line=-1)
     queue = [ast]
     while len(queue) > 0:
