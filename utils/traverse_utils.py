@@ -145,7 +145,8 @@ def build_nx_cfg(graph):
             cfg2nx[entry_node] = g.number_of_nodes()
             g.add_node(cfg2nx[entry_node], ntype="entry_node",
                        funcname=entry_node._func_name,
-                       line=entry_node.line,
+                       start_line=entry_node.line,
+                       end_line=entry_node.line,
                        )
         if isinstance(entry_node._func_first_node, CFGNode):
             # Entry to the function
@@ -198,10 +199,10 @@ def build_nx_cfg(graph):
 
     # Connect every consecutive lines between the node's
     # range
-    startline2node = [(g.nodes[node]['start_line'], []) for node in g.nodes()
-                      if g.nodes[node]['ntype'] != 'entry_node']
-    for node in g.nodes[node]:
-        startline2node[g.nodes[node]]['start_line'].append(node)
+    startline2node = dict([(g.nodes[node]['start_line'], [])
+                          for node in g.nodes()])
+    for node in g.nodes():
+        startline2node[g.nodes[node]['start_line']].append(node)
     largest_startline = max(list(startline2node.keys()))
     for node in g.nodes():
         if g.nodes[node]['ntype'] == 'entry_node':
@@ -214,7 +215,8 @@ def build_nx_cfg(graph):
             continue
         # Find the largest node among them
         candidate = max(startline2node[next_line],
-                        key=lambda node: g.nodes[node]['end_line'])
+                        key=lambda node: g.nodes[node]['end_line']
+                        )
         g.add_edge(node, candidate, 'next')
     return g, cfg2nx
 
@@ -241,10 +243,10 @@ def build_nx_ast(ast):
                     coord_line = g.nodes[ast2nx[node]]['coord_line']
             ast2nx[child] = g.number_of_nodes()
             g.add_node(g.number_of_nodes(),
-                       child_ntype=child.__class__.__name__,
+                       ntype=child.__class__.__name__,
                        token=get_token(child),
                        coord_line=coord_line)
             g.add_edge(ast2nx[node], ast2nx[child], label=child_name)
-            queue.insert(child, 0)
+            queue.insert(0, child)
 
     return g, ast2nx

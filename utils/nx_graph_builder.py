@@ -14,19 +14,15 @@ def build_nx_graph_cfg_ast(graph):
     for node in nx_cfg.nodes():
         nx_cfg.nodes[node]['graph'] = 'cfg'
     for node in nx_ast.nodes():
-        nx_cfg.nodes[node]['graph'] = 'ast'
+        nx_ast.nodes[node]['graph'] = 'ast'
 
-    nx_h_g = combine_multi([nx_ast, nx_cfg])
+    nx_h_g, batch = combine_multi([nx_ast, nx_cfg])
     for node in nx_h_g.nodes():
         if nx_h_g.nodes[node]['graph'] != 'cfg':
             continue
         # Get corresponding lines
-        if nx_h_g.nodes[node]['ntype'] == 'entry_node':
-            start = nx_h_g.nodes[node]['line']
-            end = nx_h_g.nodes[node]['line']
-        else:
-            start = nx_h_g.nodes[node]['start_line']
-            end = nx_h_g.nodes[node]['end_line']
+        start = nx_h_g.nodes[node]['start_line']
+        end = nx_h_g.nodes[node]['end_line']
 
         corresponding_ast_nodes = [n for n in nx_h_g.nodes()
                                    if nx_h_g.nodes[n]['graph'] == 'ast' and
@@ -34,7 +30,7 @@ def build_nx_graph_cfg_ast(graph):
                                    nx_h_g.nodes[n]['coord_line'] <= end]
         for ast_node in corresponding_ast_nodes:
             nx_h_g.add_edge(node, ast_node, label='corresponding_ast')
-    return nx_h_g
+    return nx_cfg, nx_ast, nx_h_g
 
 
 def build_nx_cfg_ast_coverage_codeflaws(data_codeflaws: dict):
@@ -56,7 +52,8 @@ def build_nx_cfg_ast_coverage_codeflaws(data_codeflaws: dict):
                                    data_codeflaws['c_source'])
     nline_removed = remove_lib(filename)
     graph = cfg.CFG("temp.c")
-    cfg_ast_g = build_nx_graph_cfg_ast(graph)
+    nx_cfg, nx_ast, cfg_ast_g = build_nx_graph_cfg_ast(graph)
+    nx_cfg_ast = cfg_ast_g.copy()
 
     tests_list = list(data_codeflaws['test_verdict'].keys())
 
@@ -72,12 +69,8 @@ def build_nx_cfg_ast_coverage_codeflaws(data_codeflaws: dict):
             if cfg_ast_g.nodes[node]['graph'] != 'cfg':
                 continue
             # Get corresponding lines
-            if cfg_ast_g.nodes[node]['ntype'] == 'entry_node':
-                start = cfg_ast_g.nodes[node]['line']
-                end = cfg_ast_g.nodes[node]['line']
-            else:
-                start = cfg_ast_g.nodes[node]['start_line']
-                end = cfg_ast_g.nodes[node]['end_line']
+            start = cfg_ast_g.nodes[node]['start_line']
+            end = cfg_ast_g.nodes[node]['end_line']
 
             for line in coverage_map:
                 if line >= start and line <= end:
@@ -101,4 +94,4 @@ def build_nx_cfg_ast_coverage_codeflaws(data_codeflaws: dict):
                             cfg_ast_g.add_edge(
                                 ast_node, test_node, label='a_fail_test')
 
-    return cfg_ast_g
+    return nx_cfg, nx_ast, nx_cfg_ast, cfg_ast_g
