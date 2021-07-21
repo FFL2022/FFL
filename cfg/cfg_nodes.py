@@ -59,7 +59,7 @@ class CFGEntryNode(object):
         if isinstance(self._func_first_node, CFGNode):
             print(self._func_first_node)
             self._func_first_node.show(buf=buf, lead=lead)
-    
+
     def get_id(self, id):
         self._id = id
 
@@ -81,7 +81,7 @@ class CFGNode(object):
             loop_iters (int): number of iterations in a loop
             wcec (int): WCEC value
             rwcec (int): RWCEC value
-            children (int): all children of the current node
+            children (CFGNode): all children of the current node
             ast_elem_list (list): list of pycparser/c_ast elements
     """
     def __init__(self, type):

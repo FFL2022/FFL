@@ -1,8 +1,8 @@
 from utils.utils import ConfigClass
-from utils.preprocess_helpers import remove_lib
 from cfg import cfg, cfg2graphml, cfg_cdvfs_generator
-from utils.traverse_utils import traverse_cfg, traverse_ast
+from utils.traverse_utils import build_nx_cfg, build_nx_ast
 import networkx as nx
+
 
 def build_nx_graph(graph):
     list_cfg_nodes = {}
@@ -11,7 +11,7 @@ def build_nx_graph(graph):
     graph = cfg.CFG("temp.c")
     graph.make_cfg()
     # graph.show()
-    list_cfg_nodes, list_cfg_edges = traverse_cfg(graph)
+    nx_cfg, cfg2nx = build_nx_cfg(graph)
     # print(list_cfg_nodes)
     # print(list_cfg_edges)
     # print("Done !!!")
@@ -21,15 +21,9 @@ def build_nx_graph(graph):
     list_ast_edges = {}
     nx_g = nx.MultiDiGraph()
     ast = graph.get_ast()
-
-
+    nx_ast, ast2nx = build_nx_ast
     # Note: We are removing both include and global variables
     # Is there any way to change this
-
-    for _, funcdef in ast.children():
-        index, tmp_n, tmp_e = traverse_ast(funcdef, index, None, 0)
-        list_ast_nodes.update(tmp_n)
-        list_ast_edges.update(tmp_e)
 
     # print(list_ast_nodes)
     # print(list_ast_edges)

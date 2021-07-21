@@ -1,4 +1,5 @@
 from cfg.cfg_nodes import CFGNode
+import networkx as nx
 
 
 def is_leaf(astnode):
@@ -6,40 +7,40 @@ def is_leaf(astnode):
         return True
     return len(astnode.children()) == 0
 
-def get_token(astnode, lower=True):
-        if isinstance(astnode, str):
-            return astnode.node
-        name = astnode.__class__.__name__
-        token = name
-        is_name = False
-        if is_leaf(astnode):
-            attr_names = astnode.attr_names
-            if attr_names:
-                if 'names' in attr_names:
-                    token = astnode.names[0]
-                elif 'name' in attr_names:
-                    token = astnode.name
-                    is_name = True
-                else:
-                    token = astnode.value
-            else:
-                token = name
-        else:
-            if name == 'TypeDecl':
-                token = astnode.declname
-            if astnode.attr_names:
-                attr_names = astnode.attr_names
-                if 'op' in attr_names:
-                    if astnode.op[0] == 'p':
-                        token = astnode.op[1:]
-                    else:
-                        token = astnode.op
-        if token is None:
-            token = name
-        if lower and is_name:
-            token = token.lower()
-        return token
 
+def get_token(astnode, lower=True):
+    if isinstance(astnode, str):
+        return astnode.node
+    name = astnode.__class__.__name__
+    token = name
+    is_name = False
+    if is_leaf(astnode):
+        attr_names = astnode.attr_names
+        if attr_names:
+            if 'names' in attr_names:
+                token = astnode.names[0]
+            elif 'name' in attr_names:
+                token = astnode.name
+                is_name = True
+            else:
+                token = astnode.value
+        else:
+            token = name
+    else:
+        if name == 'TypeDecl':
+            token = astnode.declname
+        if astnode.attr_names:
+            attr_names = astnode.attr_names
+            if 'op' in attr_names:
+                if astnode.op[0] == 'p':
+                    token = astnode.op[1:]
+                else:
+                    token = astnode.op
+    if token is None:
+        token = name
+    if lower and is_name:
+        token = token.lower()
+    return token
 
 
 def traverse_ast(node, index, parent, parent_index):
@@ -61,12 +62,11 @@ def traverse_ast(node, index, parent, parent_index):
     tmp_n[index] = [node_token, coord_line]
 
     for edgetype, child in node.children():
-        if child != None:
+        if child is not None:
             index, n, e = traverse_ast(child, index, node, curr_index)
             tmp_e.update(e)
             tmp_n.update(n)
     return index, tmp_n, tmp_e
-
 
 
 def traverse_cfg(graph):
@@ -77,11 +77,15 @@ def traverse_cfg(graph):
     parent = {}
     is_traversed = []
     for i in range(len(graph._entry_nodes)):
-       entry_node = graph._entry_nodes[i]
-       list_cfg_nodes[entry_node.line] = "entry_node"
-       list_callfuncline[entry_node._func_name] = entry_node.line
-       is_traversed.append(entry_node)
-       if isinstance(entry_node._func_first_node, CFGNode):
+        # Loop through entry nodes
+        entry_node = graph._entry_nodes[i]
+        # Node type on each line
+        list_cfg_nodes[entry_node.line] = "entry_node"
+        # Entry node is often function
+        list_callfuncline[entry_node._func_name] = entry_node.line
+        # Visited node
+        is_traversed.append(entry_node)
+        if isinstance(entry_node._func_first_node, CFGNode):
             queue = []
             node = entry_node._func_first_node
             queue.append(node)
@@ -120,3 +124,127 @@ def traverse_cfg(graph):
                                 list_cfg_edges[(i, i+1)] = 1
                             list_cfg_nodes[i] = node._type
     return list_cfg_nodes, list_cfg_edges
+
+
+def build_nx_cfg(graph):
+    '''Build networkx version of cfg'''
+    g = nx.MultiDiGraph()
+    cfg2nx = {}
+    ''' There exists 2 types of CFGNode:
+        1. CFGEntryNode:
+            Function definition
+        2. CFGNode
+        In the CFGNode, there will also be different node types: "COMMON",
+        "IF", "ELSE", "ELSE_IF", "FOR", "WHILE", "DO_WHILE", "PSEUDO",
+        "CALL", "END"
+    '''
+    for i in range(len(graph._entry_nodes)):
+        # Loop through entry nodes
+        entry_node = graph._entry_nodes[i]
+        if entry_node not in cfg2nx:
+            cfg2nx[entry_node] = g.number_of_nodes()
+            g.add_node(cfg2nx[entry_node], ntype="entry_node",
+                       funcname=entry_node._func_name,
+                       line=entry_node.line,
+                       )
+        if isinstance(entry_node._func_first_node, CFGNode):
+            # Entry to the function
+            queue = []
+            node = entry_node._func_first_node
+            queue.append(node)
+            cfg2nx[node] = g.number_of_nodes()
+            g.add_node(cfg2nx[node], ntype=node._type,
+                       start_line=node.get_start_line(),
+                       end_line=node.get_last_line()
+                       )
+            g.add_edge(cfg2nx[entry_node],
+                       cfg2nx[node],
+                       label='parent_child')
+            while len(queue) > 0:
+                # print(queue)
+                node = queue.pop(0)
+                if node not in cfg2nx:
+                    # print(node.get_children())
+                    for child in node.get_children():
+                        cfg2nx[child] = g.number_of_nodes()
+                        g.add_node(cfg2nx[child], ntype=child._type,
+                                   start_line=child.get_start_line(),
+                                   end_line=child.get_last_line()
+                                   )
+                        g.add_edge(cfg2nx[node],
+                                   cfg2nx[child],
+                                   label='parent_child')
+                        # print(child)
+                        queue.append(child)
+                    if node._type == "END":
+                        pass
+                    else:
+                        if node._type == "CALL":
+                            x = node.get_ast_elem_list()
+                            for func in x:
+                                # Find the node which have that funcname
+                                # So that we can connect them together
+                                mapping = dict([
+                                    (g.nodes[n]['funcname'], n)
+                                    for n in g.nodes() if
+                                    g.nodes[n]['ntype'] == 'entry_node'
+                                ])
+                                try:
+                                    dst_node = mapping[func.name.name]
+                                    g.add_edge(node, dst_node,
+                                               label='func_call')
+                                except KeyError:
+                                    pass
+
+    # Connect every consecutive lines between the node's
+    # range
+    startline2node = [(g.nodes[node]['start_line'], []) for node in g.nodes()
+                      if g.nodes[node]['ntype'] != 'entry_node']
+    for node in g.nodes[node]:
+        startline2node[g.nodes[node]]['start_line'].append(node)
+    largest_startline = max(list(startline2node.keys()))
+    for node in g.nodes():
+        if g.nodes[node]['ntype'] == 'entry_node':
+            continue
+        next_line = g.nodes[node]['end_line'] + 1
+        while next_line not in startline2node and\
+                next_line <= largest_startline:
+            next_line += 1
+        if next_line > largest_startline:
+            continue
+        # Find the largest node among them
+        candidate = max(startline2node[next_line],
+                        key=lambda node: g.nodes[node]['end_line'])
+        g.add_edge(node, candidate, 'next')
+    return g, cfg2nx
+
+
+def build_nx_ast(ast):
+    g = nx.MultiDiGraph()
+    ast2nx = {ast: 0}
+
+    g.add_node(0, name=ast.name, ntype=ast.__class__.__name__,
+               token=get_token(ast), coord_line=-1)
+    queue = [ast]
+    while len(queue) > 0:
+        node = queue.pop()
+        # Child name can also be used as edge etype
+
+        for child_name, child in node.children():
+            child_token = get_token(child)
+            if child_token == "TypeDecl":
+                coord_line = node.type.coord.line
+            else:
+                try:
+                    coord_line = node.coord.line
+                except AttributeError:
+                    coord_line = g.nodes[ast2nx[node]]['coord_line']
+            ast2nx[child] = g.number_of_nodes()
+            g.add_node(g.number_of_nodes(),
+                       child_ntype=child.__class__.__name__,
+                       token=get_token(child),
+                       coord_line=coord_line)
+            g.add_edge(ast2nx[node], ast2nx[child], label=child_name)
+            queue.insert(child, 0)
+
+    return g, ast2nx

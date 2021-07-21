@@ -3,27 +3,59 @@ import networkx as nx
 from collections import Counter, defaultdict
 
 
-def neighbors_in(u, q):
+def neighbors_in(u, q, filter_func=None):
     ''' Get neighbor having edges into this node
     Parameters
     ----------
-    u: str
+    u: str/int
     q: nx.MultiDiGraph
+    filter_func: lambda u, v, k, data -> bool
 
     Returns
     ----------
-    list(str)
+    list(str)/list(int) (based on the node id) set in the original graph
     '''
-    return list(set(list(u_n for u_n, _ in q.in_edges(u))))
+    if filter_func is None:
+        return list(set(list(u_n for u_n, _ in q.in_edges(u))))
+    else:
+        return list(set(list(u_n for u_n, _, k, e in q.in_edges(u, data=True,
+                                                                keys=True)
+                             if filter_func(u_n, u, k, e))))
 
 
-def neighbors_out(u, q):
-    return list(set(list(u_n for _, u_n in q.out_edges(u))))
+def neighbors_out(u, q, filter_func=None):
+    ''' Neighbors out (neighbors that this node have at least one edge to)
+    Parameters
+    ----------
+    u: str/int
+    q: nx.MultiDiGraph
+    filter_func: lambda u, v, k, data -> bool
+    Returns
+    ----------
+    list(str)/list(int) (based on the node id) set in the original graph
+    '''
+    if filter_func is None:
+        return list(set(list(u_n for _, u_n in q.out_edges(u))))
+    else:
+        return list(set(list(u_n for _, u_n, k, e in q.in_edges(u, data=True,
+                                                                keys=True)
+                             if filter_func(u, u_n, k, e))))
 
 
-def all_neighbors(u, q):
-    uis = neighbors_in(u, q)
-    uos = neighbors_out(u, q)
+def all_neighbors(u, q, filter_func=None):
+    ''' All neighbors
+    Parameters
+    ----------
+    u: str/int
+    q: nx.MultiDiGraph
+    filter_func: lambda u, v, k, data -> bool
+
+    Returns
+    ----------
+    list(str)/list(int) (based on the node id) set in the original graph
+    '''
+    uis = neighbors_in(u, q, filter_func)
+    uos = neighbors_out(u, q, filter_func)
     return uis, uos, list(set(uis + uos))
 
 
