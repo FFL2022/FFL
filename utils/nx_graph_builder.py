@@ -1,88 +1,104 @@
 from utils.utils import ConfigClass
-from cfg import cfg, cfg2graphml, cfg_cdvfs_generator
+from cfg import cfg
 from utils.traverse_utils import build_nx_cfg, build_nx_ast
-import networkx as nx
+from utils.preprocess_helpers import get_coverage, remove_lib
+from graph_algos.nx_shortcuts import combine_multi, neighbors_out
 
 
-def build_nx_graph(graph):
-    list_cfg_nodes = {}
-    list_cfg_edges = {}
-    # create CFG
-    graph = cfg.CFG("temp.c")
+def build_nx_graph_cfg_ast(graph):
     graph.make_cfg()
-    # graph.show()
-    nx_cfg, cfg2nx = build_nx_cfg(graph)
-    # print(list_cfg_nodes)
-    # print(list_cfg_edges)
-    # print("Done !!!")
-    # print("======== AST ========")
-    index = 0
-    list_ast_nodes = {}
-    list_ast_edges = {}
-    nx_g = nx.MultiDiGraph()
     ast = graph.get_ast()
-    nx_ast, ast2nx = build_nx_ast
-    # Note: We are removing both include and global variables
-    # Is there any way to change this
+    nx_cfg, cfg2nx = build_nx_cfg(graph)
+    nx_ast, ast2nx = build_nx_ast(ast)
 
-    # print(list_ast_nodes)
-    # print(list_ast_edges)
-    # print("Done !!!")
-    # print("======== Mapping AST-CFG ========")
-    cfg_to_ast = {}
-    for id, value in list_ast_nodes.items():
-        _, line = value
-        try:
-            cfg_to_ast[line].append(id)
-        except KeyError:
-            cfg_to_ast[line] = []
-    # print(cfg_to_ast)
-    with open("temp.c") as f:
-        index = 1
-        for line in f:
-            index +=1
+    for node in nx_cfg.nodes():
+        nx_cfg.nodes[node]['graph'] = 'cfg'
+    for node in nx_ast.nodes():
+        nx_cfg.nodes[node]['graph'] = 'ast'
 
-    os.remove("temp.c")
-    cfg_to_tests = {}
-    # print("Done !!!")
-    # print("======== Mapping tests-CFG ========")
-    if codeflaws == None:
-        tests_list = list(nbl['test_verdict'].keys())
+    nx_h_g = combine_multi([nx_ast, nx_cfg])
+    for node in nx_h_g.nodes():
+        if nx_h_g.nodes[node]['graph'] != 'cfg':
+            continue
+        # Get corresponding lines
+        if nx_h_g.nodes[node]['ntype'] == 'entry_node':
+            start = nx_h_g.nodes[node]['line']
+            end = nx_h_g.nodes[node]['line']
+        else:
+            start = nx_h_g.nodes[node]['start_line']
+            end = nx_h_g.nodes[node]['end_line']
 
-        for test in tests_list:
-            covfile = "{}/{}/{}-{}.gcov".format(ConfigClass.nbl_test_path, nbl['problem_id'], test, nbl['program_id'])
-            cfg_to_tests[test] = get_coverage(covfile, nline_removed)
+        corresponding_ast_nodes = [n for n in nx_h_g.nodes()
+                                   if nx_h_g.nodes[n]['graph'] == 'ast' and
+                                   nx_h_g.nodes[n]['coord_line'] >= start and
+                                   nx_h_g.nodes[n]['coord_line'] <= end]
+        for ast_node in corresponding_ast_nodes:
+            nx_h_g.add_edge(node, ast_node, label='corresponding_ast')
+    return nx_h_g
 
-        # print("======== Mapping tests-AST ========")
-        ast_to_tests = {}
 
-        for test in tests_list:
-            ast_to_tests[test] = {}
-            for line, ast_nodes in cfg_to_ast.items():
-                for node in ast_nodes:
-                    try:
-                        ast_to_tests[test][node] = cfg_to_tests[test][line]
-                    except KeyError:
-                        pass
+def build_nx_cfg_ast_coverage_codeflaws(data_codeflaws: dict):
+    ''' Build networkx controlflow ast coverage heterograph codeflaws
+    Parameters
+    ----------
+    cfg_ast_g:  nx.MultiDiGraph
+          Short description
+    data_codeflaws:  dict
+          Short description
+    Returns
+    ----------
+    param_name: type
+          Short description
+    '''
 
-    else:
-        tests_list = list(codeflaws['test_verdict'].keys())
+    filename = "{}/{}/{}.c".format(ConfigClass.codeflaws_data_path,
+                                   data_codeflaws['container'],
+                                   data_codeflaws['c_source'])
+    nline_removed = remove_lib(filename)
+    graph = cfg.CFG("temp.c")
+    cfg_ast_g = build_nx_graph_cfg_ast(graph)
 
-        for test in tests_list:
-            covfile = "{}/{}/{}.gcov".format(ConfigClass.codeflaws_data_path, codeflaws['container'], test)
-            cfg_to_tests[test] = get_coverage(covfile, nline_removed)
+    tests_list = list(data_codeflaws['test_verdict'].keys())
 
-        # print("======== Mapping tests-AST ========")
-        ast_to_tests = {}
+    for i, test in enumerate(tests_list):
+        covfile = "{}/{}/{}.gcov".format(
+            ConfigClass.codeflaws_data_path, data_codeflaws['container'], test)
+        coverage_map = get_coverage(covfile, nline_removed)
+        test_node = cfg_ast_g.number_of_nodes()
+        cfg_ast_g.add_node(test_node, name=f'test_{i}',
+                           ntype='test', graph='test')
+        for node in cfg_ast_g.nodes():
+            # Check the line
+            if cfg_ast_g.nodes[node]['graph'] != 'cfg':
+                continue
+            # Get corresponding lines
+            if cfg_ast_g.nodes[node]['ntype'] == 'entry_node':
+                start = cfg_ast_g.nodes[node]['line']
+                end = cfg_ast_g.nodes[node]['line']
+            else:
+                start = cfg_ast_g.nodes[node]['start_line']
+                end = cfg_ast_g.nodes[node]['end_line']
 
-        for test in tests_list:
-            ast_to_tests[test] = {}
-            for line, ast_nodes in cfg_to_ast.items():
-                for node in ast_nodes:
-                    try:
-                        ast_to_tests[test][node] = cfg_to_tests[test][line]
-                    except KeyError:
-                        pass
+            for line in coverage_map:
+                if line >= start and line <= end:
+                    # The condition of parent node passing is less strict
+                    if coverage_map[line] > 0:
+                        cfg_ast_g.add_edge(
+                            node, test_node, label='c_pass_test')
+                        for ast_node in neighbors_out(
+                                node, cfg_ast_g,
+                                filter_func=lambda u, v, k, e: e['label'] ==
+                                'corresponding_ast'):
+                            cfg_ast_g.add_edge(
+                                ast_node, test_node, label='a_pass_test')
+                    elif line == start and start == end:
+                        cfg_ast_g.add_edge(
+                            node, test_node, label='c_fail_test')
+                        for ast_node in neighbors_out(
+                                node, cfg_ast_g,
+                                filter_func=lambda u, v, k, e: e['label'] ==
+                                'corresponding_ast'):
+                            cfg_ast_g.add_edge(
+                                ast_node, test_node, label='a_fail_test')
 
-    return list_cfg_nodes, list_cfg_edges, list_ast_nodes, list_ast_edges, cfg_to_ast, cfg_to_tests, ast_to_tests
-
+    return cfg_ast_g

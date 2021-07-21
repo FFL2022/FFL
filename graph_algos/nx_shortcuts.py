@@ -1,6 +1,8 @@
 '''Networkx Shortcuts'''
 import networkx as nx
 from collections import Counter, defaultdict
+from typing import List
+import numpy as np
 
 
 def neighbors_in(u, q, filter_func=None):
@@ -104,3 +106,39 @@ def maximum_neighbor_degrees(v, G):
             neighbor_in[edata['label']] = max(G.degree[vi],
                                               neighbor_in[edata['label']])
     return neighbor_in, neighbor_out
+
+
+def combine_multi(vs: List, merge_nodes=False, node2int=None):
+    ''' Compose multiple nx graph into 1 graph
+    Parameters
+    ----------
+    merge_nodes:
+            Whether to merge nodes of same name or create new one
+    Returns
+    ----------
+    out_nx_g: nx.MultiDiGraph
+    batch: [0 0 0 ... 1 1 1 ... N]
+    node2int: converting node label to int for comparison
+    '''
+    if node2int is None:
+        if isinstance(vs[0].nodes[0], str):
+            def node2int(x): return int(x[1:])
+        else:
+            def node2int(x): return x
+    n_count = 0
+    out_nx_g = None
+    batch = []
+    for v_idx, v in enumerate(vs):
+        node_labels = list(v.nodes())
+        mapping = dict((node_label, 'n{}'.format(i + n_count))
+                       for i, node_label in enumerate(
+                           sorted(node_labels, key=node2int)))
+        # rename
+        new_v = nx.relabel_nodes(v, mapping)
+        n_count += len(node_labels)
+        batch += [v_idx] * len(node_labels)
+        if v_idx == 0:
+            out_nx_g = new_v
+        else:
+            out_nx_g = nx.compose(out_nx_g, new_v)
+    return out_nx_g, np.array(batch)
