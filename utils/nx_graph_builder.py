@@ -1,19 +1,12 @@
 from utils.utils import ConfigClass
 from utils.preprocess_helpers import remove_lib
+from cfg import cfg, cfg2graphml, cfg_cdvfs_generator
+from utils.traverse_utils import traverse_cfg, traverse_ast
+import networkx as nx
 
-def build_graph(nbl=None, codeflaws=None):
-    if nbl != None:
-        filename = "{}/{}/{}.c".format(ConfigClass.nbl_source_path, nbl['problem_id'],nbl['program_id'])
-    if codeflaws != None:
-        filename = "{}/{}/{}.c".format(ConfigClass.codeflaws_data_path, codeflaws['container'], codeflaws['c_source'])
-
-    # print("======== CFG ========")
-
+def build_nx_graph(graph):
     list_cfg_nodes = {}
     list_cfg_edges = {}
-    #Remove headers
-    nline_removed = remove_lib(filename)
-
     # create CFG
     graph = cfg.CFG("temp.c")
     graph.make_cfg()
@@ -26,7 +19,13 @@ def build_graph(nbl=None, codeflaws=None):
     index = 0
     list_ast_nodes = {}
     list_ast_edges = {}
-    ast = graph._ast
+    nx_g = nx.MultiDiGraph()
+    ast = graph.get_ast()
+
+
+    # Note: We are removing both include and global variables
+    # Is there any way to change this
+
     for _, funcdef in ast.children():
         index, tmp_n, tmp_e = traverse_ast(funcdef, index, None, 0)
         list_ast_nodes.update(tmp_n)
