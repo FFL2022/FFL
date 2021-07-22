@@ -16,7 +16,7 @@ def augment_cfg_with_content(nx_cfg: nx.MultiDiGraph, code: list):
     ----------
     nx_cfg: nx.MultiDiGraph
     '''
-    for node in nx_cfg.number_of_nodes():
+    for node in nx_cfg.nodes():
         # Only add these line to child node
         nx_cfg.nodes[node]['text'] = code[
             nx_cfg.nodes[node]['start_line'] - 1] \

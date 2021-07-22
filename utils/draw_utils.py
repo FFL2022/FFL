@@ -11,14 +11,22 @@ def cfg_to_agraph(cfg: nx.MultiDiGraph, path: str):
     path:  str
     '''
     for node in cfg.nodes():
-        cfg.nodes[node]['label'] = cfg.nodes[node]['ntype']
+        cfg.nodes[node]['label'] = cfg.nodes[node]['ntype'] + \
+            cfg.nodes[node]['text']
         if cfg.nodes[node]['ntype'] == 'entry_node':
             cfg.nodes[node]['label'] = cfg.nodes[node]['ntype'] + \
-                ' ' + cfg.nodes[node]['funcname']
+                ' ' + cfg.nodes[node]['funcname'] + ' ' +\
+                cfg.nodes[node]['text']
     nx.drawing.nx_agraph.to_agraph(cfg).draw(path, prog='dot')
 
 
 def ast_to_agraph(ast: nx.MultiDiGraph, path: str):
+    ''' Nx Ast to agraph
+    Parameters
+    ----------
+    ast:  nx.MultiDiGraph
+    path:  str
+    '''
     for node in ast.nodes():
         ast.nodes[node]['label'] = ast.nodes[node]['ntype'] + \
             ' ' + ast.nodes[node]['token']
@@ -26,6 +34,12 @@ def ast_to_agraph(ast: nx.MultiDiGraph, path: str):
 
 
 def cfg_ast_to_agraph(cfg_ast: nx.MultiDiGraph, path: str):
+    ''' Cfg ast to agraph
+    Parameters
+    ----------
+    cfg_ast:  nx.MultiDiGraph
+    path:  str
+    '''
     for node in cfg_ast.nodes():
         if cfg_ast.nodes[node]['graph'] == 'cfg':
             cfg_ast.nodes[node]['label'] = cfg_ast.nodes[node]['ntype']
