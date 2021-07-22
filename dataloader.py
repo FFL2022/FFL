@@ -2,6 +2,8 @@ from dgl.data import DGLDataset
 from dgl import save_graphs, load_graphs
 from dgl.data.utils import makedirs, save_info, load_info
 from utils.utils import ConfigClass
+from utils.codeflaws_data_utils import make_codeflaws_dict
+from utils.nbl_data_utils import make_nbl_dict
 import os
 import pickle as pkl
 import json
@@ -19,17 +21,9 @@ class BugLocalizeGraphDataset(DGLDataset):
         self.dataset_opt = dataset_opt
         self.graph_opt = graph_opt
 
-        super(BugLocalizeGraphDataset, self).__init__(
-            name='key_value_dataset',
-            url=None,
-            raw_dir=raw_dir,
-            save_dir=save_dir,
-            force_reload=False,
-            verbose=False)
-
         self.train_idxs = range(int(self.total_train))
         self.val_idxs = range(self.total_train, len(self.gs))
-        
+
         self.active_idxs = self.train_idxs
 
     def train(self):
@@ -55,7 +49,7 @@ class BugLocalizeGraphDataset(DGLDataset):
 
     def process(self):
         from dataset import build_dgl_graph
-        self.total_train = 0 
+        self.total_train = 0
         if self.dataset_opt == 'nbl':
             train_map = pkl.load(open(
                 ConfigClass.train_cfgidx_map_pkl, 'rb'))
@@ -83,18 +77,9 @@ class BugLocalizeGraphDataset(DGLDataset):
         for i, key in enumerate(self.temp_keys):
             nbl, codeflaws = None, None
             if self.dataset_opt == 'nbl':
-                problem_id, uid, program_id = key.split("-")
-                nbl = {}
-                nbl['problem_id'] = problem_id
-                nbl['uid'] = uid
-                nbl['program_id'] = program_id
-                nbl['test_verdict'] = test_verdict[problem_id][int(program_id)]
+                nbl = make_nbl_dict(key, test_verdict)
             if self.dataset_opt == 'codeflaws':
-                info = key.split("-")
-                codeflaws = {}
-                codeflaws['container'] = key
-                codeflaws['c_source'] = "{}-{}-{}".format(info[0], info[1], info[3])
-                codeflaws['test_verdict'] = test_verdict["{}-{}".format(info[0], info[1])][info[3]]
+                codeflaws = make_codeflaws_dict(key, test_verdict)
             try:
                 G, ast_id2idx, cfg_id2idx, test_id2idx = build_dgl_graph(nbl=nbl, codeflaws=codeflaws, model=model, graph_opt=self.graph_opt)
             except:

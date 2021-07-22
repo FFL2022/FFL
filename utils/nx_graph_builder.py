@@ -3,13 +3,34 @@ from cfg import cfg
 from utils.traverse_utils import build_nx_cfg, build_nx_ast
 from utils.preprocess_helpers import get_coverage, remove_lib
 from graph_algos.nx_shortcuts import combine_multi, neighbors_out
+import networkx as nx
 
 
-def build_nx_graph_cfg_ast(graph):
+def augment_cfg_with_content(nx_cfg: nx.MultiDiGraph, code: list):
+    ''' Augment cfg with text content (In place)
+    Parameters
+    ----------
+    nx_cfg:  nx.MultiDiGraph
+    code: list[text]: linenumber-1 -> text
+    Returns
+    ----------
+    nx_cfg: nx.MultiDiGraph
+    '''
+    for node in nx_cfg.number_of_nodes():
+        # Only add these line to child node
+        nx_cfg.nodes[node]['text'] = code[
+            nx_cfg.nodes[node]['start_line'] - 1] \
+            if nx_cfg.nodes[node]['start_line'] == \
+            nx_cfg.nodes[node]['end_line'] else ''
+    return nx_cfg
+
+
+def build_nx_graph_cfg_ast(graph, code: list):
     ''' Build nx graph cfg ast
     Parameters
     ----------
     graph: cfg.CFG
+    code: list[text]
     Returns
     ----------
     cfg_ast: nx.MultiDiGraph
@@ -17,6 +38,9 @@ def build_nx_graph_cfg_ast(graph):
     graph.make_cfg()
     ast = graph.get_ast()
     nx_cfg, cfg2nx = build_nx_cfg(graph)
+    if code is not None:
+        nx_cfg = augment_cfg_with_content(nx_cfg, code)
+
     nx_ast, ast2nx = build_nx_ast(ast)
 
     for node in nx_cfg.nodes():
@@ -61,7 +85,11 @@ def build_nx_cfg_coverage_codeflaws(data_codeflaws: dict):
                                    data_codeflaws['c_source'])
     nline_removed = remove_lib(filename)
     graph = cfg.CFG("temp.c")
-    nx_cfg, nx_ast, nx_cfg_ast = build_nx_graph_cfg_ast(graph)
+    code = []
+    with open("temp.c", 'r') as f:
+        code = [line for line in f]
+
+    nx_cfg, nx_ast, nx_cfg_ast = build_nx_graph_cfg_ast(graph, code)
     nx_cfg_cov = nx_cfg.copy()
 
     tests_list = list(data_codeflaws['test_verdict'].keys())
@@ -115,7 +143,10 @@ def build_nx_cfg_ast_coverage_codeflaws(data_codeflaws: dict):
                                    data_codeflaws['c_source'])
     nline_removed = remove_lib(filename)
     graph = cfg.CFG("temp.c")
-    nx_cfg, nx_ast, cfg_ast_g = build_nx_graph_cfg_ast(graph)
+
+    with open("temp.c", 'r') as f:
+        code = [line for line in f]
+    nx_cfg, nx_ast, cfg_ast_g = build_nx_graph_cfg_ast(graph, code)
     nx_cfg_ast = cfg_ast_g.copy()
 
     tests_list = list(data_codeflaws['test_verdict'].keys())
