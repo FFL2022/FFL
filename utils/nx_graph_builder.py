@@ -92,7 +92,9 @@ def build_nx_cfg_ast_coverage_codeflaws(data_codeflaws: dict):
                                 'corresponding_ast'):
                             cfg_ast_g.add_edge(
                                 ast_node, test_node, label='a_pass_test')
-                    elif line == start and start == end:
+                    elif line == start and (start == end or start==end-1):
+                        # 2 case, since a common parent line might only have
+                        # 1 line
                         cfg_ast_g.add_edge(
                             node, test_node, label='c_fail_test')
                         for ast_node in neighbors_out(

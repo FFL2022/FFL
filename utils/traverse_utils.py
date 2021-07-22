@@ -184,18 +184,20 @@ def build_nx_cfg(graph, break_to_line=True):
                     # Break node down to smaller components of same type
                 if node._type == 'COMMON' and break_to_line:
                     start_line = g.nodes[cfg2nx[node]]['start_line']
-                    end_line = g.nodes[cfg2nx[node]]['end_line']
-                    for line in range(start_line, end_line + 1):
-                        line_idx = g.number_of_nodes()
-                        cfg2nx[g.number_of_nodes()] = line_idx
-                        g.add_node(line_idx, ntype='COMMON', start_line=line,
-                                   end_line=line)
-                        g.add_edge(cfg2nx[node], line_idx,
-                                   label='parent_child')
-                        if line >= start_line + 1:
-                            g.add_edge(line_idx-1,
-                                       line_idx,
-                                       label='next')
+                    end_line = min_start_line_child
+                    if end_line - start_line > 1:
+                        for line in range(start_line, end_line):
+                            line_idx = g.number_of_nodes()
+                            cfg2nx[g.number_of_nodes()] = line_idx
+                            g.add_node(line_idx, ntype='COMMON',
+                                       start_line=line,
+                                       end_line=line)
+                            g.add_edge(cfg2nx[node], line_idx,
+                                       label='parent_child')
+                            if line >= start_line + 1:
+                                g.add_edge(line_idx-1,
+                                           line_idx,
+                                           label='next')
 
                 if node._type == "END":
                     pass
