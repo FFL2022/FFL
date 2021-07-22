@@ -28,9 +28,12 @@ def build_nx_graph_cfg_ast(graph):
     for node in nx_h_g.nodes():
         if nx_h_g.nodes[node]['graph'] != 'cfg':
             continue
+        # only take on-liners
         # Get corresponding lines
         start = nx_h_g.nodes[node]['start_line']
         end = nx_h_g.nodes[node]['end_line']
+        if end - start > 0:  # This is a parent node
+            continue
 
         corresponding_ast_nodes = [n for n in nx_h_g.nodes()
                                    if nx_h_g.nodes[n]['graph'] == 'ast' and
@@ -79,9 +82,11 @@ def build_nx_cfg_ast_coverage_codeflaws(data_codeflaws: dict):
             # Get corresponding lines
             start = cfg_ast_g.nodes[node]['start_line']
             end = cfg_ast_g.nodes[node]['end_line']
+            if end - start > 0:     # This is a parent node
+                continue
 
             for line in coverage_map:
-                if line >= start and line <= end:
+                if line == start:
                     # The condition of parent node passing is less strict
                     if coverage_map[line] > 0:
                         cfg_ast_g.add_edge(
@@ -92,7 +97,7 @@ def build_nx_cfg_ast_coverage_codeflaws(data_codeflaws: dict):
                                 'corresponding_ast'):
                             cfg_ast_g.add_edge(
                                 ast_node, test_node, label='a_pass_test')
-                    elif line == start and (start == end or start==end-1):
+                    else:
                         # 2 case, since a common parent line might only have
                         # 1 line
                         cfg_ast_g.add_edge(

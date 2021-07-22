@@ -21,11 +21,13 @@ if __name__ == '__main__':
                                                             info[1])][info[3]]
 
     cfg, ast, cfg_ast, cfg_ast_cov = build_nx_cfg_ast_coverage_codeflaws(codeflaws)
-    draw_utils.cfg_ast_cov_to_agraph(cfg_ast_cov,
-                                     'visualize_nx_graphs/cfg_ast_cov.png')
     draw_utils.cfg_ast_cov_to_agraph(cfg,
                                      'visualize_nx_graphs/cfg.png')
     draw_utils.cfg_ast_cov_to_agraph(ast,
                                      'visualize_nx_graphs/ast.png')
     draw_utils.cfg_ast_cov_to_agraph(cfg_ast,
                                      'visualize_nx_graphs/cfg_ast.png')
+    ''' Dont try this shit, it's too dense to see anyway
+    draw_utils.cfg_ast_cov_to_agraph(cfg_ast_cov,
+                                     'visualize_nx_graphs/cfg_ast_cov.png')
+    '''

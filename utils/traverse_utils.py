@@ -1,4 +1,4 @@
-from cfg.cfg_nodes import CFGNode
+from cfg.cfg_nodes import CFGNode, CFGEntryNode
 import networkx as nx
 
 
@@ -165,7 +165,7 @@ def build_nx_cfg(graph, break_to_line=True):
                 # print(queue)
                 node = queue.pop(0)
                 # print(node.get_children())
-                min_start_line_child = node.get_last_line() + 1
+                min_start_line_child = node.get_last_line()
                 if len(node.get_children()) > 0:
                     for child in node.get_children():
                         if child not in cfg2nx:
@@ -186,7 +186,7 @@ def build_nx_cfg(graph, break_to_line=True):
                     start_line = g.nodes[cfg2nx[node]]['start_line']
                     end_line = min_start_line_child
                     if end_line - start_line > 1:
-                        for line in range(start_line, end_line):
+                        for line in range(start_line, end_line + 1):
                             line_idx = g.number_of_nodes()
                             cfg2nx[g.number_of_nodes()] = line_idx
                             g.add_node(line_idx, ntype='COMMON',
@@ -218,6 +218,34 @@ def build_nx_cfg(graph, break_to_line=True):
                                            label='func_call')
                             except KeyError:
                                 pass
+                    if node._type == "PSEUDO" or node._type == "CALL":
+                        refnode = node.get_refnode()
+                        if refnode is not None:
+                            if refnode not in cfg2nx:
+                                cfg2nx[refnode] = g.number_of_nodes()
+                                if isinstance(refnode, CFGEntryNode):
+                                    g.add_node(cfg2nx[refnode],
+                                               ntype="entry_node",
+                                               funcname=refnode._func_name,
+                                               start_line=refnode.line,
+                                               end_line=refnode.line)
+                                    new_node = refnode._func_first_node
+                                    cfg2nx[new_node] = g.number_of_nodes()
+                                    g.add_node(cfg2nx[new_node], ntype=node._type,
+                                               start_line=node.get_start_line(),
+                                               end_line=node.get_last_line()
+                                               )
+                                    g.add_edge(cfg2nx[refnode],
+                                               cfg2nx[new_node],
+                                               label='parent_child')
+                                    queue.append(new_node)
+                                else:
+                                    g.add_node(cfg2nx[refnode], ntype=node._type,
+                                               start_line=refnode.get_start_line(),
+                                               end_line=refnode.get_last_line())
+                                    queue.append(refnode)
+                            g.add_edge(cfg2nx[node], cfg2nx[refnode],
+                                       label='ref')
 
     # Connect every consecutive lines between the node's
     # range
