@@ -164,9 +164,9 @@ def build_nx_cfg(graph):
             while len(queue) > 0:
                 # print(queue)
                 node = queue.pop(0)
-                if node not in cfg2nx:
-                    # print(node.get_children())
-                    for child in node.get_children():
+                # print(node.get_children())
+                for child in node.get_children():
+                    if child not in cfg2nx:
                         cfg2nx[child] = g.number_of_nodes()
                         g.add_node(cfg2nx[child], ntype=child._type,
                                    start_line=child.get_start_line(),
@@ -177,25 +177,25 @@ def build_nx_cfg(graph):
                                    label='parent_child')
                         # print(child)
                         queue.append(child)
-                    if node._type == "END":
-                        pass
-                    else:
-                        if node._type == "CALL":
-                            x = node.get_ast_elem_list()
-                            for func in x:
-                                # Find the node which have that funcname
-                                # So that we can connect them together
-                                mapping = dict([
-                                    (g.nodes[n]['funcname'], n)
-                                    for n in g.nodes() if
-                                    g.nodes[n]['ntype'] == 'entry_node'
-                                ])
-                                try:
-                                    dst_node = mapping[func.name.name]
-                                    g.add_edge(node, dst_node,
-                                               label='func_call')
-                                except KeyError:
-                                    pass
+                if node._type == "END":
+                    pass
+                else:
+                    if node._type == "CALL":
+                        x = node.get_ast_elem_list()
+                        for func in x:
+                            # Find the node which have that funcname
+                            # So that we can connect them together
+                            mapping = dict([
+                                (g.nodes[n]['funcname'], n)
+                                for n in g.nodes() if
+                                g.nodes[n]['ntype'] == 'entry_node'
+                            ])
+                            try:
+                                dst_node = mapping[func.name.name]
+                                g.add_edge(node, dst_node,
+                                           label='func_call')
+                            except KeyError:
+                                pass
 
     # Connect every consecutive lines between the node's
     # range
@@ -217,7 +217,7 @@ def build_nx_cfg(graph):
         candidate = max(startline2node[next_line],
                         key=lambda node: g.nodes[node]['end_line']
                         )
-        g.add_edge(node, candidate, 'next')
+        g.add_edge(node, candidate, label='next')
     return g, cfg2nx
 
 
@@ -228,10 +228,10 @@ def build_nx_ast(ast):
     g.add_node(0, ntype=ast.__class__.__name__,
                token=get_token(ast), coord_line=-1)
     queue = [ast]
+
     while len(queue) > 0:
         node = queue.pop()
         # Child name can also be used as edge etype
-
         for child_name, child in node.children():
             child_token = get_token(child)
             if child_token == "TypeDecl":
