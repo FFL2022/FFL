@@ -44,14 +44,66 @@ def build_nx_graph_cfg_ast(graph):
     return nx_cfg, nx_ast, nx_h_g
 
 
+def build_nx_cfg_coverage_codeflaws(data_codeflaws: dict):
+    ''' Build networkx controlflow coverage heterograph codeflaws
+    Parameters
+    ----------
+    cfg_ast_g:  nx.MultiDiGraph
+    data_codeflaws:  dict
+    Returns
+    ----------
+    param_name: type
+          Short description
+    '''
+
+    filename = "{}/{}/{}.c".format(ConfigClass.codeflaws_data_path,
+                                   data_codeflaws['container'],
+                                   data_codeflaws['c_source'])
+    nline_removed = remove_lib(filename)
+    graph = cfg.CFG("temp.c")
+    nx_cfg, nx_ast, nx_cfg_ast = build_nx_graph_cfg_ast(graph)
+    nx_cfg_cov = nx_cfg.copy()
+
+    tests_list = list(data_codeflaws['test_verdict'].keys())
+
+    for i, test in enumerate(tests_list):
+        covfile = "{}/{}/{}.gcov".format(
+            ConfigClass.codeflaws_data_path, data_codeflaws['container'], test)
+        coverage_map = get_coverage(covfile, nline_removed)
+        test_node = nx_cfg_cov.number_of_nodes()
+        nx_cfg_cov.add_node(test_node, name=f'test_{i}',
+                            ntype='test', graph='test')
+        for node in nx_cfg_cov.nodes():
+            # Check the line
+            if nx_cfg_cov.nodes[node]['graph'] != 'cfg':
+                continue
+            # Get corresponding lines
+            start = nx_cfg_cov.nodes[node]['start_line']
+            end = nx_cfg_cov.nodes[node]['end_line']
+            if end - start > 0:     # This is a parent node
+                continue
+
+            for line in coverage_map:
+                if line == start:
+                    # The condition of parent node passing is less strict
+                    if coverage_map[line] > 0:
+                        nx_cfg_cov.add_edge(
+                            node, test_node, label='c_pass_test')
+                    else:
+                        # 2 case, since a common parent line might only have
+                        # 1 line
+                        nx_cfg_cov.add_edge(
+                            node, test_node, label='c_fail_test')
+
+    return nx_cfg, nx_ast, nx_cfg_ast, nx_cfg_cov
+
+
 def build_nx_cfg_ast_coverage_codeflaws(data_codeflaws: dict):
     ''' Build networkx controlflow ast coverage heterograph codeflaws
     Parameters
     ----------
     cfg_ast_g:  nx.MultiDiGraph
-          Short description
     data_codeflaws:  dict
-          Short description
     Returns
     ----------
     param_name: type
