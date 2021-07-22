@@ -313,14 +313,11 @@ def build_dgl_graph(nbl=None, codeflaws=None, graph_opt = 1, tokenizer_opt = 2, 
             feat, _ = value
             ast_feats[ast_id2idx[key]] = feat
 
-        vocab_dict = {}
         if nbl != None:
             vocab_file = open('/home/minhld/GNN4FL/nbl_vocab.txt', 'r')
         if codeflaws != None:
             vocab_file = open('/home/minhld/GNN4FL/codeflaws_vocab.txt', 'r')
-        for line in vocab_file:
-            key, value = line.split()
-            vocab_dict[key] = value
+        vocab_dict = dict(list(line.split()) for line in vocab_file)
 
         ###One-hot encode then convert to tensor
         tokens_ast_feats = [tokenize(input=feat, tokenizer_opt=tokenizer_opt) for feat in ast_feats]
