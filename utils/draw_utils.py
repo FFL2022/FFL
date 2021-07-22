@@ -32,7 +32,7 @@ def cfg_ast_to_agraph(cfg_ast: nx.MultiDiGraph, path: str):
             if cfg_ast.nodes[node]['ntype'] == 'entry_node':
                 cfg_ast.nodes[node]['label'] = cfg_ast.nodes[node]['ntype'] + \
                     ' ' + cfg_ast.nodes[node]['funcname']
-        elif cfg_ast.nodes['node']['graph'] == 'ast':
+        elif cfg_ast.nodes[node]['graph'] == 'ast':
             cfg_ast.nodes[node]['label'] = cfg_ast.nodes[node]['ntype'] + \
                 ' ' + cfg_ast.nodes[node]['token']
     nx.drawing.nx_agraph.to_agraph(cfg_ast).draw(path, prog='dot')
