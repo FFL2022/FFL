@@ -10,3 +10,8 @@ python3 dataset.py
 ```
 - Funtion: dataset.build_dgl_graph(...). 
 - Return: It will return G (dgl graph of cfg + test + tests), ast_id2idx, cfg_id2idx, tests_id2idx
+
+## Testing Graph Visualization
+```bash
+python3 -m unittest.test_nx_graph_build.py
+```
