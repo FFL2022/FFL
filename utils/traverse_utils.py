@@ -126,7 +126,7 @@ def traverse_cfg(graph):
     return list_cfg_nodes, list_cfg_edges
 
 
-def build_nx_cfg(graph):
+def build_nx_cfg(graph, break_to_line=True):
     '''Build networkx version of cfg'''
     g = nx.MultiDiGraph()
     cfg2nx = {}
@@ -165,18 +165,31 @@ def build_nx_cfg(graph):
                 # print(queue)
                 node = queue.pop(0)
                 # print(node.get_children())
-                for child in node.get_children():
-                    if child not in cfg2nx:
-                        cfg2nx[child] = g.number_of_nodes()
-                        g.add_node(cfg2nx[child], ntype=child._type,
-                                   start_line=child.get_start_line(),
-                                   end_line=child.get_last_line()
-                                   )
-                        g.add_edge(cfg2nx[node],
-                                   cfg2nx[child],
-                                   label='parent_child')
-                        # print(child)
-                        queue.append(child)
+                if len(node.get_children()) > 0:
+                    for child in node.get_children():
+                        if child not in cfg2nx:
+                            cfg2nx[child] = g.number_of_nodes()
+                            g.add_node(cfg2nx[child], ntype=child._type,
+                                       start_line=child.get_start_line(),
+                                       end_line=child.get_last_line()
+                                       )
+                            g.add_edge(cfg2nx[node],
+                                       cfg2nx[child],
+                                       label='parent_child')
+                            # print(child)
+                            queue.append(child)
+                else:
+                    # Break node down to smaller components of same type
+                    if node._type == 'COMMON' and break_to_line:
+                        start_line = g.nodes[node]['start_line']
+                        end_line = g.nodes[node]['end_line']
+                        for line in range(start_line+1, end_line):
+                            g.add_node(g.number_of_nodes(),
+                                       ntype='COMMON',
+                                       start_line=line,
+                                       end_line=line+1)
+                            g.add_edge(node, g.number_of_nodes()-1,
+                                       label='parent_child')
                 if node._type == "END":
                     pass
                 else:
@@ -217,7 +230,8 @@ def build_nx_cfg(graph):
         candidate = max(startline2node[next_line],
                         key=lambda node: g.nodes[node]['end_line']
                         )
-        g.add_edge(node, candidate, label='next')
+        if not g.has_edge(node, candidate):
+            g.add_edge(node, candidate, label='next')
     return g, cfg2nx
 
 
