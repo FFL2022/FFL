@@ -6,6 +6,14 @@ from graph_algos.nx_shortcuts import combine_multi, neighbors_out
 
 
 def build_nx_graph_cfg_ast(graph):
+    ''' Build nx graph cfg ast
+    Parameters
+    ----------
+    graph: cfg.CFG
+    Returns
+    ----------
+    cfg_ast: nx.MultiDiGraph
+    '''
     graph.make_cfg()
     ast = graph.get_ast()
     nx_cfg, cfg2nx = build_nx_cfg(graph)
