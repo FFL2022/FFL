@@ -40,7 +40,8 @@ class ConfigClassThanhServer(object):
 
 
 class ConfigClassDat(object):
-    pretrained_fastext = 'data_nbl/c_pretrained.bin'
+    pretrained_fastext = 'preprocess/c_pretrained.bin'
+
     test_verdict_pickle = "data_nbl/nbl_dataset/test_verdict.pkl"
     nbl_source_path = "data_nbl/nbl_dataset/sources"
     nbl_test_path = "data_nbl/nbl_dataset/data/tests"
