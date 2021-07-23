@@ -84,6 +84,7 @@ def train(model, in_queue, out_queue):
 
 
 def train_loop(model, dataset, n_workers, epochs=101):
+    mp.set_start_method("spawn", force=True)
     in_queue, out_queue = mp.Queue(), mp.Queue()
     model.to(device)
     model.share_memory()
@@ -232,8 +233,7 @@ def eval(model, dataloader, epoch):
     return mean_loss.avg, mean_acc.avg, f1_meter.get()['aux_f1']
 
 
-if __name__ == '__main__':
-    mp.set_start_method("spawn", force=True)
+def main():
     # config
     dataset_opt = 'codeflaws'  # nbl, codeflaws
     graph_opt = 2  # 1, 2
@@ -259,3 +259,6 @@ if __name__ == '__main__':
     print(f"Evaluation: {model_path}")
     dataset.test()
     eval(model, dataset, best_latest)
+
+if __name__ == '__main__':
+    main()
