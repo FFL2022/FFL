@@ -85,7 +85,8 @@ def build_nx_cfg_coverage_codeflaws(data_codeflaws: dict):
                                    data_codeflaws['container'],
                                    data_codeflaws['c_source'])
     shutil.copy2(filename, 'original_temp.c')
-    nline_removed = remove_lib(filename)
+    # nline_removed = remove_lib(filename)
+    nline_removed = 0
     graph = cfg.CFG("temp.c")
     code = []
     with open("temp.c", 'r') as f:
@@ -144,7 +145,8 @@ def build_nx_cfg_ast_coverage_codeflaws(data_codeflaws: dict):
                                    data_codeflaws['container'],
                                    data_codeflaws['c_source'])
     shutil.copy2(filename, 'original_temp.c')
-    nline_removed = remove_lib(filename)
+    # nline_removed = remove_lib(filename)
+    nline_removed = 0
     graph = cfg.CFG("temp.c")
 
     with open("temp.c", 'r') as f:
