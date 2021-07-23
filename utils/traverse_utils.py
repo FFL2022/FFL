@@ -210,11 +210,11 @@ def build_nx_cfg(graph, break_to_line=True):
                             mapping = dict([
                                 (g.nodes[n]['funcname'], n)
                                 for n in g.nodes() if
-                                print(g.nodes[n]) or g.nodes[n]['ntype'] == 'entry_node'
+                                g.nodes[n]['ntype'] == 'entry_node'
                             ])
                             try:
                                 dst_node = mapping[func.name.name]
-                                g.add_edge(node, dst_node,
+                                g.add_edge(cfg2nx[node], dst_node,
                                            label='func_call')
                             except KeyError:
                                 pass
