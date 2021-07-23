@@ -119,7 +119,7 @@ class CodeflawsDGLDataset(DGLDataset):
         self.graph_save_path = os.path.join(
             save_dir, f'dgl_nx_graphs_{graph_opt}_{self.mode}.bin')
         self.info_path = os.path.join(
-            save_dir, f'dgl_graphs_info.pkl')
+            save_dir, 'dgl_graphs_info.pkl')
         self.graph_opt = graph_opt
         self.nx_dataset = CodeflawsNxDataset(raw_dir, save_dir,
                                              label_mapping_path, graph_opt)
@@ -453,16 +453,6 @@ class CodeflawsFullDGLDataset(DGLDataset):
             force_reload=False,
             verbose=False)
 
-        if not self.has_cache():
-            self.master_idxs = list(range(len(self.gs)))
-            self.train_idxs = self.master_idx[:int(len(self.gs)*0.6)]
-            self.val_idxs = self.master_idx[
-                int(len(self.gs)*0.6):int(len(self.gs)*0.8)]
-            self.test_idxs = self.master_idx[
-                int(len(self.gs)*0.9):int(len(self.gs))]
-
-        self.active_idxs = self.train_idxs
-
     def train(self):
         self.active_idxs = self.train_idxs
 
@@ -482,12 +472,29 @@ class CodeflawsFullDGLDataset(DGLDataset):
         info_dict = pkl.load(open(self.info_path, 'rb'))
         self.cfg_content_dim = info_dict['cfg_content_dim']
         self.ast_content_dim = info_dict['ast_content_dim']
+        self.master_idxs = info_dict['master_idxs']
+        self.train_idxs = info_dict['train_idxs']
+        self.val_idxs = info_dict['val_idxs']
+        self.test_idxs = info_dict['test_idxs']
+
+        self.train()
 
     def save(self):
         os.makedirs(self.save_dir, exist_ok=True)
         save_graphs(self.graph_save_path, self.gs)
+        self.master_idxs = list(range(len(self.gs)))
+        self.train_idxs = self.master_idx[:int(len(self.gs)*0.6)]
+        self.val_idxs = self.master_idx[
+            int(len(self.gs)*0.6):int(len(self.gs)*0.8)]
+        self.test_idxs = self.master_idx[
+            int(len(self.gs)*0.9):int(len(self.gs))]
         pkl.dump({'cfg_content_dim': self.cfg_content_dim,
-                  'ast_content_dim': self.ast_content_dim},
+                  'ast_content_dim': self.ast_content_dim,
+                  'master_idxs': self.master_idxs,
+                  'train_idxs': self.train_idxs,
+                  'val_idxs': self.val_idxs,
+                  'test_idxs': self.test_idxs
+                  },
                  open(self.info_path, 'wb'))
 
     def convert_from_nx_to_dgl(self, embedding_model, nx_g, lbl):
@@ -610,4 +617,3 @@ class CodeflawsFullDGLDataset(DGLDataset):
 
     def __getitem__(self, i):
         return self.gs[self.active_idxs[i]]
-
