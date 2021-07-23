@@ -1,10 +1,9 @@
 from dgl.data import DGLDataset
 from dgl import save_graphs, load_graphs
 import dgl
-from dgl.data.utils import save_info, load_info
 from utils.utils import ConfigClass
 from utils.nx_graph_builder import build_nx_cfg_ast_coverage_codeflaws,\
-    build_nx_cfg_coverage_codeflaws
+    build_nx_cfg_coverage_codeflaws, augment_with_reverse_edge
 from utils.codeflaws_data_utils import make_codeflaws_dict
 import os
 import pickle as pkl
@@ -102,10 +101,7 @@ class CodeflawsNxDataset(object):
         self.ast_etypes = gs_label['ast_etypes']
 
     def has_cache(self):
-        if os.path.exists(self.graph_save_path) and\
-                os.path.exists(self.info_path):
-            return True
-        return False
+        return os.path.exists(self.graph_save_path)
 
 
 class CodeflawsDGLDataset(DGLDataset):
@@ -115,7 +111,9 @@ class CodeflawsDGLDataset(DGLDataset):
                  graph_opt=1):
         self.mode = os.path.splitext(os.path.split(label_mapping_path)[-1])[0]
         self.graph_save_path = os.path.join(
-            save_dir, f'nx_graphs_{graph_opt}_{self.mode}.bin')
+            save_dir, f'dgl_nx_graphs_{graph_opt}_{self.mode}.bin')
+        self.info_path = os.path.join(
+            save_dir, f'dgl_graphs_info.pkl')
         self.graph_opt = graph_opt
         self.nx_dataset = CodeflawsNxDataset(raw_dir, save_dir,
                                              label_mapping_path, graph_opt)
@@ -130,22 +128,37 @@ class CodeflawsDGLDataset(DGLDataset):
             force_reload=False,
             verbose=False)
 
-        if 'train' in self.mode:
-            self.train_idxs = range(len(self.gs))
-            self.val_idxs = range(self.total_train, len(self.gs))
+        if 'train' in self.mode:    # Only split to train val when train
+            self.train_idxs = range(int(len(self.gs)*0.8))
+            self.val_idxs = range(int(len(self.gs)*0.8), len(self.gs))
 
             self.active_idxs = self.train_idxs
+        else:
+            self.active_idxs = range(len(self.gs))
+
+    def train(self):
+        self.active_idxs = self.train_idxs
+
+    def val(self):
+        self.active_idxs = self.val_idxs
 
     def has_cache(self):
-        return os.path.exists(self.graph_save_path)
+        return os.path.exists(self.graph_save_path) and\
+            os.path.exists(self.info_path)
 
     def load(self):
         self.gs = load_graphs(self.graph_save_path)
         self.construct_edge_metagraph()
+        info_dict = pkl.load(open(self.info_path, 'rb'))
+        self.cfg_content_dim = info_dict['cfg_content_dim']
+        self.ast_content_dim = info_dict['ast_content_dim']
 
     def save(self):
         os.makedirs(self.save_dir, exist_ok=True)
         save_graphs(self.graph_save_path, self.gs)
+        pkl.dump({'cfg_content_dim': self.cfg_content_dim,
+                  'ast_content_dim': self.ast_content_dim},
+                 open(self.info_path, 'wb'))
 
     def convert_from_nx_to_dgl(self, embedding_model, nx_g, lbl):
         # Create a node mapping for cfg
@@ -188,21 +201,8 @@ class CodeflawsDGLDataset(DGLDataset):
                 line2cfg['start_line'] = [n]
             else:
                 line2cfg['start_line'].append(n)
-        for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-            if e['label'] in self.nx_dataset.ast_etypes:
-                nx_g.add_edges(v, u, label=e['label'] + '_reverse')
-            elif e['label'] in self.nx_dataset.cfg_etypes:
-                nx_g.add_edges(v, u, label=e['label'] + '_reverse')
-            elif e['label'] == 'corresponding_ast':
-                nx_g.add_edges(v, u, label='corresponding_cfg')
-            elif e['label'] == 'c_pass_test':
-                nx_g.add_edges(v, u, label='t_pass_c')
-            elif e['label'] == 'c_fail_test':
-                nx_g.add_edges(v, u, label='t_fail_c')
-            elif e['label'] == 'a_pass_test':
-                nx_g.add_edges(v, u, label='t_pass_a')
-            elif e['label'] == 'a_fail_test':
-                nx_g.add_edges(v, u, label='t_fail_a')
+        nx_g = augment_with_reverse_edge(nx_g, self.nx_dataset.ast_etypes,
+                                         self.nx_dataset.cfg_etypes)
 
         for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
             map_u = map2id[nx_g.nodes[u]['graph']]
@@ -254,9 +254,12 @@ class CodeflawsDGLDataset(DGLDataset):
     def process(self):
         self.meta_graph = self.construct_edge_metagraph()
         self.gs = []
-        for nx_g, lbl in self.nx_dataset:
+        for i, (nx_g, lbl) in enumerate(self.nx_dataset):
             g = self.convert_from_nx_to_dgl(embedding_model, nx_g, lbl)
             self.gs.append(g)
+            if i == 0:
+                self.cfg_content_dim = g.nodes['cfg'].data['content'].shape[-1]
+                self.ast_content_dim = g.nodes['ast'].data['content'].shape[-1]
 
     def __len__(self):
         return len(self.active_idxs)
