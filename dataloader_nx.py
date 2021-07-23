@@ -300,7 +300,7 @@ class TestCodeflawsDGLDataset(DGLDataset):
         self.vocab_dict = dict(tuple(line.split()) for line in open(
             'preprocess/codeflaws_vocab.txt', 'r'))
 
-        super(CodeflawsDGLDataset, self).__init__(
+        super(TestCodeflawsDGLDataset, self).__init__(
             name='codeflaws_dgl',
             url=None,
             raw_dir=raw_dir,
