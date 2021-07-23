@@ -55,6 +55,7 @@ class ConfigClassDat(object):
     train_cfgidx_map_json = "data_nbl/nbl_dataset/training_dat.json"
     train_cfgidx_map_pkl = "data_nbl/nbl_dataset/training_data.pkl"
     eval_cfgidx_map_pkl = "data_nbl/nbl_dataset/eval_data.pkl"
+
     codeflaws_train_cfgidx_map_pkl = "data_codeflaws/training_data.pkl"
     codeflaws_eval_cfgidx_map_pkl = "data_codeflaws/eval_data.pkl"
     codeflaws_test_verdict_pickle = "data_codeflaws/test_verdict.pkl"
