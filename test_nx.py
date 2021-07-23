@@ -280,7 +280,7 @@ if __name__ == '__main__':
         dataset.ast_content_dim)
     ConfigClass.preprocess_dir = "{}/{}/{}".format(
         ConfigClass.preprocess_dir, dataset_opt, graph_opt)
-    train(model, dataset, ConfigClass.n_epochs)
+    # train(model, dataset, ConfigClass.n_epochs)
     list_models_paths = list(
         glob.glob(f"{ConfigClass.trained_dir}/model*best.pth"))
     best_latest = max(int(model_path.split("_")[1])
