@@ -5,7 +5,7 @@ import time
 import torch
 import os
 import torch.nn.functional as F
-from dataloader_nx import CodeflawsDGLDataset
+from dataloader_nx import CodeflawsDGLDataset, TestCodeflawsDGLDataset
 from model import HeteroMPNNPredictor1TestNodeType
 from utils.utils import ConfigClass
 import tqdm
@@ -266,7 +266,8 @@ if __name__ == '__main__':
     dataset = CodeflawsDGLDataset(
         label_mapping_path=ConfigClass.codeflaws_train_cfgidx_map_pkl,
         graph_opt=graph_opt)
-    test_dataset = CodeflawsDGLDataset(
+    test_dataset = TestCodeflawsDGLDataset(
+        train_datsaet=dataset,
         label_mapping_path=ConfigClass.codeflaws_eval_cfgidx_map_pkl,
         graph_opt=graph_opt
     )
