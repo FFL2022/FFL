@@ -74,7 +74,6 @@ class CodeflawsNxDataset(object):
                 if key not in error_instance:
                     error_instance.append(key)
                 json.dump(error_instance, open('error_instance.json', 'w'))
-                err_count += 1
                 continue
             self.keys.append(key)
             self.nx_gs.append(nx_g)
