@@ -6,6 +6,7 @@ from utils.nx_graph_builder import build_nx_cfg_ast_coverage_codeflaws,\
     build_nx_cfg_coverage_codeflaws, augment_with_reverse_edge
 from utils.codeflaws_data_utils import make_codeflaws_dict
 import os
+import random
 import pickle as pkl
 import json
 import fasttext
@@ -483,10 +484,11 @@ class CodeflawsFullDGLDataset(DGLDataset):
         os.makedirs(self.save_dir, exist_ok=True)
         save_graphs(self.graph_save_path, self.gs)
         self.master_idxs = list(range(len(self.gs)))
-        self.train_idxs = self.master_idx[:int(len(self.gs)*0.6)]
-        self.val_idxs = self.master_idx[
+        random.shuffle(self.master_idxs)
+        self.train_idxs = self.master_idxs[:int(len(self.gs)*0.6)]
+        self.val_idxs = self.master_idxs[
             int(len(self.gs)*0.6):int(len(self.gs)*0.8)]
-        self.test_idxs = self.master_idx[
+        self.test_idxs = self.master_idxs[
             int(len(self.gs)*0.9):int(len(self.gs))]
         pkl.dump({'cfg_content_dim': self.cfg_content_dim,
                   'ast_content_dim': self.ast_content_dim,
