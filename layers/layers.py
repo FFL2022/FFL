@@ -185,7 +185,7 @@ class HeteroMPNNBlockNoAutoSelfLoop(torch.nn.Module):
                  hidden_dim, hidden_edim,
                  out_dim,
                  device=device):
-        super(HeteroMPNNBlockSimp, self).__init__()
+        super().__init__()
         # 1. Get all edges via meta graph
         self.meta_graph = meta_graph
         per_type_linear = {}
