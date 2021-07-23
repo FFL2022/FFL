@@ -25,7 +25,7 @@ class CodeflawsNxDataset(object):
         self.mode = os.path.splitext(os.path.split(label_mapping_path)[-1])[0]
         self.graph_save_path = os.path.join(
             save_dir, f'nx_graphs_{graph_opt}_{self.mode}.bin')
-        self.cfg_etypes = ['parent_child', 'next', 'ref']
+        self.cfg_etypes = ['parent_child', 'next', 'ref', 'func_call']
         self.graph_opt = graph_opt
         self.label_mapping_path = label_mapping_path
         if self.has_cache():
