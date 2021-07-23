@@ -143,6 +143,7 @@ def build_nx_cfg_ast_coverage_codeflaws(data_codeflaws: dict):
     filename = "{}/{}/{}.c".format(ConfigClass.codeflaws_data_path,
                                    data_codeflaws['container'],
                                    data_codeflaws['c_source'])
+    shutil.copy2(filename, 'original_temp.c')
     nline_removed = remove_lib(filename)
     graph = cfg.CFG("temp.c")
 
