@@ -200,8 +200,9 @@ class HeteroMPNNBlockNoAutoSelfLoop(torch.nn.Module):
                 hidden_dim, out_dim)
             self.funcs[c_etype] = (
                 per_type_linear[ctype_str].compute_send_messages,
-                per_type_linear[ctype_str].aggregator('msg', 'h',
-                                                      self.add_act))
+                per_type_linear[ctype_str].aggregator('msg', 'h'),
+                self.add_act
+            )
 
         self.per_type_linear = torch.nn.ModuleDict(per_type_linear)
 
