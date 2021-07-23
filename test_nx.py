@@ -270,6 +270,7 @@ if __name__ == '__main__':
         label_mapping_path=ConfigClass.codeflaws_eval_cfgidx_map_pkl,
         graph_opt=graph_opt
     )
+    dataset.val()
 
     meta_graph = dataset.meta_graph
     model = HeteroMPNNPredictor1TestNodeType(
@@ -288,4 +289,4 @@ if __name__ == '__main__':
     model_path = f"{ConfigClass.trained_dir}/model_{best_latest}_best.pth"
     model.load_state_dict(torch.load(model_path))
     print(f"Evaluation: {model_path}")
-    eval(model, test_dataset, best_latest)
+    eval(model, dataset, best_latest)
