@@ -105,6 +105,7 @@ def train_loop(model, dataset, n_workers, epochs=101):
     best_f1 = 0.0
 
     for epoch in range(epochs):
+        dataset.train()
         mean_loss.reset()
         mean_acc.reset()
         f1_meter.reset()
@@ -120,9 +121,8 @@ def train_loop(model, dataset, n_workers, epochs=101):
         bar.set_description(f"Train epoch {epoch}")
 
         for gidx in bar:
-            msg, (t10f, t5f, t2f, t1f, loss_item, acc_item, cal, lb, n) =\
-                out_queue.get()
-
+            msg, params  = out_queue.get()
+            t10f, t5f, t2f, t1f, loss_item, acc_item, cal, lb, n = params
             top_10_meter.update(t10f, 1)
             top_5_meter.update(t5f, 1)
             top_2_meter.update(t2f, 1)
