@@ -286,7 +286,7 @@ class CodeflawsDGLDataset(DGLDataset):
         return len(self.active_idxs)
 
     def __getitem__(self, i):
-        return self.gs[i]
+        return self.gs[self.active_idxs[i]]
 
 
 class TestCodeflawsDGLDataset(DGLDataset):
@@ -426,7 +426,7 @@ class TestCodeflawsDGLDataset(DGLDataset):
         return len(self.active_idxs)
 
     def __getitem__(self, i):
-        return self.gs[i]
+        return self.gs[self.active_idxs[i]]
 
 
 class CodeflawsFullDGLDataset(DGLDataset):
@@ -438,7 +438,7 @@ class CodeflawsFullDGLDataset(DGLDataset):
         self.graph_save_path = os.path.join(
             save_dir, f'dgl_nx_graphs_{graph_opt}_{self.mode}.bin')
         self.info_path = os.path.join(
-            save_dir, f'dgl_graphs_info.pkl')
+            save_dir, f'dgl_graphs_full_info.pkl')
         self.graph_opt = graph_opt
         self.nx_dataset = CodeflawsNxDataset(raw_dir, save_dir,
                                              label_mapping_path, graph_opt)
@@ -453,21 +453,24 @@ class CodeflawsFullDGLDataset(DGLDataset):
             force_reload=False,
             verbose=False)
 
-        self.master_idxs = list(range(len(self.gs)))
-        self.train_idxs = self.master_idx[:int(len(self.gs)*0.6)]
-        self.val_idxs = self.master_idx[
-            int(len(self.gs)*0.6):int(len(self.gs)*0.8)]
-        self.test_idxs = self.master_idx[
-            int(len(self.gs)*0.6):int(len(self.gs)*0.8)]
+        if not self.has_cache():
+            self.master_idxs = list(range(len(self.gs)))
+            self.train_idxs = self.master_idx[:int(len(self.gs)*0.6)]
+            self.val_idxs = self.master_idx[
+                int(len(self.gs)*0.6):int(len(self.gs)*0.8)]
+            self.test_idxs = self.master_idx[
+                int(len(self.gs)*0.9):int(len(self.gs))]
 
         self.active_idxs = self.train_idxs
-
 
     def train(self):
         self.active_idxs = self.train_idxs
 
     def val(self):
         self.active_idxs = self.val_idxs
+
+    def test(self):
+        self.active_idxs = self.test_idxs
 
     def has_cache(self):
         return os.path.exists(self.graph_save_path) and\
@@ -606,5 +609,5 @@ class CodeflawsFullDGLDataset(DGLDataset):
         return len(self.active_idxs)
 
     def __getitem__(self, i):
-        return self.gs[i]
+        return self.gs[self.active_idxs[i]]
 
