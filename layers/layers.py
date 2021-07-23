@@ -176,3 +176,48 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
             if h_g.number_of_nodes(ntype) > 0:
                 h_g.apply_nodes(self.add_self_loop_act, ntype=ntype)
         return h_g
+
+
+class HeteroMPNNBlockNoAutoSelfLoop(torch.nn.Module):
+    ''' Propagate infor through each type of edge'''
+
+    def __init__(self, meta_graph,
+                 hidden_dim, hidden_edim,
+                 out_dim,
+                 device=device):
+        super(HeteroMPNNBlockSimp, self).__init__()
+        # 1. Get all edges via meta graph
+        self.meta_graph = meta_graph
+        per_type_linear = {}
+        self.funcs = {}
+        self.act = nn.ReLU()
+        nn.init.xavier_normal_(self.self_loop.weight)
+        nn.init.normal_(self.self_loop.bias)
+        for c_etype in self.meta_graph:
+            # etype is a tuple of node type, etype, dst type
+            t_src, t_e, t_dst = c_etype
+            # 2. for each meta graph, create a mpnn block
+            ctype_str = '><'.join((t_src, t_e, t_dst))
+            per_type_linear[ctype_str] = MPNNBlockMultSingleEtype(
+                hidden_dim, out_dim)
+            self.funcs[c_etype] = (
+                per_type_linear[ctype_str].compute_send_messages,
+                per_type_linear[ctype_str].aggregator('msg', 'h',
+                                                      self.add_act))
+
+        self.per_type_linear = torch.nn.ModuleDict(per_type_linear)
+
+    def add_act(self, nodes):
+        return {'h': self.act(nodes.data['h'])}
+
+    def forward(self, h_g):
+        # 4. Passing message through each of these sub graph onces each
+        # TODO: Beware of gradient explodes
+        temp_func = {}
+        for c_etype in self.meta_graph:
+            if h_g.number_of_edges(c_etype) > 0:
+                temp_func[c_etype] = self.funcs[c_etype]
+            else:
+                temp_func[c_etype] = (lambda x: {}, lambda x: {})
+        h_g.multi_update_all(temp_func, 'sum', self.add_act)
+        return h_g

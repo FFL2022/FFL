@@ -227,6 +227,8 @@ class CodeflawsDGLDataset(DGLDataset):
         g.nodes['cfg'].data['content'] = cfg_contents
         g.nodes['ast'].data['label'] = ast_labels
         g.nodes['ast'].data['content'] = ast_contents
+        g = dgl.add_self_loop(g, etype=('ast', 'a_self_loop', 'ast'))
+        g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
         tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
         for line in lbl:
             while line not in line2cfg:
@@ -237,9 +239,9 @@ class CodeflawsDGLDataset(DGLDataset):
         return g
 
     def construct_edge_metagraph(self):
-        self.ast_etypes = self.nx_dataset.ast_etypes +\
+        self.ast_etypes = self.nx_dataset.ast_etypes + ['a_self_loop'] + \
             [et + '_reverse' for et in self.nx_dataset.ast_etypes]
-        self.cfg_etypes = self.nx_dataset.cfg_etypes + \
+        self.cfg_etypes = self.nx_dataset.cfg_etypes + ['c_self_loop'] + \
             [et + '_reverse' for et in self.nx_dataset.cfg_etypes]
         self.c_a_etypes = ['corresponding_ast']
         self.a_c_etypes = ['corresponding_cfg']

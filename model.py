@@ -3,7 +3,8 @@ from __future__ import print_function, unicode_literals
 import dgl
 import torch
 import torch.nn as nn
-from layers.layers import HeteroMPNNBlockSimp
+from layers.layers import HeteroMPNNBlockSimp, \
+    HeteroMPNNBlockNoAutoSelfLoop as HeteroMPNNBlockSimp2
 
 
 __author__ = "Marc: thanhdatn@student.unimelb.edu.au"
@@ -208,22 +209,22 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
 
         self.meta_graph = meta_graph
 
-        self.h_process1 = HeteroMPNNBlockSimp(
+        self.h_process1 = HeteroMPNNBlockSimp2(
             self.meta_graph, hidden_feats,
             hidden_efeats, hidden_feats, device)
 
-        self.h_process2 = HeteroMPNNBlockSimp(
+        self.h_process2 = HeteroMPNNBlockSimp2(
             self.meta_graph, hidden_feats,
             hidden_efeats, hidden_feats, device)
 
-        self.h_process3 = HeteroMPNNBlockSimp(
+        self.h_process3 = HeteroMPNNBlockSimp2(
             self.meta_graph, hidden_feats*2,
             hidden_efeats, hidden_feats*2, device)
-        self.h_process4 = HeteroMPNNBlockSimp(
+        self.h_process4 = HeteroMPNNBlockSimp2(
             self.meta_graph, hidden_feats*2,
             hidden_efeats, hidden_feats*2, device)
 
-        self.h_process5 = HeteroMPNNBlockSimp(
+        self.h_process5 = HeteroMPNNBlockSimp2(
             self.meta_graph, hidden_feats*4,
             hidden_efeats, hidden_feats, device)
 
