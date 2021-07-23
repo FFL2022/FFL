@@ -11,6 +11,7 @@ import json
 import fasttext
 import torch
 import tqdm
+from pycparser.plyparser import ParseError
 
 embedding_model = fasttext.load_model(ConfigClass.pretrained_fastext)
 
@@ -57,22 +58,24 @@ class CodeflawsNxDataset(object):
         error_instance = []
         bar = tqdm.tqdm(enumerate(self.temp_keys))
         bar.set_description('Loading Nx Data')
+        err_count = 0
         for i, key in bar:
-            # Allowing no exception in dataprocessing
             data_codeflaws = make_codeflaws_dict(key, test_verdict)
-            if self.graph_opt == 2:
-                _, _, _, nx_g = build_nx_cfg_ast_coverage_codeflaws(
-                    data_codeflaws)
-            else:
-                _, _, _, nx_g = build_nx_cfg_coverage_codeflaws(
-                    data_codeflaws)
-            '''
-            except:
+            try:
+                if self.graph_opt == 2:
+                    _, _, _, nx_g = build_nx_cfg_ast_coverage_codeflaws(
+                        data_codeflaws)
+                else:
+                    _, _, _, nx_g = build_nx_cfg_coverage_codeflaws(
+                        data_codeflaws)
+            except ParseError:
+                err_count += 1
+                print(f"Total syntax error files: {err_count}")
                 if key not in error_instance:
                     error_instance.append(key)
                 json.dump(error_instance, open('error_instance.json', 'w'))
+                err_count += 1
                 continue
-            '''
             self.keys.append(key)
             self.nx_gs.append(nx_g)
             self.ast_types.extend(

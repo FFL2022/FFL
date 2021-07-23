@@ -215,3 +215,8 @@ def augment_with_reverse_edge(nx_g, ast_etypes, cfg_etypes):
         elif e['label'] == 'a_fail_test':
             nx_g.add_edge(v, u, label='t_fail_a')
     return nx_g
+
+
+# TODO:
+# Tobe considered:
+# - Syntax error: statc num[3]; in graph 35
