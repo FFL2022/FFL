@@ -16,7 +16,7 @@ embedding_model = fasttext.load_model(ConfigClass.pretrained_fastext)
 
 
 class CodeflawsNxDataset(object):
-    def __init__(self, raw_dataset_dir=ConfigClass.raw_dataset_dir,
+    def __init__(self, raw_dataset_dir=ConfigClass.raw_dir,
                  save_dir=ConfigClass.preprocess_dir,
                  label_mapping_path=ConfigClass.codeflaws_train_cfgidx_map_pkl,
                  graph_opt=2):
@@ -24,6 +24,7 @@ class CodeflawsNxDataset(object):
         self.mode = os.path.splitext(os.path.split(label_mapping_path)[-1])[0]
         self.graph_save_path = os.path.join(
             save_dir, f'nx_graphs_{graph_opt}_{self.mode}.bin')
+        self.cfg_etypes = ['parent_child', 'next', 'ref']
         self.graph_opt = graph_opt
         self.label_mapping_path = label_mapping_path
         if self.has_cache():
@@ -38,7 +39,7 @@ class CodeflawsNxDataset(object):
         return len(self.active_idxs)
 
     def __getitem__(self, i):
-        return self.nx_g[i], self.lbs[i]
+        return self.nx_gs[i], self.lbs[i]
 
     def process(self):
         self.total_train = 0
@@ -50,7 +51,6 @@ class CodeflawsNxDataset(object):
         self.nx_gs = []
         self.ast_types = []
         self.ast_etypes = []
-        self.cfg_etypes = ['parent_child', 'next', 'ref']
         self.lbs = []
         self.keys = []
 
@@ -61,9 +61,11 @@ class CodeflawsNxDataset(object):
             data_codeflaws = make_codeflaws_dict(key, test_verdict)
             try:
                 if self.graph_opt == 2:
-                    nx_g = build_nx_cfg_ast_coverage_codeflaws(data_codeflaws)
+                    _, _, _, nx_g = build_nx_cfg_ast_coverage_codeflaws(
+                        data_codeflaws)
                 else:
-                    nx_g = build_nx_cfg_coverage_codeflaws(data_codeflaws)
+                    _, _, _, nx_g = build_nx_cfg_coverage_codeflaws(
+                        data_codeflaws)
             except:
                 if key not in error_instance:
                     error_instance.append(key)
@@ -91,12 +93,12 @@ class CodeflawsNxDataset(object):
         pkl.dump(
             {'nx': self.nx_gs, 'lbs': self.lbs,
              'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes},
-            open(os.path.join(self.save_dir, self.graph_save_path), 'wb'))
+            open(self.graph_save_path, 'wb'))
 
     def load(self):
-        gs_label = pkl.load(open(self.graph_save_path), 'rb')
+        gs_label = pkl.load(open(self.graph_save_path, 'rb'))
         self.nx_gs = gs_label['nx']
-        self.lbls = gs_label['lbls']
+        self.lbs = gs_label['lbs']
         self.ast_types = gs_label['ast_types']
         self.ast_etypes = gs_label['ast_etypes']
 
@@ -147,8 +149,8 @@ class CodeflawsDGLDataset(DGLDataset):
             os.path.exists(self.info_path)
 
     def load(self):
-        self.gs = load_graphs(self.graph_save_path)
-        self.construct_edge_metagraph()
+        self.gs = load_graphs(self.graph_save_path)[0]
+        self.meta_graph = self.construct_edge_metagraph()
         info_dict = pkl.load(open(self.info_path, 'rb'))
         self.cfg_content_dim = info_dict['cfg_content_dim']
         self.ast_content_dim = info_dict['ast_content_dim']
@@ -170,14 +172,15 @@ class CodeflawsDGLDataset(DGLDataset):
         # Create a node mapping for test
         n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
         t2id = dict([n, i] for i, n in enumerate(n_tests))
-        map2id = {'cfg': cfg2id, 'ast': ast2id, 't': t2id}
+        map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
 
         # Create dgl cfg node
         cfg_labels = torch.tensor(
             [ConfigClass.cfg_label_corpus.index(nx_g.nodes[n]['ntype'])
              for n in n_cfgs], dtype=torch.long)
         cfg_contents = torch.stack([
-            embedding_model.get_sentence_vector(nx_g.nodes[n]['text'])
+            torch.from_numpy(embedding_model.get_sentence_vector(
+                nx_g.nodes[n]['text'].replace('\n', '')))
             for n in n_cfgs], dim=0)
         # Create dgl ast node
         ast_labels = torch.tensor([
@@ -185,22 +188,23 @@ class CodeflawsDGLDataset(DGLDataset):
             for node in n_asts], dtype=torch.long
         )
         ast_contents = torch.stack([
-            embedding_model.get_sentence_vector(nx_g.nodes[n]['token'])
+            torch.from_numpy(embedding_model.get_sentence_vector(
+                nx_g.nodes[n]['token'].replace('\n', '')))
             for n in n_asts], dim=0)
         # Create dgl test node
         # No need, will be added automatically when we update edges
 
         all_canon_etypes = {}
         for k in self.meta_graph:
-            self.all_canon_etypes[k] = []
+            all_canon_etypes[k] = []
         line2cfg = {}
         for n in n_cfgs:
             if nx_g.nodes[n]['end_line'] - nx_g.nodes[n]['start_line'] > 0:
                 continue
             if nx_g.nodes[n]['start_line'] not in line2cfg:
-                line2cfg['start_line'] = [n]
+                line2cfg[nx_g.nodes[n]['start_line']] = [n]
             else:
-                line2cfg['start_line'].append(n)
+                line2cfg[nx_g.nodes[n]['start_line']].append(n)
         nx_g = augment_with_reverse_edge(nx_g, self.nx_dataset.ast_etypes,
                                          self.nx_dataset.cfg_etypes)
 
@@ -212,8 +216,12 @@ class CodeflawsDGLDataset(DGLDataset):
             ].append([map_u[u], map_v[v]])
 
         for k in all_canon_etypes:
-            all_canon_etypes[k] = torch.tensor(all_canon_etypes[k],
-                                               dtype=torch.long)
+            if len(all_canon_etypes[k]) > 0:
+                type_es = torch.tensor(all_canon_etypes[k], dtype=torch.int32)
+                all_canon_etypes[k] = (type_es[:, 0], type_es[:, 1])
+            else:
+                all_canon_etypes[k] = (torch.tensor([], dtype=torch.int32),
+                                       torch.tensor([], dtype=torch.int32))
         g = dgl.heterograph(all_canon_etypes)
         g.nodes['cfg'].data['label'] = cfg_labels
         g.nodes['cfg'].data['content'] = cfg_contents
@@ -221,8 +229,10 @@ class CodeflawsDGLDataset(DGLDataset):
         g.nodes['ast'].data['content'] = ast_contents
         tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
         for line in lbl:
+            while line not in line2cfg:
+                line -= 1   # Note: Matching to the closest (presumably parent)
             for n in line2cfg[line]:
-                g.nodes['cfg'].data['tgt'][cfg2id[n]] = 1
+                tgts[cfg2id[n]] = 1
         g.nodes['cfg'].data['tgt'] = tgts
         return g
 
@@ -243,6 +253,8 @@ class CodeflawsDGLDataset(DGLDataset):
             self.t_a_etypes
         self.all_ntypes = [('ast', 'ast') for et in self.ast_etypes] +\
             [('cfg', 'cfg') for et in self.cfg_etypes] +\
+            [('cfg', 'ast') for et in self.c_a_etypes] +\
+            [('ast', 'cfg') for et in self.a_c_etypes] +\
             [('cfg', 'test') for et in self.c_t_etypes] +\
             [('test', 'cfg') for et in self.t_c_etypes] +\
             [('ast', 'test') for et in self.a_t_etypes] +\
@@ -254,7 +266,9 @@ class CodeflawsDGLDataset(DGLDataset):
     def process(self):
         self.meta_graph = self.construct_edge_metagraph()
         self.gs = []
-        for i, (nx_g, lbl) in enumerate(self.nx_dataset):
+        bar = tqdm.tqdm(enumerate(self.nx_dataset))
+        bar.set_description("Converting NX to DGL")
+        for i, (nx_g, lbl) in bar:
             g = self.convert_from_nx_to_dgl(embedding_model, nx_g, lbl)
             self.gs.append(g)
             if i == 0:

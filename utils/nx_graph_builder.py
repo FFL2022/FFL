@@ -198,17 +198,17 @@ def build_nx_cfg_ast_coverage_codeflaws(data_codeflaws: dict):
 def augment_with_reverse_edge(nx_g, ast_etypes, cfg_etypes):
     for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
         if e['label'] in ast_etypes:
-            nx_g.add_edges(v, u, label=e['label'] + '_reverse')
+            nx_g.add_edge(v, u, label=e['label'] + '_reverse')
         elif e['label'] in cfg_etypes:
-            nx_g.add_edges(v, u, label=e['label'] + '_reverse')
+            nx_g.add_edge(v, u, label=e['label'] + '_reverse')
         elif e['label'] == 'corresponding_ast':
-            nx_g.add_edges(v, u, label='corresponding_cfg')
+            nx_g.add_edge(v, u, label='corresponding_cfg')
         elif e['label'] == 'c_pass_test':
-            nx_g.add_edges(v, u, label='t_pass_c')
+            nx_g.add_edge(v, u, label='t_pass_c')
         elif e['label'] == 'c_fail_test':
-            nx_g.add_edges(v, u, label='t_fail_c')
+            nx_g.add_edge(v, u, label='t_fail_c')
         elif e['label'] == 'a_pass_test':
-            nx_g.add_edges(v, u, label='t_pass_a')
+            nx_g.add_edge(v, u, label='t_pass_a')
         elif e['label'] == 'a_fail_test':
-            nx_g.add_edges(v, u, label='t_fail_a')
+            nx_g.add_edge(v, u, label='t_fail_a')
     return nx_g

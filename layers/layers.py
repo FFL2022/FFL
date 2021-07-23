@@ -77,7 +77,7 @@ class MPNNBlockSingleEdge(torch.nn.Module):
             g.update_all(
                 self.compute_send_messages,
                 self.aggregator('msg', 'h'),
-                )
+            )
             g.apply_nodes(self.sum_h_h1)
             g.apply_nodes(
                 lambda nodes: self.activate_node(nodes, 'h', 'h'))
@@ -128,9 +128,9 @@ class MPNNBlockMultSingleEtype(torch.nn.Module):
         return g
 
 
-
 class HeteroMPNNBlockSimp(torch.nn.Module):
     ''' Propagate infor through each type of edge'''
+
     def __init__(self, meta_graph,
                  hidden_dim, hidden_edim,
                  out_dim,
@@ -148,26 +148,29 @@ class HeteroMPNNBlockSimp(torch.nn.Module):
             # etype is a tuple of node type, etype, dst type
             t_src, t_e, t_dst = c_etype
             # 2. for each meta graph, create a mpnn block
-            per_type_linear[t_e] = MPNNBlockMultSingleEtype(hidden_dim,
-                                                            out_dim)
-            self.funcs[t_e] = (per_type_linear[t_e].compute_send_messages,
-                               per_type_linear[t_e].aggregator('msg', 'h1'))
+            ctype_str = '><'.join((t_src, t_e, t_dst))
+            per_type_linear[ctype_str] = MPNNBlockMultSingleEtype(
+                hidden_dim, out_dim)
+            self.funcs[c_etype] = (
+                per_type_linear[ctype_str].compute_send_messages,
+                per_type_linear[ctype_str].aggregator('msg', 'h1'))
 
         self.per_type_linear = torch.nn.ModuleDict(per_type_linear)
 
     def add_self_loop_act(self, nodes):
         if nodes.batch_size() > 0:
-            return {'h': self.act(self.self_loop(nodes.data['h']) + nodes.data['h1'])}
+            return {'h': self.act(
+                self.self_loop(nodes.data['h']) + nodes.data['h1'])}
 
     def forward(self, h_g):
         # 4. Passing message through each of these sub graph onces each
         # TODO: Beware of gradient explodes
         temp_func = {}
         for c_etype in self.meta_graph:
-            if h_g.number_of_edges(c_etype[1]) > 0:
-                temp_func[c_etype[1]] = self.funcs[c_etype[1]]
+            if h_g.number_of_edges(c_etype) > 0:
+                temp_func[c_etype] = self.funcs[c_etype]
             else:
-                temp_func[c_etype[1]] = (lambda x: {}, lambda x: {})
+                temp_func[c_etype] = (lambda x: {}, lambda x: {})
         h_g.multi_update_all(temp_func, 'mean')
         for ntype in h_g.ntypes:
             if h_g.number_of_nodes(ntype) > 0:

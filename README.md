@@ -13,5 +13,5 @@ python3 dataset.py
 
 ## Testing Graph Visualization
 ```bash
-python3 -m unittest.test_nx_graph_build.py
+python3 -m selfunittest.test_nx_graph_build.py
 ```

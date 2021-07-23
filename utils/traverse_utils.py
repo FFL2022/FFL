@@ -272,6 +272,21 @@ def build_nx_cfg(graph, break_to_line=True):
     return g, cfg2nx
 
 
+def get_unique_base(children: list):
+    unique_child_map = {}
+    for child_name, child in children:
+        if "[" in child_name:
+            base = child_name.split("[")[0]
+            index = int(child_name.split("[")[1].split("]")[0])
+            if base not in unique_child_map:
+                unique_child_map[base] = {index: child}
+            else:
+                unique_child_map[base][index] = child
+        else:
+            unique_child_map[child_name] = {0: child}
+    return unique_child_map
+
+
 def build_nx_ast(ast):
     g = nx.MultiDiGraph()
     ast2nx = {ast: 0}
@@ -283,21 +298,30 @@ def build_nx_ast(ast):
     while len(queue) > 0:
         node = queue.pop()
         # Child name can also be used as edge etype
-        for child_name, child in node.children():
-            child_token = get_token(child)
-            if child_token == "TypeDecl":
-                coord_line = node.type.coord.line
-            else:
-                try:
-                    coord_line = node.coord.line
-                except AttributeError:
-                    coord_line = g.nodes[ast2nx[node]]['coord_line']
-            ast2nx[child] = g.number_of_nodes()
-            g.add_node(g.number_of_nodes(),
-                       ntype=child.__class__.__name__,
-                       token=get_token(child),
-                       coord_line=coord_line)
-            g.add_edge(ast2nx[node], ast2nx[child], label=child_name)
-            queue.insert(0, child)
-
+        # First, check childname
+        if len(node.children()) > 0:
+            unique_child_map = get_unique_base(list(node.children()))
+            for etype in unique_child_map:
+                # Sort all nodes
+                sorted_cidxs = sorted(list(unique_child_map[etype].keys()))
+                for i in sorted_cidxs:
+                    child = unique_child_map[etype][i]
+                    child_token = get_token(child)
+                    if child_token == "TypeDecl":
+                        coord_line = node.type.coord.line
+                    else:
+                        try:
+                            coord_line = node.coord.line
+                        except AttributeError:
+                            coord_line = g.nodes[ast2nx[node]]['coord_line']
+                    ast2nx[child] = g.number_of_nodes()
+                    g.add_node(g.number_of_nodes(),
+                               ntype=child.__class__.__name__,
+                               token=get_token(child),
+                               coord_line=coord_line)
+                    g.add_edge(ast2nx[node], ast2nx[child], label=etype)
+                    if i > 0:
+                        g.add_edge(ast2nx[child]-1, ast2nx[child],
+                                   label='next_sibling')
+                    queue.insert(0, child)
     return g, ast2nx

@@ -202,7 +202,8 @@ def eval(model, dataloader, epoch):
     model.eval()
     out_dict = {}
     for i in tqdm.trange(len(dataloader)):
-        g, lb = dataloader[i]
+        g = dataloader[i]
+        lb = g.nodes['cfg']['tgt']
         if g is None or lb is None:
             continue
 
@@ -263,10 +264,10 @@ if __name__ == '__main__':
     graph_opt = 2  # 1, 2
     # loaddataset
     dataset = CodeflawsDGLDataset(
-        label_mapping_path=ConfigClass.train_cfgidx_map_pkl,
+        label_mapping_path=ConfigClass.codeflaws_train_cfgidx_map_pkl,
         graph_opt=graph_opt)
     test_dataset = CodeflawsDGLDataset(
-        label_mapping_path=ConfigClass.eval_cfgidx_map_pkl,
+        label_mapping_path=ConfigClass.codeflaws_eval_cfgidx_map_pkl,
         graph_opt=graph_opt
     )
 
