@@ -19,6 +19,7 @@ class ConfigClassThanhServer(object):
     eval_cfgidx_map_pkl = "/home/thanhlc/thanhlc/Data/nbl_dataset/eval_data.pkl"
     codeflaws_train_cfgidx_map_pkl = "/home/minhld/codeflaws/training_data.pkl"
     codeflaws_eval_cfgidx_map_pkl = "/home/minhld/codeflaws/eval_data.pkl"
+    codeflaws_full_cfgidx_map_pkl = "/home/minhld/codeflaws/full_data.pkl"
     codeflaws_test_verdict_pickle = "/home/minhld/codeflaws/test_verdict.pkl"
 
     bug_lines_info_pkl = "/home/thanhlc/thanhlc/Data/nbl_dataset/bug_lines_info.pkl"
@@ -59,6 +60,7 @@ class ConfigClassDat(object):
     codeflaws_train_cfgidx_map_pkl = "data_codeflaws/training_data.pkl"
     codeflaws_eval_cfgidx_map_pkl = "data_codeflaws/eval_data.pkl"
     codeflaws_test_verdict_pickle = "data_codeflaws/test_verdict.pkl"
+    codeflaws_full_cfgidx_map_pkl = "data_codeflaws/full_data.pkl"
 
     bug_lines_info_pkl = "data_nbl/nbl_dataset/bug_lines_info.pkl"
 
