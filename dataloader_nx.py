@@ -58,6 +58,7 @@ class CodeflawsNxDataset(object):
         bar = tqdm.tqdm(enumerate(self.temp_keys))
         bar.set_description('Loading Nx Data')
         for i, key in bar:
+            # Allowing no exception in dataprocessing
             data_codeflaws = make_codeflaws_dict(key, test_verdict)
             if self.graph_opt == 2:
                 _, _, _, nx_g = build_nx_cfg_ast_coverage_codeflaws(

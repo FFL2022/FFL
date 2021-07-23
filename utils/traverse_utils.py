@@ -210,7 +210,7 @@ def build_nx_cfg(graph, break_to_line=True):
                             mapping = dict([
                                 (g.nodes[n]['funcname'], n)
                                 for n in g.nodes() if
-                                g.nodes[n]['ntype'] == 'entry_node'
+                                print(g.nodes[n]) or g.nodes[n]['ntype'] == 'entry_node'
                             ])
                             try:
                                 dst_node = mapping[func.name.name]
