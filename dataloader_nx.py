@@ -485,11 +485,11 @@ class CodeflawsFullDGLDataset(DGLDataset):
         save_graphs(self.graph_save_path, self.gs)
         self.master_idxs = list(range(len(self.gs)))
         random.shuffle(self.master_idxs)
-        self.train_idxs = self.master_idxs[:int(len(self.gs)*0.6)]
-        self.val_idxs = self.master_idxs[
-            int(len(self.gs)*0.6):int(len(self.gs)*0.8)]
-        self.test_idxs = self.master_idxs[
-            int(len(self.gs)*0.9):int(len(self.gs))]
+        self.train_idxs = list(self.master_idxs[:int(len(self.gs)*0.6)])
+        self.val_idxs = list(self.master_idxs[
+            int(len(self.gs)*0.6):int(len(self.gs)*0.8)])
+        self.test_idxs = list(self.master_idxs[
+            int(len(self.gs)*0.9):int(len(self.gs))])
         pkl.dump({'cfg_content_dim': self.cfg_content_dim,
                   'ast_content_dim': self.ast_content_dim,
                   'master_idxs': self.master_idxs,
