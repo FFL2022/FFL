@@ -4,6 +4,7 @@ from utils.traverse_utils import build_nx_cfg, build_nx_ast
 from utils.preprocess_helpers import get_coverage, remove_lib
 from graph_algos.nx_shortcuts import combine_multi, neighbors_out
 import networkx as nx
+import shutil
 
 
 def augment_cfg_with_content(nx_cfg: nx.MultiDiGraph, code: list):
@@ -83,6 +84,7 @@ def build_nx_cfg_coverage_codeflaws(data_codeflaws: dict):
     filename = "{}/{}/{}.c".format(ConfigClass.codeflaws_data_path,
                                    data_codeflaws['container'],
                                    data_codeflaws['c_source'])
+    shutil.copy2(filename, 'original_temp.c')
     nline_removed = remove_lib(filename)
     graph = cfg.CFG("temp.c")
     code = []
