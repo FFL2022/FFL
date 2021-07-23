@@ -191,8 +191,6 @@ class HeteroMPNNBlockNoAutoSelfLoop(torch.nn.Module):
         per_type_linear = {}
         self.funcs = {}
         self.act = nn.ReLU()
-        nn.init.xavier_normal_(self.self_loop.weight)
-        nn.init.normal_(self.self_loop.bias)
         for c_etype in self.meta_graph:
             # etype is a tuple of node type, etype, dst type
             t_src, t_e, t_dst = c_etype
