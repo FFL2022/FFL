@@ -203,7 +203,7 @@ def eval(model, dataloader, epoch):
     out_dict = {}
     for i in tqdm.trange(len(dataloader)):
         g = dataloader[i]
-        lb = g.nodes['cfg']['tgt']
+        lb = g.nodes['cfg'].data['tgt']
         if g is None or lb is None:
             continue
 
