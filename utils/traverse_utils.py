@@ -307,13 +307,13 @@ def build_nx_ast(ast):
                 for i in sorted_cidxs:
                     child = unique_child_map[etype][i]
                     child_token = get_token(child)
-                    if child_token == "TypeDecl":
-                        coord_line = node.type.coord.line
-                    else:
-                        try:
+                    try:
+                        if child_token == "TypeDecl":
+                            coord_line = node.type.coord.line
+                        else:
                             coord_line = node.coord.line
-                        except AttributeError:
-                            coord_line = g.nodes[ast2nx[node]]['coord_line']
+                    except AttributeError:
+                        coord_line = g.nodes[ast2nx[node]]['coord_line']
                     ast2nx[child] = g.number_of_nodes()
                     g.add_node(g.number_of_nodes(),
                                ntype=child.__class__.__name__,
