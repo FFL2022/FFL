@@ -137,6 +137,7 @@ class CodeflawsDGLDataset(DGLDataset):
             self.active_idxs = self.train_idxs
         else:
             self.active_idxs = range(len(self.gs))
+            self.val_idxs = self.active_idxs
 
     def train(self):
         self.active_idxs = self.train_idxs
