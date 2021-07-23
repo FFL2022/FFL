@@ -233,6 +233,7 @@ def eval(model, dataloader, epoch):
 
 
 if __name__ == '__main__':
+    mp.set_start_method("spawn", force=True)
     # config
     dataset_opt = 'codeflaws'  # nbl, codeflaws
     graph_opt = 2  # 1, 2
