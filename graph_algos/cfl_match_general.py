@@ -365,6 +365,121 @@ def cpi_bottom_up(q: nx.MultiGraph, G: nx.MultiDiGraph,
     return node_dict, edge_dict, q
 
 
+def extend_cpi_top_down(last_q: nx.MultiDiGraph, q: nx.MultiDiGraph,
+                        G: nx.MultiDiGraph,
+                        root: str, node_dict: Dict[str, TreeNode],
+                        check_label_func=lambda u, q, v, G:
+                        q.nodes['u']['label'] == G.nodes['v']['label']):
+    ''' Extending CPI top-down with new node, useful for mining
+    TODO: implement
+    Parameters
+    ----------
+    q : nx.MultiDiGraph
+        The source graph to be used for matching,
+        has some overlapping with last_q
+    G : nx.MultiDiGraph
+        The target graph to be matched against
+    root: str
+        The anchored chosen root node, can be random if needed
+    node_dict : dict
+                Dictionary mapping from node name to TreeNode in BFS Tree
+    check_label_func: function to check compatible nodes
+    Returns
+    -------
+    int
+        Description of anonymous integer return value.
+    '''
+    r_i_count, r_o_count = get_in_out_edge_count(root, q)
+    edge_labels = get_all_labels(q, G)
+    for node in node_dict:
+        q.nodes[node]['candidates'] = []
+        q.nodes[node]['UN'] = gen_un_dict(edge_labels)
+
+    for v in G.nodes():
+        # Check degree
+        v_i_count, v_o_count = get_in_out_edge_count(v, G)
+        if not (check_basic_compatible(root, q, v, G, check_label_func) and
+                cand_verify(root, q, v, G, check_label_func)):
+            continue
+        q.nodes[root]['candidates'].append(v)
+
+    for node in q.nodes():
+        q.nodes[node]['visited'] = False
+
+    q.nodes[root]['visited'] = True
+
+    for node in G.nodes():
+        G.nodes[node]['cnt'] = create_empty_cnt_dict(edge_labels)
+
+    # TODO: use queue and delimiter instead
+    l2n_map = defaultdict(list)
+    for node in node_dict:
+        lev = q.nodes[node]['distance']
+        l2n_map[lev].append(node)
+
+    n_levels = len(list(l2n_map.keys()))
+    edge_dict = {}
+    for v in G.nodes():
+        edge_dict[v] = gen_edge_dict(edge_labels)
+
+    for lev in range(1, n_levels):
+        # Forward candidate generation
+        for u in l2n_map[lev]:
+            u_i_count, u_o_count = get_in_out_edge_count(u, q)
+            cnt_dict = create_empty_cnt_dict(edge_labels)
+            u_is, u_os, u_as = all_neighbors(u, q)
+            for u_n in u_as:
+                io_switch, etype, check_edge_func = get_params_cnt(u_n in u_is,
+                                                                   u, u_n, q)
+                if not q.nodes[u_n]['visited'] and check_snte(u, u_n, q):
+                    q.nodes[u]['UN'][io_switch][etype].append(u_n)
+                elif q.nodes[u_n]['visited']:
+                    check_edge_func(u, u_n, q, G, cnt_dict, etype,
+                                    check_label_func)
+                    cnt_dict[io_switch][etype] += 1
+            for v in G.nodes():
+                cnt_match = check_cnt_match(G.nodes[v]['cnt'], cnt_dict)
+                # If every count, every time we check u from all other node's
+                # position so far, v match, then v is one potential candidates
+                if cnt_match and cand_verify(u, q, v, G, check_label_func):
+                    q.nodes[u]['candidates'].append(v)
+            q.nodes[u]['visited'] = True
+            for node in G.nodes():
+                G.nodes[node]['cnt'] = create_empty_cnt_dict(edge_labels)
+        # Backward candidate pruning
+        for u in l2n_map[lev][::-1]:
+            cnt_dict = create_empty_cnt_dict(edge_labels)
+            for io_switch in q.nodes[u]['UN']:
+                check_edge_func = check_edge_in if io_switch == 'i' else check_edge_out
+                for etype in q.nodes[u]['UN'][io_switch]:
+                    for u_n in q.nodes[u]['UN'][io_switch][etype]:
+                        check_edge_func(u, u_n, q, G, cnt_dict, etype,
+                                        check_label_func)
+                        cnt_dict[io_switch][etype] += 1
+            for v in list(q.nodes[u]['candidates'])[:]:
+                if not check_cnt_match(G.nodes[v]['cnt'], cnt_dict):
+                    q.nodes[u]['candidates'].remove(v)
+            # Reset again
+            for node in G.nodes():
+                G.nodes[node]['cnt'] = create_empty_cnt_dict(edge_labels)
+        for u in l2n_map[lev]:
+            u_p = node_dict[u].parent.node_label
+            uis, uos, uas = all_neighbors(u, q)
+            io_switch, etype, _ = get_params_cnt(u_p in uis, u, u_p, q)
+            if io_switch == 'i':                    # Tricky: inverse
+                neighbors_func = neighbors_out
+            else:
+                neighbors_func = neighbors_in
+            for v_p in q.nodes[u_p]['candidates']:
+                for v in list(set(neighbors_func(v_p, G)).intersection(
+                        set(q.nodes[u]['candidates']))):
+                    if u not in edge_dict[v][io_switch][etype]:
+                        edge_dict[v][io_switch][etype] = {u: {u_p: []}}
+                    edge_dict[v][io_switch][etype][u][u_p].append(v_p)
+    return node_dict, edge_dict, q
+
+
+
 def build_cpi(q, G, check_label_func, root_name='n0'):
     q = q.copy()
     G = G.copy()

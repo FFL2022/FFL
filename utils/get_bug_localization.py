@@ -54,7 +54,6 @@ def simple_top_down_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
                         match = True
                         break
 
-
         if ast_node_match_label(n1, ast1, n2, ast2):
             # Also check if the all the input edges match
             pass
@@ -62,6 +61,24 @@ def simple_top_down_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
         # Check if it match with any in queue2
         # If it does, add its children and queue2's children in to queue
     pass
+
+
+def neighbor_parent_consensus_candidates(n1, ast1, ast2, forward_mapping):
+    n1_parents = neighbors_in(
+        n1, ast1, lambda u, v, k, e: u in forward_mapping)
+    # Get corresponding parents in graph 2
+    candidates = []
+    for i, p in enumerate(n1_parents):
+        for p_c in forward_mapping[p]:
+            new_cands = neighbors_out(
+                p_c, ast2,
+                lambda _, n2, k, e: ast_node_token_match(n1, ast1, n2, ast2) and
+                match_edge((p, n1), ast1, (p_c, n2), ast2))
+            if i == 0:
+                candidates.extend(new_cands)
+            else:
+                candidates = list(set(candidates).intersection(new_cands))
+    return candidates
 
 
 def full_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
@@ -83,16 +100,33 @@ def full_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
                                           n_n in neighbors_in(n, ast1))])
     list_nodes = list(forward_mapping.keys())
     while len(queue) > 0:
-        node = queue.pop()
-        new_temp_subgraph = ast1.subgraph(list_nodes + [node]).copy()
-        # Check if it is isomorphic to ast2
-        node_dict, edge_dict, q = build_cpi(
-            new_temp_subgraph, ast2, ast_node_token_match, root_name=0)
-        # Note: can be faster by caching previous candidates
+        n1 = queue.pop()
+        candidates = neighbor_parent_consensus_candidates(n1, ast1, ast2,
+                                                          forward_mapping)
+        if len(candidates) == 0:
+            continue
+        new_temp_subgraph = ast1.subgraph(list_nodes + [n1]).copy()
+        if len(candidates) == 1:
+            # If this has only one candidate: add it
+            q = new_temp_subgraph
+            for n in list_nodes:
+                q.nodes[n]['candidates'] = last_q.nodes[n]['candidates'][:]
+            q.nodes[n1]['candidates'] = candidates
+        else:
+            # Check if it is isomorphic to ast2
+            node_dict, edge_dict, q = build_cpi(
+                new_temp_subgraph, ast2, ast_node_token_match, root_name=0)
+            # Note: can be faster by caching previous candidates
         if all(len(q.nodes[n]['candidates']) > 0 for n in q.nodes()):
             last_q = q
-            queue.extend(neighbors_out(node, ast1))
-            list_nodes.append(node)
+            queue.extend(neighbors_out(n1, ast1))
+            list_nodes.append(n1)
+            forward_mapping = {
+                n1: last_q.nodes[n1]['candidates']
+                for n1 in last_q.nodes()
+                if len(last_q.nodes[n1]['candidates']) > 0
+            }
+
 
     forward_mapping = {}
     backward_mapping = {}
@@ -106,7 +140,6 @@ def full_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
                            for n1 in last_q.nodes()}
 
     return forward_mapping, backward_mapping
-
 
 
 def careful_slow_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
