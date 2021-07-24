@@ -181,7 +181,7 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
     def __init__(self, num_cfg_label, cfg_content_feats,
                  hidden_feats, hidden_efeats, meta_graph,
                  num_classes, device=device,
-                 num_ast_labels=None, ast_content_feats=None):
+                 num_ast_labels=None, ast_content_feats=None, num_classes_ast=3):
         super().__init__()
         # Passing test overlapp
         # Failing test: often only one, so more important!
@@ -229,6 +229,7 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
             hidden_efeats, hidden_feats, device)
 
         self.decoder = torch.nn.Linear(hidden_feats, num_classes)
+        self.ast_decoder = torch.nn.Linear(hidden_feats, num_classes_ast)
         if num_classes > 1:
             self.last_act = torch.nn.Softmax(dim=1)
         else:
@@ -239,6 +240,13 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
 
     def decode_node_func(self, nodes):
         feats = self.decoder(nodes.data['h'])
+        return {
+            'logits': feats,
+            'pred': self.last_act(feats)
+        }
+
+    def ast_decode_node_func(self, nodes):
+        feats = self.ast_decoder(nodes.data['h'])
         return {
             'logits': feats,
             'pred': self.last_act(feats)
@@ -306,5 +314,5 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
         h_g = self.h_process5(h_g)
         h_g.apply_nodes(self.decode_node_func, ntype='cfg')
         if self.ast_label_encoder is not None and self.ast_content_encoder != None:
-            h_g.apply_nodes(self.decode_node_func, ntype='ast')
+            h_g.apply_nodes(self.ast_decode_node_func, ntype='ast')
         return h_g
