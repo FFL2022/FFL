@@ -279,7 +279,7 @@ if __name__ == '__main__':
     dataset_opt = 'codeflaws'  # nbl, codeflaws
     graph_opt = 2  # 1, 2
     # loaddataset
-    dataset = CodeflawsFullDGLDataset(graph_opt=graph_opt)
+    dataset = CodeflawsFullDGLDataset()
     meta_graph = dataset.meta_graph
     model = HeteroMPNNPredictor1TestNodeType(
         len(ConfigClass.cfg_label_corpus),
