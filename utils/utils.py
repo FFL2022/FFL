@@ -61,6 +61,7 @@ class ConfigClassDat(object):
     codeflaws_eval_cfgidx_map_pkl = "data_codeflaws/eval_data.pkl"
     codeflaws_test_verdict_pickle = "data_codeflaws/test_verdict.pkl"
     codeflaws_full_cfgidx_map_pkl = "data_codeflaws/full_data.pkl"
+    codeflaws_all_keys = "data_codeflaws/all_keys.pkl"
 
     bug_lines_info_pkl = "data_nbl/nbl_dataset/bug_lines_info.pkl"
 

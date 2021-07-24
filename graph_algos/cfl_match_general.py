@@ -219,6 +219,11 @@ def cpi_top_down(q: nx.MultiDiGraph, G: nx.MultiDiGraph,
             continue
         q.nodes[root]['candidates'].append(v)
 
+    for node in q.nodes():
+        q.nodes[node]['visited'] = False
+
+    q.nodes[root]['visited'] = True
+
     for node in G.nodes():
         G.nodes[node]['cnt'] = create_empty_cnt_dict(edge_labels)
 
@@ -244,15 +249,15 @@ def cpi_top_down(q: nx.MultiDiGraph, G: nx.MultiDiGraph,
                                                                    u, u_n, q)
                 if not q.nodes[u_n]['visited'] and check_snte(u, u_n, q):
                     q.nodes[u]['UN'][io_switch][etype].append(u_n)
-                else:
+                elif q.nodes[u_n]['visited']:
                     check_edge_func(u, u_n, q, G, cnt_dict, etype,
                                     check_label_func)
                     cnt_dict[io_switch][etype] += 1
             for v in G.nodes():
+                cnt_match = check_cnt_match(G.nodes[v]['cnt'], cnt_dict)
                 # If every count, every time we check u from all other node's
                 # position so far, v match, then v is one potential candidates
-                if check_cnt_match(G.nodes[v]['cnt'], cnt_dict) and\
-                        cand_verify(u, q, v, G, check_label_func):
+                if cnt_match and cand_verify(u, q, v, G, check_label_func):
                     q.nodes[u]['candidates'].append(v)
             q.nodes[u]['visited'] = True
             for node in G.nodes():
@@ -361,6 +366,8 @@ def cpi_bottom_up(q: nx.MultiGraph, G: nx.MultiDiGraph,
 
 
 def build_cpi(q, G, check_label_func, root_name='n0'):
+    q = q.copy()
+    G = G.copy()
     roots, node_dicts = graph2spanning_trees(q, root_name)
     edge_dicts = []
     for root, node_dict in zip(roots, node_dicts):

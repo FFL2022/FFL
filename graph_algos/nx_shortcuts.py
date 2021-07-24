@@ -39,8 +39,8 @@ def neighbors_out(u, q, filter_func=None):
     if filter_func is None:
         return list(set(list(u_n for _, u_n in q.out_edges(u))))
     else:
-        return list(set(list(u_n for _, u_n, k, e in q.in_edges(u, data=True,
-                                                                keys=True)
+        return list(set(list(u_n for _, u_n, k, e in q.out_edges(u, data=True,
+                                                                 keys=True)
                              if filter_func(u, u_n, k, e))))
 
 
