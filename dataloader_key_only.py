@@ -41,6 +41,7 @@ class CodeflawsNxDataset(object):
         self.nx_gs = []
         self.ast_types = []
         self.ast_etypes = []
+        self.max_ast_arity = 0
         self.keys = []
         error_instance = []
         bar = tqdm.tqdm(all_codeflaws_keys)
@@ -56,6 +57,11 @@ class CodeflawsNxDataset(object):
                     error_instance.append(key)
                 json.dump(error_instance, open('error_instance.json', 'w'))
                 continue
+            for n in nx_g.nodes():
+                if nx_g.nodes[n]['graph'] == 'ast':
+                    print(nx_g.nodes[n])
+                    self.max_ast_arity = max(
+                        self.max_ast_arity, nx_g.nodes[n]['n_order'])
             self.keys.append(key)
             self.nx_gs.append(nx_g)
             self.ast_types.extend(
@@ -72,7 +78,7 @@ class CodeflawsNxDataset(object):
     def save(self):
         os.makedirs(self.save_dir, exist_ok=True)
         pkl.dump(
-            {'nx': self.nx_gs,
+            {'nx': self.nx_gs, 'max_arity': self.max_ast_arity,
              'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes},
             open(self.graph_save_path, 'wb'))
 
@@ -81,6 +87,7 @@ class CodeflawsNxDataset(object):
         self.nx_gs = gs_label['nx']
         self.ast_types = gs_label['ast_types']
         self.ast_etypes = gs_label['ast_etypes']
+        self.max_ast_arity = gs_label['max_ast_arity']
 
     def has_cache(self):
         return os.path.exists(self.graph_save_path)
@@ -128,7 +135,6 @@ class CodeflawsFullDGLDataset(DGLDataset):
         self.train_idxs = info_dict['train_idxs']
         self.val_idxs = info_dict['val_idxs']
         self.test_idxs = info_dict['test_idxs']
-
         self.train()
 
     def save(self):
@@ -175,6 +181,9 @@ class CodeflawsFullDGLDataset(DGLDataset):
             self.nx_dataset.ast_types.index(nx_g.nodes[node]['ntype'])
             for node in n_asts], dtype=torch.long
         )
+        ast_arity = torch.tensor(
+            [nx_g.node[node]['n_order']
+             for node in nx_g.nodes()], dtype=torch.long)
         ast_contents = torch.stack([
             torch.from_numpy(embedding_model.get_sentence_vector(
                 nx_g.nodes[n]['token'].replace('\n', '')))
@@ -214,6 +223,7 @@ class CodeflawsFullDGLDataset(DGLDataset):
         g.nodes['cfg'].data['label'] = cfg_labels
         g.nodes['cfg'].data['content'] = cfg_contents
         g.nodes['ast'].data['label'] = ast_labels
+        g.nodes['ast'].data['arity'] = ast_arity
         g.nodes['ast'].data['content'] = ast_contents
         g = dgl.add_self_loop(g, etype=('ast', 'a_self_loop', 'ast'))
         g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))

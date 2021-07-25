@@ -1,6 +1,7 @@
 from utils.utils import ConfigClass
 from cfg import cfg
-from utils.traverse_utils import build_nx_cfg, build_nx_ast
+from utils.traverse_utils import build_nx_cfg, build_nx_ast_base,\
+    build_nx_ast_full
 from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.codeflaws_data_format import key2bug, key2fix, key2bugfile,\
     key2fixfile, key2test_verdict
@@ -60,7 +61,7 @@ def combine_ast_cfg(nx_ast, nx_cfg):
     return nx_h_g
 
 
-def build_nx_graph_cfg_ast(graph, code: list):
+def build_nx_graph_cfg_ast(graph, code: list, full_ast=True):
     ''' Build nx graph cfg ast
     Parameters
     ----------
@@ -76,7 +77,10 @@ def build_nx_graph_cfg_ast(graph, code: list):
     if code is not None:
         nx_cfg = augment_cfg_with_content(nx_cfg, code)
 
-    nx_ast, ast2nx = build_nx_ast(ast)
+    if full_ast:
+        nx_ast, ast2nx = build_nx_ast_full(ast)
+    else:
+        nx_ast, ast2nx = build_nx_ast_base(ast)
 
     for node in nx_cfg.nodes():
         nx_cfg.nodes[node]['graph'] = 'cfg'

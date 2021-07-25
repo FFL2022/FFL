@@ -5,7 +5,7 @@ import torch
 import os
 import torch.nn.functional as F
 from dataloader_key_only import CodeflawsFullDGLDataset
-from model import HeteroMPNNPredictor1TestNodeType
+from model import HeteroMPNNPredictor1TestNodeTypeArity
 from utils.utils import ConfigClass
 import tqdm
 import json
@@ -281,12 +281,12 @@ if __name__ == '__main__':
     # loaddataset
     dataset = CodeflawsFullDGLDataset()
     meta_graph = dataset.meta_graph
-    model = HeteroMPNNPredictor1TestNodeType(
+    model = HeteroMPNNPredictor1TestNodeTypeArity(
         len(ConfigClass.cfg_label_corpus),
         dataset.cfg_content_dim,
-        256, 32, meta_graph, 2, device,
-        len(dataset.nx_dataset.ast_types),
-        dataset.ast_content_dim, 3)
+        256, 32, meta_graph, dataset.nx_dataset.max_ast_arity, num_classes=2,
+        device=device, num_ast_labels=len(dataset.nx_dataset.ast_types),
+        ast_content_feats=dataset.ast_content_dim, num_classes_ast=3)
     ConfigClass.preprocess_dir = "{}/{}/{}".format(
         ConfigClass.preprocess_dir, dataset_opt, graph_opt)
     train(model, dataset, ConfigClass.n_epochs)

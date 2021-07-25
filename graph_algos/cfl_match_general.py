@@ -404,7 +404,6 @@ def extend_cpi_top_down(last_q: nx.MultiDiGraph, q: nx.MultiDiGraph,
 
     for node in last_q:
         q.nodes[node]['candidates'] = last_q.nodes[node]['candidates']
-        q.nodes[node]['UN'] = last_q.nodes[node]['UN']
         q.nodes[node]['visited'] = True
         q.nodes[node]['prev_visited'] = True
 
@@ -412,18 +411,24 @@ def extend_cpi_top_down(last_q: nx.MultiDiGraph, q: nx.MultiDiGraph,
         G.nodes[node]['cnt'] = create_empty_cnt_dict(edge_labels)
 
     # TODO: use queue and delimiter instead
+    # Reset all from the level that contains the node
     l2n_map = defaultdict(list)
+    check_visited = 9999
     for node in node_dict:
         lev = q.nodes[node]['distance']
         l2n_map[lev].append(node)
+        if not q.nodes[node]['prev_visited']:
+            check_visited = min(check_visited, lev)
 
     n_levels = len(list(l2n_map.keys()))
 
-    if 60 in q.nodes() and 60 in G.nodes():
-        print(q.nodes[60]['token'], G.nodes[60]['token'])
-        print(cand_verify(60, q, 60, G, check_label_func))
+    for lev in range(check_visited, n_levels):
+        for u in l2n_map[lev]:
+            q.nodes[u]['visited'] = False
+            q.nodes[u]['prev_visited'] = False
+            q.nodes[u]['candidates'] = []
 
-    for lev in range(1, n_levels):
+    for lev in range(check_visited, n_levels):
         # Forward candidate generation
         n_modifieds = []
         for u in l2n_map[lev]:
@@ -497,10 +502,19 @@ def extend_cpi_bottom_up(q: nx.MultiGraph, G: nx.MultiDiGraph,
         for u in l2n_map[lev]:
             cnt_dict = create_empty_cnt_dict(edge_labels)
             u_is, u_os, u_as = all_neighbors(u, q)
+
+            if q.nodes[u]['prev_visited']:
+                u_is = [ui for ui in u_is if not q.nodes[ui]['prev_visited']]
+                u_os = [uo for uo in u_os if not q.nodes[uo]['prev_visited']]
+                u_as = [ua for ua in u_as if not q.nodes[ua]['prev_visited']]
+
+                if len(u_as) == 0:
+                    continue
+
             u_ns = [u_n for u_n in u_as if compare_level(u, u_n, q) > 0]
             for u_n in u_ns:
-                io_switch, etype, check_edge_func = get_params_cnt(u_n in u_is,
-                                                                   u, u_n, q)
+                io_switch, etype, check_edge_func = get_params_cnt(
+                    u_n in u_is, u, u_n, q)
                 check_edge_func(u, u_n, q, G, cnt_dict, etype,
                                 check_label_func)
                 cnt_dict[io_switch][etype] += 1

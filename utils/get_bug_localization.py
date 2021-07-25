@@ -1,5 +1,6 @@
 from utils.preprocess_helpers import remove_lib
 from utils.nx_graph_builder import build_nx_graph_cfg_ast, combine_ast_cfg
+from utils.traverse_utils import augment_ast_base_to_full
 from cfg import cfg
 import networkx as nx
 from graph_algos.cfl_match_general import build_cpi, match_edge, extend_cpi,\
@@ -26,42 +27,21 @@ def simple_top_down_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
     # Since it makes no differences in our case where
     # Whether the node moves or not, we automatically assign
     # Error to parent
-    forward_mapping = {}
-    backward_mapping = {}
+    forward_mapping = {0: [0]}
+    backward_mapping = {0: [0]}
     # BFS
-    queue1 = [0]
+    queue1 = neighbors_out(0, ast1)
     while len(queue1) > 0:
-        new_forward_mapping = copy.deepcopy(forward_mapping)
-        new_backward_mapping = copy.deepcopy(backward_mapping)
         n1 = queue1.pop()
-        # 1. Top down adding
-        n1_parents = neighbors_in(
-            n1, ast1,
-            lambda u, v, k, e: u in forward_mapping)
-        candidates = []
-        for n2 in ast2.nodes():
-            if not ast_node_token_match(n1, ast1, n2, ast2):
-                continue
-            # neighbor consensus
-            n2_parents = neighbors_in(
-                n2, ast2,
-                lambda u, v, k, e:
-                any([u in forward_mapping[n1_n] for n1_n in forward_mapping]))
-            # Check its relation with all of ast1's neighbor in
-            for p1 in n1_parents:
-                match = False
-                for p2 in n2_parents:
-                    if match_edge((p1, n1), ast1, (p2, n2), ast2):
-                        match = True
-                        break
-
-        if ast_node_match_label(n1, ast1, n2, ast2):
-            # Also check if the all the input edges match
-            pass
-            pass
-        # Check if it match with any in queue2
-        # If it does, add its children and queue2's children in to queue
-    pass
+        candidates = neighbor_parent_consensus_candidates(n1, ast1, ast2,
+                                                          forward_mapping)
+        if len(candidates) > 1:
+            raise ValueError
+        if len(candidates) == 1:
+            forward_mapping[n1] = [candidates[0]]
+            backward_mapping[candidates[0]] = [n1]
+            queue1.extend(neighbors_out(n1, ast1))
+    return forward_mapping, backward_mapping
 
 
 def neighbor_parent_consensus_candidates(n1, ast1, ast2, forward_mapping):
@@ -84,7 +64,7 @@ def neighbor_parent_consensus_candidates(n1, ast1, ast2, forward_mapping):
 
 def full_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
     ''' Careful and slow (guaranteed correct) CFL-based AST match '''
-    _, _, last_q = build_cpi(
+    _, last_q = build_cpi_node_only(
         ast1, ast2, ast_node_token_match, root_name=0)
 
     forward_mapping = {}
@@ -119,8 +99,12 @@ def full_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
             q.nodes[n1]['candidates'] = candidates
         else:
             # Check if it is isomorphic to ast2
+            node_dict, q = extend_cpi(last_q,
+                                      new_temp_subgraph, ast2, ast_node_token_match, root_name=0)
+            '''
             node_dict, q = build_cpi_node_only(
                 new_temp_subgraph, ast2, ast_node_token_match, root_name=0)
+            '''
             # Note: can be faster by caching previous candidates
         '''
         # 2. Use extend cpi
@@ -191,33 +175,51 @@ def get_bug_localization(file1, file2):
     with open("temp.c", 'r') as f:
         code = [line for line in f]
 
-    nx_cfg1, nx_ast1, _ = build_nx_graph_cfg_ast(graph, code)
+    # Full ast false for easier matching
+    nx_cfg1, nx_ast1, _ = build_nx_graph_cfg_ast(graph, code, full_ast=True)
 
     nline_removed2 = remove_lib(file2)
     graph = cfg.CFG("temp.c")
     with open("temp.c", 'r') as f:
         code = [line for line in f]
 
-    nx_cfg2, nx_ast2, _ = build_nx_graph_cfg_ast(graph, code)
+    nx_cfg2, nx_ast2, _ = build_nx_graph_cfg_ast(graph, code, full_ast=True)
     # 2 Scenarios
     # 1.
     # Take differences betweeen AST and AST
 
-    forward_mapping, backward_mapping = full_ast_match(
+    forward_mapping, backward_mapping = full_ast_match(nx_ast1, nx_ast2)
+    '''
+    forward_mapping, backward_mapping = simple_top_down_ast_match(
         nx_ast1, nx_ast2)
+    '''
 
     for n_a1 in nx_ast1.nodes():
         nx_ast1.nodes[n_a1]['status'] = 'k' if n_a1 in forward_mapping else 'd'
 
     for n_a2 in nx_ast2.nodes():
+        nx_ast2.nodes[n_a2]['status'] = 'k'
         if n_a2 in backward_mapping:
             continue
+        nx_ast2.nodes[n_a2]['status'] = 'i'
         # Get all parents (either 'next sibling' or 'parent-child'
         kept_parents = neighbors_in(
             n_a2, nx_ast2, lambda u, v, k, e: u in backward_mapping)
         for k_p in kept_parents:
-            for b_c in backward_mapping[k_p]:
+            # MAGIC:
+            # This is only one node
+            # If until the end, it has multiple mapping from the previous
+            # Then it is probably inserted to the parent
+            parents = backward_mapping[k_p]
+            # Do this until the parent converge
+            while len(parents) > 1:
+                parents = list(
+                    set(neighbors_in(p, nx_ast1)[0] for p in parents))
+            for b_c in parents:
+                # If the b_c has the same amount of children as this one
+                # and no node is deleted: Wrong
                 nx_ast1.nodes[b_c]['status'] = 'i'
+
     # Map back to CFG and CFG
     for n_c1 in nx_cfg1.nodes():
         nx_cfg1.nodes[n_c1]['status'] = 'k'

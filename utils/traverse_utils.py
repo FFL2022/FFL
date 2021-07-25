@@ -1,5 +1,7 @@
 from cfg.cfg_nodes import CFGNode, CFGEntryNode
 import networkx as nx
+from graph_algos.nx_shortcuts import neighbors_out
+from graph_algos.spanning_tree_conversion import get_elbl
 
 
 def is_leaf(astnode):
@@ -287,12 +289,27 @@ def get_unique_base(children: list):
     return unique_child_map
 
 
-def build_nx_ast(ast):
+def get_unique_base(children: list):
+    unique_child_map = {}
+    for child_name, child in children:
+        if "[" in child_name:
+            base = child_name.split("[")[0]
+            index = int(child_name.split("[")[1].split("]")[0])
+            if base not in unique_child_map:
+                unique_child_map[base] = {index: child}
+            else:
+                unique_child_map[base][index] = child
+        else:
+            unique_child_map[child_name] = {0: child}
+    return unique_child_map
+
+
+def build_nx_ast_full(ast):
     g = nx.MultiDiGraph()
     ast2nx = {ast: 0}
 
     g.add_node(0, ntype=ast.__class__.__name__,
-               token=get_token(ast), coord_line=-1)
+               token=get_token(ast), coord_line=-1, n_order=0)
     queue = [ast]
 
     while len(queue) > 0:
@@ -318,10 +335,69 @@ def build_nx_ast(ast):
                     g.add_node(g.number_of_nodes(),
                                ntype=child.__class__.__name__,
                                token=get_token(child),
-                               coord_line=coord_line)
+                               coord_line=coord_line, n_order=i)
                     g.add_edge(ast2nx[node], ast2nx[child], label=etype)
+                    '''
                     if i > 0:
                         g.add_edge(ast2nx[child]-1, ast2nx[child],
                                    label='next_sibling')
+                    '''
                     queue.insert(0, child)
     return g, ast2nx
+
+
+def build_nx_ast_base(ast):
+    g = nx.MultiDiGraph()
+    g = nx.MultiDiGraph()
+    ast2nx = {ast: 0}
+
+    g.add_node(0, ntype=ast.__class__.__name__,
+               token=get_token(ast), coord_line=-1)
+    queue = [ast]
+    while len(queue) > 0:
+        node = queue.pop()
+        # Child name can also be used as edge etype
+
+        for child_name, child in node.children():
+            child_token = get_token(child)
+            try:
+                if child_token == "TypeDecl":
+                    coord_line = node.type.coord.line
+                else:
+                    coord_line = node.coord.line
+            except AttributeError:
+                coord_line = g.nodes[ast2nx[node]]['coord_line']
+            ast2nx[child] = g.number_of_nodes()
+            g.add_node(g.number_of_nodes(),
+                       ntype=child.__class__.__name__,
+                       token=get_token(child),
+                       coord_line=coord_line)
+            g.add_edge(ast2nx[node], ast2nx[child], label=child_name)
+            queue.insert(0, child)
+
+    return g, ast2nx
+
+
+def augment_ast_base_to_full(nx_ast):
+    g = nx_ast
+    queue = [0]
+
+    while len(queue) > 0:
+        node = queue.pop()
+        children = neighbors_out(node, g)
+        if len(children) > 0:
+            children_etype = [
+                (get_elbl((node, child), nx_ast), child) for child in children]
+            # Transform
+            unique_child_map = get_unique_base(children_etype)
+            for etype in unique_child_map:
+                # Sort all nodes
+                sorted_cidxs = sorted(list(unique_child_map[etype].keys()))
+                for i in sorted_cidxs:
+                    child = unique_child_map[etype][i]
+                    g[node][child][0]['label'] = etype
+                    if i > 0:
+                        g.add_edge(unique_child_map[etype][i-1], child,
+                                   label='next_sibling')
+                    queue.insert(0, child)
+    return g
