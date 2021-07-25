@@ -108,7 +108,8 @@ def maximum_neighbor_degrees(v, G):
     return neighbor_in, neighbor_out
 
 
-def combine_multi(vs: List, merge_nodes=False, node2int=None):
+def combine_multi(vs: List, merge_nodes=False, node2int=None,
+                  merge_to_int=True):
     ''' Compose multiple nx graph into 1 graph
     Parameters
     ----------
@@ -130,9 +131,15 @@ def combine_multi(vs: List, merge_nodes=False, node2int=None):
     batch = []
     for v_idx, v in enumerate(vs):
         node_labels = list(v.nodes())
-        mapping = dict((node_label, 'n{}'.format(i + n_count))
-                       for i, node_label in enumerate(
-                           sorted(node_labels, key=node2int)))
+        if merge_to_int:
+            mapping = dict((node_label, i + n_count)
+                        for i, node_label in enumerate(
+                            sorted(node_labels, key=node2int)))
+        else:
+            mapping = dict((node_label, 'n{}'.format(i + n_count))
+                        for i, node_label in enumerate(
+                            sorted(node_labels, key=node2int)))
+
         # rename
         new_v = nx.relabel_nodes(v, mapping)
         n_count += len(node_labels)

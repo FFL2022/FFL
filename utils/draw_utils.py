@@ -5,10 +5,10 @@ def set_label_ast(ast, node):
     ast.nodes[node]['label'] = ast.nodes[node]['ntype'] + \
         ' ' + ast.nodes[node]['token']
     if 'status' in ast.nodes[node]:
-        if ast.nodes[node]['status'] == 'i':
+        if ast.nodes[node]['status'] == 2:
             ast.nodes[node]['fillcolor'] = "#CCFFCC"
             ast.nodes[node]['style'] = "filled"
-        elif ast.nodes[node]['status'] == 'd':
+        elif ast.nodes[node]['status'] == 1:
             ast.nodes[node]['fillcolor'] = "#FFCCCC"
             ast.nodes[node]['style'] = "filled"
 
@@ -21,7 +21,7 @@ def set_label_cfg(cfg, node):
             ' ' + cfg.nodes[node]['funcname'] + ' ' +\
             cfg.nodes[node]['text']
     if 'status' in cfg.nodes[node]:
-        if cfg.nodes[node]['status'] == 'm':
+        if cfg.nodes[node]['status'] == 1:
             cfg.nodes[node]['fillcolor'] = "#FFFFCC"
             cfg.nodes[node]['style'] = "filled"
 

@@ -1,6 +1,6 @@
 from utils.preprocess_helpers import remove_lib
 from utils.nx_graph_builder import build_nx_graph_cfg_ast, combine_ast_cfg
-from utils.traverse_utils import augment_ast_base_to_full
+from utils.traverse_utils import augment_ast_base_to_full, convert_from_arity_to_rel
 from cfg import cfg
 import networkx as nx
 from graph_algos.cfl_match_general import build_cpi, match_edge, extend_cpi,\
@@ -196,14 +196,15 @@ def get_bug_localization(file1, file2):
         nx_ast1, nx_ast2)
     '''
 
+    # k = 0, d = 1, i = 2, m = 1
     for n_a1 in nx_ast1.nodes():
-        nx_ast1.nodes[n_a1]['status'] = 'k' if n_a1 in forward_mapping else 'd'
+        nx_ast1.nodes[n_a1]['status'] = 0 if n_a1 in forward_mapping else 1
 
     for n_a2 in nx_ast2.nodes():
-        nx_ast2.nodes[n_a2]['status'] = 'k'
+        nx_ast2.nodes[n_a2]['status'] = 0
         if n_a2 in backward_mapping:
             continue
-        nx_ast2.nodes[n_a2]['status'] = 'i'
+        nx_ast2.nodes[n_a2]['status'] = 2
         # Get all parents (either 'next sibling' or 'parent-child'
         kept_parents = neighbors_in(
             n_a2, nx_ast2, lambda u, v, k, e: u in backward_mapping)
@@ -220,19 +221,23 @@ def get_bug_localization(file1, file2):
             for b_c in parents:
                 # If the b_c has the same amount of children as this one
                 # and no node is deleted: Wrong
-                nx_ast1.nodes[b_c]['status'] = 'i'
+                nx_ast1.nodes[b_c]['status'] = 2
 
     # Map back to CFG and CFG
     for n_c1 in nx_cfg1.nodes():
-        nx_cfg1.nodes[n_c1]['status'] = 'k'
+        nx_cfg1.nodes[n_c1]['status'] = 0
+
+    nx_ast1 = convert_from_arity_to_rel(nx_ast1)
+    nx_ast2 = convert_from_arity_to_rel(nx_ast2)
+
     nx_cfg_ast1 = combine_ast_cfg(nx_ast1, nx_cfg1)
     for n_c1 in nx_cfg_ast1.nodes():
         if nx_cfg_ast1.nodes[n_c1]['graph'] != 'cfg':
             continue
         if len(neighbors_out(n_c1, nx_cfg_ast1, lambda u, v, k, e:
-                             nx_cfg_ast1.nodes[v]['status'] != 'k' and
+                             nx_cfg_ast1.nodes[v]['status'] != 0 and
                              nx_cfg_ast1.nodes[v]['graph'] == 'ast')) > 0:
-            nx_cfg_ast1.nodes[n_c1]['status'] = 'm'     # Modified
+            nx_cfg_ast1.nodes[n_c1]['status'] = 1     # Modified
     # 2.
     # Take differences between lines
     # Check back to CFG

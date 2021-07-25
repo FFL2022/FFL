@@ -1,6 +1,6 @@
 from cfg.cfg_nodes import CFGNode, CFGEntryNode
 import networkx as nx
-from graph_algos.nx_shortcuts import neighbors_out
+from graph_algos.nx_shortcuts import neighbors_out, neighbors_in
 from graph_algos.spanning_tree_conversion import get_elbl
 
 
@@ -289,18 +289,15 @@ def get_unique_base(children: list):
     return unique_child_map
 
 
-def get_unique_base(children: list):
+def get_unique_base_arity(children: list, nx_ast):
     unique_child_map = {}
     for child_name, child in children:
-        if "[" in child_name:
-            base = child_name.split("[")[0]
-            index = int(child_name.split("[")[1].split("]")[0])
-            if base not in unique_child_map:
-                unique_child_map[base] = {index: child}
-            else:
-                unique_child_map[base][index] = child
+        if child_name not in unique_child_map:
+            unique_child_map[child_name] = {
+                nx_ast.nodes[child]['n_order']: child}
         else:
-            unique_child_map[child_name] = {0: child}
+            unique_child_map[child_name][nx_ast.nodes[child]
+                                         ['n_order']] = child
     return unique_child_map
 
 
@@ -313,7 +310,7 @@ def build_nx_ast_full(ast):
     queue = [ast]
 
     while len(queue) > 0:
-        node = queue.pop()
+        node = queue.pop(0)
         # Child name can also be used as edge etype
         # First, check childname
         if len(node.children()) > 0:
@@ -378,12 +375,43 @@ def build_nx_ast_base(ast):
     return g, ast2nx
 
 
+def convert_from_arity_to_rel(nx_ast):
+    g = nx_ast
+    root = [n for n in nx_ast
+            if len(neighbors_in(n, nx_ast,
+                                filter_func=lambda u, _, k, e:
+                                nx_ast.nodes[u]['graph'] == 'ast')) == 0][0]
+    queue = [root]
+    while len(queue) > 0:
+        node = queue.pop(0)
+        del nx_ast.nodes[node]['n_order']
+        children = neighbors_out(node, g, filter_func=lambda _, v, k, e:
+                                 nx_ast.nodes[v]['graph'] == 'ast' and
+                                 e['label'] != 'next_sibling')
+        if len(children) > 0:
+            children_etype = [
+                (get_elbl((node, child), nx_ast), child) for child in children]
+            unique_child_map = get_unique_base_arity(children_etype, nx_ast)
+            for etype in unique_child_map:
+                sorted_cidxs = sorted(list(unique_child_map[etype].keys()))
+                for idx, i in enumerate(sorted_cidxs):
+                    child = unique_child_map[etype][i]
+                    g[node][child][0]['label'] = etype
+                    if idx > 0:
+                        g.add_edge(
+                            unique_child_map[etype][sorted_cidxs[idx-1]],
+                            child,
+                            label='next_sibling')
+                    queue.append(child)
+    return g
+
+
 def augment_ast_base_to_full(nx_ast):
     g = nx_ast
     queue = [0]
 
     while len(queue) > 0:
-        node = queue.pop()
+        node = queue.pop(0)
         children = neighbors_out(node, g)
         if len(children) > 0:
             children_etype = [
