@@ -180,8 +180,7 @@ def train(model, dataloader, n_epochs):
             opt.zero_grad()
             loss.backward()
             opt.step()
-            bar.set_postfix(ast_loss=ast_loss.item(), acc=mean_ast_acc.avg,
-                            ast_loss=ast_loss.item())
+            bar.set_postfix(ast_loss=ast_loss.item(), acc=mean_ast_acc.avg)
 
         if epoch % ConfigClass.print_rate == 0:
             out_dict = {}
