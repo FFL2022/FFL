@@ -59,7 +59,6 @@ class CodeflawsNxDataset(object):
                 continue
             for n in nx_g.nodes():
                 if nx_g.nodes[n]['graph'] == 'ast':
-                    print(nx_g.nodes[n])
                     self.max_ast_arity = max(
                         self.max_ast_arity, nx_g.nodes[n]['n_order'])
             self.keys.append(key)
