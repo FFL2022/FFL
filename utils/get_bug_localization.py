@@ -23,6 +23,7 @@ def ast_node_token_match(n1, ast1, n2, ast2):
 
 
 def simple_top_down_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
+    # NOTE: only work on base version
     # We don't need fine-grained bottom up like GumTree
     # Since it makes no differences in our case where
     # Whether the node moves or not, we automatically assign
@@ -91,17 +92,18 @@ def full_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
         if len(candidates) == 0:
             continue
         new_temp_subgraph = ast1.subgraph(list_nodes + [n1]).copy()
-        if len(candidates) == 1:
-            # If this has only one candidate: add it
-            q = new_temp_subgraph
-            for n in list_nodes:
-                q.nodes[n]['candidates'] = last_q.nodes[n]['candidates'][:]
-            q.nodes[n1]['candidates'] = candidates
+        # If this has only one candidate: add it
+        q = new_temp_subgraph
+        for n in list_nodes:
+            q.nodes[n]['candidates'] = last_q.nodes[n]['candidates'][:]
+        q.nodes[n1]['candidates'] = candidates
+        '''
         else:
             # Check if it is isomorphic to ast2
             node_dict, q = extend_cpi(last_q,
                                       new_temp_subgraph, ast2, ast_node_token_match, root_name=0)
-            '''
+        '''
+        '''
             node_dict, q = build_cpi_node_only(
                 new_temp_subgraph, ast2, ast_node_token_match, root_name=0)
             '''

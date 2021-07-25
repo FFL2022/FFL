@@ -86,7 +86,7 @@ class CodeflawsNxDataset(object):
         self.nx_gs = gs_label['nx']
         self.ast_types = gs_label['ast_types']
         self.ast_etypes = gs_label['ast_etypes']
-        self.max_ast_arity = gs_label['max_ast_arity']
+        self.max_ast_arity = gs_label['max_arity']
 
     def has_cache(self):
         return os.path.exists(self.graph_save_path)
