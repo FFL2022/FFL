@@ -87,9 +87,9 @@ def time_since(since, percent):
 def train(model, dataloader, n_epochs):
     opt = torch.optim.Adam(model.parameters())
 
-    mean_loss = AverageMeter()
+    # mean_loss = AverageMeter()
+    # mean_acc = AverageMeter()
     mean_ast_loss = AverageMeter()
-    mean_acc = AverageMeter()
     mean_ast_acc = AverageMeter()
 
     top_1_meter = AverageMeter()
@@ -103,10 +103,10 @@ def train(model, dataloader, n_epochs):
     # eval(model, dataloader)
     for epoch in range(n_epochs):
         dataloader.train()
-        mean_loss.reset()
+        # mean_loss.reset()
         mean_ast_loss.reset()
         mean_ast_acc.reset()
-        mean_acc.reset()
+        # mean_acc.reset()
         f1_meter.reset()
         top_10_meter.reset()
         top_5_meter.reset()
@@ -121,62 +121,66 @@ def train(model, dataloader, n_epochs):
             if g is None:
                 continue
             # LB will be preprocessed to have
-            lb = g.nodes['cfg'].data['tgt']
-            ast_lb = g.nodes['cfg'].data['tgt']
+            # lb = g.nodes['cfg'].data['tgt']
+            ast_lb = g.nodes['ast'].data['tgt']
 
-            non_zeros_lbs = torch.nonzero(lb)
-            if non_zeros_lbs.shape[0] == 0:
+            # non_zeros_lbs = torch.nonzero(lb)
+            non_zeros_ast_lbs = torch.nonzero(ast_lb)
+            if non_zeros_ast_lbs.shape[0] == 0:
                 continue
             g = g.to(device)
-            lbidxs = torch.flatten(non_zeros_lbs).tolist()
-            lb = lb.to(device)
+            ast_lbidxs = torch.flatten(non_zeros_ast_lbs).tolist()
+            # lb = lb.to(device)
             ast_lb = ast_lb.to(device)
             g = model(g)
             # 2 scenario:
             # not using master node
-            logits = g.nodes['cfg'].data['logits']
+            # logits = g.nodes['cfg'].data['logits']
             # using master node, TODO: To be implemented
-            cfg_loss = F.cross_entropy(logits, lb)
+            # cfg_loss = F.cross_entropy(logits, lb)
             ast_loss = F.cross_entropy(g.nodes['ast'].data['logits'])
-            loss = cfg_loss + 0.5 * ast_loss
+            loss = ast_loss
+            # loss = cfg_loss + 0.5 * ast_loss
 
-            _, cal = torch.max(logits, dim=1)
+            # _, cal = torch.max(logits, dim=1)
             _, ast_cal = torch.max(g.nodes['ast'].data['logits'], dim=1)
 
-            preds = g.nodes['cfg'].data['pred'][:, 1]
-            k = min(g.number_of_nodes('cfg'), 10)
+            preds = g.nodes['ast'].data['pred'][:, 1]
+            k = min(g.number_of_nodes('ast'), 10)
             _, indices = torch.topk(preds, k)
             top_10_val = indices[:k].tolist()
             top_10_meter.update(
-                int(any([idx in lbidxs for idx in top_10_val])), 1)
+                int(any([idx in ast_lbidxs for idx in top_10_val])), 1)
 
-            k = min(g.number_of_nodes('cfg'), 5)
+            k = min(g.number_of_nodes('ast'), 5)
             top_5_val = indices[:k].tolist()
             top_5_meter.update(
-                int(any([idx in lbidxs for idx in top_5_val])), 1)
+                int(any([idx in ast_lbidxs for idx in top_5_val])), 1)
 
-            k = min(g.number_of_nodes('cfg'), 2)
+            k = min(g.number_of_nodes('ast'), 2)
             top_2_val = indices[:k].tolist()
             top_2_meter.update(
-                int(any([idx in lbidxs for idx in top_2_val])), 1)
+                int(any([idx in ast_lbidxs for idx in top_2_val])), 1)
 
-            k = min(g.number_of_nodes('cfg'), 1)
+            k = min(g.number_of_nodes('ast'), 1)
             top_1_val = indices[:k].tolist()
-            top_1_meter.update(int(top_1_val[0] in lbidxs), 1)
+            top_1_meter.update(int(top_1_val[0] in ast_lbidxs), 1)
 
-            mean_loss.update(cfg_loss.item(), g.number_of_nodes('cfg'))
+            # mean_loss.update(cfg_loss.item(), g.number_of_nodes('ast'))
             mean_ast_loss.update(ast_loss.item(), g.number_of_nodes('ast'))
+            '''
             mean_acc.update(
-                torch.sum(cal == lb).item()/g.number_of_nodes('cfg'),
-                g.number_of_nodes('cfg'))
+                torch.sum(cal == lb).item()/g.number_of_nodes('ast'),
+                g.number_of_nodes('ast'))
+            '''
             mean_ast_acc.update(
                 torch.sum(ast_cal == ast_lb).item()/g.number_of_nodes('ast'),
                 g.number_of_nodes('ast'))
-            f1_meter.update(cal, lb)
+            f1_meter.update(ast_cal, ast_lb)
             opt.zero_grad()
             loss.backward()
             opt.step()
-            bar.set_postfix(loss=loss.item(), acc=mean_acc.avg,
+            bar.set_postfix(ast_loss=ast_loss.item(), acc=mean_ast_acc.avg,
                             ast_loss=ast_loss.item())
 
         if epoch % ConfigClass.print_rate == 0:
@@ -185,17 +189,19 @@ def train(model, dataloader, n_epochs):
             out_dict['top_2'] = top_2_meter.avg
             out_dict['top_5'] = top_5_meter.avg
             out_dict['top_10'] = top_10_meter.avg
-            out_dict['mean_acc'] = mean_acc.avg
-            out_dict['mean_loss'] = mean_loss.avg
+            out_dict['mean_acc'] = mean_ast_acc.avg
+            out_dict['mean_loss'] = mean_ast_loss.avg
             out_dict['mean_ast_acc'] = mean_ast_acc.avg
             out_dict['mean_ast_loss'] = mean_ast_loss.avg
             out_dict['f1'] = f1_meter.get()
             with open(ConfigClass.result_dir +
                       '/training_dict_e{}.json'.format(epoch), 'w') as f:
                 json.dump(out_dict, f, indent=2)
-            print(f"loss: {mean_loss.avg}, acc: {mean_acc.avg}, " +
+            print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
                   f"top 10 acc: {top_10_meter.avg}, " +
-                  f"top 5 acc: {top_5_meter.avg}, top 2 acc {top_2_meter.avg}")
+                  f"top 5 acc: {top_5_meter.avg}, " +
+                  f"top 2 acc {top_2_meter.avg}" +
+                  f"top 1 acc {top_1_meter.avg}")
             print(f1_meter.get())
         if epoch % ConfigClass.save_rate == 0:
             l_eval, acc_eval, f1_eval = eval(model, dataloader, epoch)
@@ -208,8 +214,10 @@ def train(model, dataloader, n_epochs):
 
 def eval(model, dataloader, epoch):
     dataloader.val()
-    mean_loss = AverageMeter()
-    mean_acc = AverageMeter()
+    # mean_loss = AverageMeter()
+    # mean_acc = AverageMeter()
+    mean_ast_loss = AverageMeter()
+    mean_ast_acc = AverageMeter()
     f1_meter = BinFullMeter()
     top_1_meter = AverageMeter()
     top_2_meter = AverageMeter()
@@ -219,59 +227,67 @@ def eval(model, dataloader, epoch):
     out_dict = {}
     for i in tqdm.trange(len(dataloader)):
         g = dataloader[i]
-        lb = g.nodes['cfg'].data['tgt']
-        if g is None or lb is None:
+        # lb = g.nodes['cfg'].data['tgt']
+        ast_lb = g.nodes['cfg'].data['tgt']
+        if g is None:
             continue
 
-        non_zeros_lbs = torch.nonzero(lb)
-        if non_zeros_lbs.shape[0] == 0:
+        ast_non_zeros_lbs = torch.nonzero(ast_lb)
+        if ast_non_zeros_lbs.shape[0] == 0:
             continue
 
         g = g.to(device)
         # LB will be preprocessed to have
-        lb = lb.to(device)
+        ast_lb = ast_lb.to(device)
         model(g)
-        lbidxs = torch.flatten(non_zeros_lbs).tolist()
+        ast_lbidxs = torch.flatten(ast_non_zeros_lbs).tolist()
 
-        preds = g.nodes['cfg'].data['pred'][:, 1]
-        k = min(g.number_of_nodes('cfg'), 10)
+        preds = g.nodes['ast'].data['pred'][:, 1]
+        k = min(g.number_of_nodes('ast'), 10)
         _, indices = torch.topk(preds, k)
         top_10_val = indices[:k].tolist()
-        top_10_meter.update(int(any([idx in lbidxs for idx in top_10_val])), 1)
+        top_10_meter.update(
+            int(any([idx in ast_lbidxs for idx in top_10_val])), 1)
 
-        k = min(g.number_of_nodes('cfg'), 5)
+        k = min(g.number_of_nodes('ast'), 5)
         top_5_val = indices[:k].tolist()
-        top_5_meter.update(int(any([idx in lbidxs for idx in top_5_val])), 1)
+        top_5_meter.update(
+            int(any([idx in ast_lbidxs for idx in top_5_val])), 1)
 
-        k = min(g.number_of_nodes('cfg'), 2)
+        k = min(g.number_of_nodes('ast'), 2)
         top_2_val = indices[:k].tolist()
-        top_2_meter.update(int(any([idx in lbidxs for idx in top_2_val])), 1)
+        top_2_meter.update(
+            int(any([idx in ast_lbidxs for idx in top_2_val])), 1)
 
-        k = min(g.number_of_nodes('cfg'), 1)
+        k = min(g.number_of_nodes('ast'), 1)
         top_1_val = indices[:k].tolist()
-        top_1_meter.update(int(top_1_val[0] in lbidxs), 1)
+        top_1_meter.update(int(top_1_val[0] in ast_lbidxs), 1)
 
         # 2 scenario:
         # not using master node
-        logits = g.nodes['cfg'].data['logits']
+        # logits = g.nodes['cfg'].data['logits']
+        ast_logits = g.nodes['ast'].data['logits']
+
         # using master node, to be implemented
-        loss = F.cross_entropy(logits, lb)
-        _, cal = torch.max(logits, dim=1)
-        mean_loss.update(loss.item(), g.number_of_nodes('cfg'))
-        mean_acc.update(torch.sum(cal == lb).item()/g.number_of_nodes('cfg'),
-                        g.number_of_nodes('cfg'))
-        f1_meter.update(cal, lb)
+        ast_loss = F.cross_entropy(g.nodes['ast'].data['logits'])
+        # cfg_loss = F.cross_entropy(logits, lb)
+        loss = ast_loss  # + cfg_loss
+        _, ast_cal = torch.max(ast_logits, dim=1)
+        mean_ast_loss.update(ast_loss.item(), g.number_of_nodes('ast'))
+        mean_ast_acc.update(torch.sum(ast_cal == ast_lb).item()/g.number_of_nodes('ast'),
+                            g.number_of_nodes('ast'))
+        f1_meter.update(ast_cal, ast_lb)
     out_dict['top_1'] = top_1_meter.avg
     out_dict['top_2'] = top_2_meter.avg
     out_dict['top_5'] = top_5_meter.avg
     out_dict['top_10'] = top_10_meter.avg
-    out_dict['mean_acc'] = mean_acc.avg
-    out_dict['mean_loss'] = mean_loss.avg
+    out_dict['mean_acc'] = mean_ast_acc.avg
+    out_dict['mean_loss'] = mean_ast_loss.avg
     out_dict['f1'] = f1_meter.get()
     with open(ConfigClass.result_dir + f'/eval_dict_e{epoch}.json', 'w') as f:
         json.dump(out_dict, f, indent=2)
     print(out_dict)
-    return mean_loss.avg, mean_acc.avg, f1_meter.get()['aux_f1']
+    return mean_ast_loss.avg, mean_ast_acc.avg, f1_meter.get()['aux_f1']
 
 
 if __name__ == '__main__':
