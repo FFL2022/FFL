@@ -2,7 +2,8 @@ from utils.preprocess_helpers import remove_lib
 from utils.nx_graph_builder import build_nx_graph_cfg_ast, combine_ast_cfg
 from cfg import cfg
 import networkx as nx
-from graph_algos.cfl_match_general import build_cpi, match_edge
+from graph_algos.cfl_match_general import build_cpi, match_edge, extend_cpi,\
+    build_cpi_node_only
 from graph_algos.nx_shortcuts import neighbors_out, neighbors_in
 import copy
 
@@ -99,8 +100,12 @@ def full_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
     queue = list([n for n in queue if any((n_n in forward_mapping) for
                                           n_n in neighbors_in(n, ast1))])
     list_nodes = list(forward_mapping.keys())
+    for node in list(last_q.nodes()):
+        if node not in forward_mapping:
+            last_q.remove_node(node)
     while len(queue) > 0:
         n1 = queue.pop()
+        # 1. Use neighbor consensus
         candidates = neighbor_parent_consensus_candidates(n1, ast1, ast2,
                                                           forward_mapping)
         if len(candidates) == 0:
@@ -114,9 +119,16 @@ def full_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
             q.nodes[n1]['candidates'] = candidates
         else:
             # Check if it is isomorphic to ast2
-            node_dict, edge_dict, q = build_cpi(
+            node_dict, q = build_cpi_node_only(
                 new_temp_subgraph, ast2, ast_node_token_match, root_name=0)
             # Note: can be faster by caching previous candidates
+        '''
+        # 2. Use extend cpi
+        new_temp_subgraph = ast1.subgraph(list_nodes + [n1]).copy()
+        node_dict, q = extend_cpi(
+            last_q,
+            new_temp_subgraph, ast2, ast_node_token_match, root_name=0)
+        '''
         if all(len(q.nodes[n]['candidates']) > 0 for n in q.nodes()):
             last_q = q
             queue.extend(neighbors_out(n1, ast1))
@@ -126,7 +138,6 @@ def full_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
                 for n1 in last_q.nodes()
                 if len(last_q.nodes[n1]['candidates']) > 0
             }
-
 
     forward_mapping = {}
     backward_mapping = {}

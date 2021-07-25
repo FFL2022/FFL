@@ -44,7 +44,7 @@ def neighbors_out(u, q, filter_func=None):
                              if filter_func(u, u_n, k, e))))
 
 
-def all_neighbors(u, q, filter_func=None):
+def all_neighbors(u, q, filter_func_in=None, filter_func_out=None):
     ''' All neighbors
     Parameters
     ----------
@@ -56,8 +56,8 @@ def all_neighbors(u, q, filter_func=None):
     ----------
     list(str)/list(int) (based on the node id) set in the original graph
     '''
-    uis = neighbors_in(u, q, filter_func)
-    uos = neighbors_out(u, q, filter_func)
+    uis = neighbors_in(u, q, filter_func_in)
+    uos = neighbors_out(u, q, filter_func_out)
     return uis, uos, list(set(uis + uos))
 
 
