@@ -154,6 +154,9 @@ def train(model, dataloader, n_epochs):
             # cfg_loss = F.cross_entropy(logits, lb)
             ast_loss = F.cross_entropy(g.nodes['ast'].data['logits'], ast_lb)
             loss = ast_loss
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
             # loss = cfg_loss + 0.5 * ast_loss
 
             # _, cal = torch.max(logits, dim=1)
@@ -191,9 +194,7 @@ def train(model, dataloader, n_epochs):
                 torch.sum(ast_cal == ast_lb).item()/g.number_of_nodes('ast'),
                 g.number_of_nodes('ast'))
             f1_meter.update(ast_cal, ast_lb)
-            opt.zero_grad()
-            loss.backward()
-            opt.step()
+
             bar.set_postfix(ast_loss=ast_loss.item(), acc=mean_ast_acc.avg)
 
         if epoch % ConfigClass.print_rate == 0:
@@ -241,20 +242,24 @@ def eval(model, dataloader, epoch):
     for i in tqdm.trange(len(dataloader)):
         g = dataloader[i]
         # lb = g.nodes['cfg'].data['tgt']
-        ast_lb = g.nodes['cfg'].data['tgt']
         if g is None:
-            continue
-
-        ast_non_zeros_lbs = torch.nonzero(ast_lb)
-        if ast_non_zeros_lbs.shape[0] == 0:
             continue
 
         g = g.to(device)
         # LB will be preprocessed to have
-        ast_lb = ast_lb.to(device)
+        ast_lb = g.ndata['ast']['tgt']
+        ast_non_zeros_lbs = torch.nonzero(ast_lb).cpu()
         model(g)
-        ast_lbidxs = torch.flatten(ast_non_zeros_lbs).tolist()
 
+        if ast_non_zeros_lbs.shape[0] == 0:
+            continue
+        ast_lbidxs = torch.flatten(ast_non_zeros_lbs).tolist()
+        ast_logits = g.nodes['ast'].data['logits']
+
+        # using master node, to be implemented
+        ast_loss = F.cross_entropy(g.nodes['ast'].data['logits'])
+        # cfg_loss = F.cross_entropy(logits, lb)
+        loss = ast_loss  # + cfg_loss
         preds = g.nodes['ast'].data['pred'][:, 1]
         k = min(g.number_of_nodes('ast'), 10)
         _, indices = torch.topk(preds, k)
@@ -279,12 +284,7 @@ def eval(model, dataloader, epoch):
         # 2 scenario:
         # not using master node
         # logits = g.nodes['cfg'].data['logits']
-        ast_logits = g.nodes['ast'].data['logits']
 
-        # using master node, to be implemented
-        ast_loss = F.cross_entropy(g.nodes['ast'].data['logits'])
-        # cfg_loss = F.cross_entropy(logits, lb)
-        loss = ast_loss  # + cfg_loss
         _, ast_cal = torch.max(ast_logits, dim=1)
         mean_ast_loss.update(ast_loss.item(), g.number_of_nodes('ast'))
         mean_ast_acc.update(torch.sum(ast_cal == ast_lb).item()/g.number_of_nodes('ast'),
