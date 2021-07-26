@@ -313,7 +313,7 @@ if __name__ == '__main__':
     model = HeteroMPNNPredictor1TestNodeType(
         len(ConfigClass.cfg_label_corpus),
         dataset.cfg_content_dim,
-        256, 32, meta_graph, num_classes=2,
+        128, 32, meta_graph, num_classes=2,
         device=device, num_ast_labels=len(dataset.nx_dataset.ast_types),
         ast_content_feats=dataset.ast_content_dim, num_classes_ast=3)
     ConfigClass.preprocess_dir = "{}/{}/{}".format(
