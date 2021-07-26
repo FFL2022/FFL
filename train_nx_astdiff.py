@@ -159,7 +159,6 @@ def train(model, dataloader, n_epochs):
             ast_lb = ast_lb.detach().cpu()
 
             if non_zeros_ast_lbs.shape[0] == 0:
-                g.clear()
                 continue
             # loss = cfg_loss + 0.5 * ast_loss
 
