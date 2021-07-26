@@ -184,18 +184,22 @@ class CodeflawsFullDGLDataset(DGLDataset):
 
     def convert_from_nx_to_dgl(self, embedding_model, nx_g, ast_lb_d,
                                ast_lb_i, cfg_lb):
+        '''
         # Create a node mapping for cfg
         n_cfgs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
         cfg2id = dict([n, i] for i, n in enumerate(n_cfgs))
+        '''
         # Create a node mapping for ast
         n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
         ast2id = dict([n, i] for i, n in enumerate(n_asts))
         # Create a node mapping for test
         n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
         t2id = dict([n, i] for i, n in enumerate(n_tests))
-        map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
+        # map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
+        map2id = {'ast': ast2id, 'test': t2id}
 
         # Create dgl cfg node
+        '''
         cfg_labels = torch.tensor(
             [ConfigClass.cfg_label_corpus.index(nx_g.nodes[n]['ntype'])
              for n in n_cfgs], dtype=torch.long)
@@ -203,6 +207,7 @@ class CodeflawsFullDGLDataset(DGLDataset):
             torch.from_numpy(embedding_model.get_sentence_vector(
                 nx_g.nodes[n]['text'].replace('\n', '')))
             for n in n_cfgs], dim=0)
+        '''
         # Create dgl ast node
         ast_labels = torch.tensor([
             self.nx_dataset.ast_types.index(nx_g.nodes[node]['ntype'])
@@ -219,6 +224,7 @@ class CodeflawsFullDGLDataset(DGLDataset):
         all_canon_etypes = {}
         for k in self.meta_graph:
             all_canon_etypes[k] = []
+        '''
         line2cfg = {}
         for n in n_cfgs:
             if nx_g.nodes[n]['end_line'] - nx_g.nodes[n]['start_line'] > 0:
@@ -227,10 +233,13 @@ class CodeflawsFullDGLDataset(DGLDataset):
                 line2cfg[nx_g.nodes[n]['start_line']] = [n]
             else:
                 line2cfg[nx_g.nodes[n]['start_line']].append(n)
+        '''
         nx_g = augment_with_reverse_edge(nx_g, self.nx_dataset.ast_etypes,
                                          self.nx_dataset.cfg_etypes)
 
         for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
+            if nx_g.nodes[u]['graph'] == 'cfg' or nx_g.nodes[v]['graph'] == 'cfg':
+                continue
             map_u = map2id[nx_g.nodes[u]['graph']]
             map_v = map2id[nx_g.nodes[v]['graph']]
             all_canon_etypes[
@@ -245,22 +254,26 @@ class CodeflawsFullDGLDataset(DGLDataset):
                 all_canon_etypes[k] = (torch.tensor([], dtype=torch.int32),
                                        torch.tensor([], dtype=torch.int32))
         g = dgl.heterograph(all_canon_etypes)
+        '''
         g.nodes['cfg'].data['label'] = cfg_labels
         g.nodes['cfg'].data['content'] = cfg_contents
+        '''
         g.nodes['ast'].data['label'] = ast_labels
         g.nodes['ast'].data['content'] = ast_contents
         g = dgl.add_self_loop(g, etype=('ast', 'a_self_loop', 'ast'))
-        g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
-        tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
+        # g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
+        # tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
         ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
         for node in ast_lb_d:
             ast_tgts[ast2id[node]] = 1
         for node in ast_lb_i:
             ast_tgts[ast2id[node]] = 2
+        '''
         for node in cfg_lb:
             tgts[cfg2id[node]] = 1
 
         g.nodes['cfg'].data['tgt'] = tgts
+        '''
         g.nodes['ast'].data['tgt'] = ast_tgts
         return g
 
@@ -301,7 +314,8 @@ class CodeflawsFullDGLDataset(DGLDataset):
                                             ast_lb_i, cfg_lb)
             self.gs.append(g)
             if i == 0:
-                self.cfg_content_dim = g.nodes['cfg'].data['content'].shape[-1]
+                # self.cfg_content_dim = g.nodes['cfg'].data['content'].shape[-1]
+                self.cfg_content_dim = 1
                 self.ast_content_dim = g.nodes['ast'].data['content'].shape[-1]
 
     def __len__(self):
