@@ -227,14 +227,18 @@ def augment_with_reverse_edge(nx_g, ast_etypes, cfg_etypes):
             nx_g.add_edge(v, u, label=e['label'] + '_reverse')
         elif e['label'] == 'corresponding_ast':
             nx_g.add_edge(v, u, label='corresponding_cfg')
+        elif e['label'] == 'a_pass_test':
+            nx_g.add_edge(v, u, label='t_pass_a')
+            nx_g.remove_edge(u, v)
+        elif e['label'] == 'a_fail_test':
+            nx_g.add_edge(v, u, label='t_fail_a')
+            nx_g.remove_edge(u, v)
+        ''' Only pass message from test to asts
         elif e['label'] == 'c_pass_test':
             nx_g.add_edge(v, u, label='t_pass_c')
         elif e['label'] == 'c_fail_test':
             nx_g.add_edge(v, u, label='t_fail_c')
-        elif e['label'] == 'a_pass_test':
-            nx_g.add_edge(v, u, label='t_pass_a')
-        elif e['label'] == 'a_fail_test':
-            nx_g.add_edge(v, u, label='t_fail_a')
+        '''
     return nx_g
 
 
