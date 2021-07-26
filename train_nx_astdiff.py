@@ -138,7 +138,7 @@ def train(model, dataloader, n_epochs):
             # logits = g.nodes['cfg'].data['logits']
             # using master node, TODO: To be implemented
             # cfg_loss = F.cross_entropy(logits, lb)
-            ast_loss = F.cross_entropy(g.nodes['ast'].data['logits'])
+            ast_loss = F.cross_entropy(g.nodes['ast'].data['logits'], ast_lb)
             loss = ast_loss
             # loss = cfg_loss + 0.5 * ast_loss
 
@@ -294,9 +294,7 @@ if __name__ == '__main__':
     dataset_opt = 'codeflaws'  # nbl, codeflaws
     graph_opt = 2  # 1, 2
     # loaddataset
-    print("Here1")
     dataset = CodeflawsFullDGLDataset()
-    print("Here2")
     meta_graph = dataset.meta_graph
     model = HeteroMPNNPredictor1TestNodeType(
         len(ConfigClass.cfg_label_corpus),
