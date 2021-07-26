@@ -280,26 +280,30 @@ class CodeflawsFullDGLDataset(DGLDataset):
     def construct_edge_metagraph(self):
         self.ast_etypes = self.nx_dataset.ast_etypes + ['a_self_loop'] + \
             [et + '_reverse' for et in self.nx_dataset.ast_etypes]
-        self.cfg_etypes = self.nx_dataset.cfg_etypes + ['c_self_loop'] + \
-            [et + '_reverse' for et in self.nx_dataset.cfg_etypes]
-        self.c_a_etypes = ['corresponding_ast']
-        self.a_c_etypes = ['corresponding_cfg']
-        self.c_t_etypes = ['c_pass_test', 'c_fail_test']
-        self.t_c_etypes = ['t_pass_c', 't_fail_c']
+        # self.cfg_etypes = self.nx_dataset.cfg_etypes + ['c_self_loop'] + \
+        #     [et + '_reverse' for et in self.nx_dataset.cfg_etypes]
+        # self.c_a_etypes = ['corresponding_ast']
+        # self.a_c_etypes = ['corresponding_cfg']
+        # self.c_t_etypes = ['c_pass_test', 'c_fail_test']
+        # self.t_c_etypes = ['t_pass_c', 't_fail_c']
         self.a_t_etypes = ['a_pass_test', 'a_fail_test']
         self.t_a_etypes = ['t_pass_a', 't_fail_a']
-        self.all_etypes = self.ast_etypes + self.cfg_etypes +\
-            self.c_a_etypes + self.a_c_etypes +\
-            self.c_t_etypes + self.t_c_etypes + self.a_t_etypes +\
-            self.t_a_etypes
-        self.all_ntypes = [('ast', 'ast') for et in self.ast_etypes] +\
-            [('cfg', 'cfg') for et in self.cfg_etypes] +\
-            [('cfg', 'ast') for et in self.c_a_etypes] +\
-            [('ast', 'cfg') for et in self.a_c_etypes] +\
-            [('cfg', 'test') for et in self.c_t_etypes] +\
-            [('test', 'cfg') for et in self.t_c_etypes] +\
-            [('ast', 'test') for et in self.a_t_etypes] +\
-            [('test', 'ast') for et in self.t_a_etypes]
+        self.all_etypes = (
+            self.ast_etypes +
+            # self.cfg_etypes +
+            # self.c_a_etypes + self.a_c_etypes +
+            # self.c_t_etypes + self.t_c_etypes +
+            self.a_t_etypes +
+            self.t_a_etypes)
+        self.all_ntypes = (
+            [('ast', 'ast') for et in self.ast_etypes] +
+            # [('cfg', 'cfg') for et in self.cfg_etypes] +
+            # [('cfg', 'ast') for et in self.c_a_etypes] +
+            # [('ast', 'cfg') for et in self.a_c_etypes] +
+            # [('cfg', 'test') for et in self.c_t_etypes] +
+            # [('test', 'cfg') for et in self.t_c_etypes] +
+            [('ast', 'test') for et in self.a_t_etypes] +
+            [('test', 'ast') for et in self.t_a_etypes])
 
         return [(t[0], et, t[1]) for t, et in zip(self.all_ntypes,
                                                   self.all_etypes)]
