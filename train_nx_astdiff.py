@@ -45,10 +45,10 @@ class BinFullMeter(object):
         self.fp = {}
         self.fn = {}
         for i in range(self.num_classes):
-            self.tn = 0
-            self.tp = 0
-            self.fp = 0
-            self.fn = 0
+            self.tn[i] = 0
+            self.tp[i] = 0
+            self.fp[i] = 0
+            self.fn[i] = 0
 
     def update(self, cal, labels):
         for i in range(self.num_classes):
