@@ -143,7 +143,7 @@ def train(model, dataloader, n_epochs):
             if non_zeros_ast_lbs.shape[0] == 0:
                 continue
             g = g.to(device)
-            ast_lbidxs = torch.flatten(non_zeros_ast_lbs).tolist()
+            ast_lbidxs = torch.flatten(non_zeros_ast_lbs).cpu().tolist()
             # lb = lb.to(device)
             ast_lb = ast_lb.to(device)
             g = model(g)
