@@ -253,6 +253,7 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
         }
 
     def forward(self, h_g):
+        '''
         # GNN creation on the fly
         if (h_g.number_of_nodes('cfg') > 0):
             h_g.nodes['cfg'].data['h'] = torch.cat((
@@ -260,6 +261,7 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
                 self.cfg_content_encoder(
                     h_g.nodes['cfg'].data['content'].float())),
                 dim=-1)
+                '''
 
         if self.ast_label_encoder is not None and\
                 self.ast_content_encoder != None:
@@ -275,8 +277,10 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
         # Let's cache stuffs here
         # Passing message
         h_g = self.h_process1(h_g)
+        '''
         if (h_g.number_of_nodes('cfg') > 0):
             cfg_feats = h_g.nodes['cfg'].data['h']
+            '''
         if self.ast_label_encoder is not None and self.ast_content_encoder != None:
             ast_feats = h_g.nodes['ast'].data['h']
 
@@ -284,9 +288,11 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
             test_feats = h_g.nodes['test'].data['h']
 
         h_g = self.h_process2(h_g)
+        '''
         if (h_g.number_of_nodes('cfg') > 0):
             h_g.nodes['cfg'].data['h'] = torch.cat((
                 cfg_feats, h_g.nodes['cfg'].data['h']), -1)
+                '''
 
         if self.ast_label_encoder is not None and self.ast_content_encoder != None:
             h_g.nodes['ast'].data['h'] = torch.cat((
@@ -297,8 +303,10 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
 
         h_g = self.h_process3(h_g)
 
+        '''
         if (h_g.number_of_nodes('cfg') > 0):
             cfg_feats = h_g.nodes['cfg'].data['h']
+            '''
         if self.ast_label_encoder is not None and self.ast_content_encoder != None:
             ast_feats = h_g.nodes['ast'].data['h']
         if h_g.number_of_nodes('test') > 0:
@@ -306,9 +314,11 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
 
         h_g = self.h_process4(h_g)
 
+        '''
         if (h_g.number_of_nodes('cfg') > 0):
             h_g.nodes['cfg'].data['h'] = torch.cat((
                 cfg_feats, h_g.nodes['cfg'].data['h']), -1)
+                '''
         if self.ast_label_encoder is not None and self.ast_content_encoder != None:
             h_g.nodes['ast'].data['h'] = torch.cat((
                 ast_feats, h_g.nodes['ast'].data['h']), -1)
@@ -317,8 +327,10 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
                 test_feats, h_g.nodes['test'].data['h']), -1)
 
         h_g = self.h_process5(h_g)
+        '''
         if (h_g.number_of_nodes('cfg') > 0):
             h_g.apply_nodes(self.decode_node_func, ntype='cfg')
+            '''
         if self.ast_label_encoder is not None and self.ast_content_encoder != None:
             h_g.apply_nodes(self.ast_decode_node_func, ntype='ast')
         return h_g
