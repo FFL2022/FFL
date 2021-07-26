@@ -293,7 +293,7 @@ class CodeflawsFullDGLDataset(DGLDataset):
             # self.cfg_etypes +
             # self.c_a_etypes + self.a_c_etypes +
             # self.c_t_etypes + self.t_c_etypes +
-            self.a_t_etypes +
+            # self.a_t_etypes +
             self.t_a_etypes)
         self.all_ntypes = (
             [('ast', 'ast') for et in self.ast_etypes] +
