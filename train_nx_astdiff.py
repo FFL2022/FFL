@@ -261,7 +261,7 @@ def eval(model, dataloader, epoch):
 
         g = g.to(device)
         # LB will be preprocessed to have
-        ast_lb = g.ndata['ast']['tgt']
+        ast_lb = g.nodes['ast'].data['tgt']
         ast_non_zeros_lbs = torch.nonzero(ast_lb).cpu()
         model(g)
 
