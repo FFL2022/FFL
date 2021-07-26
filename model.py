@@ -218,14 +218,14 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
             hidden_efeats, hidden_feats, device)
 
         self.h_process3 = HeteroMPNNBlockSimp2(
-            self.meta_graph, hidden_feats*2,
-            hidden_efeats, hidden_feats*2, device)
+            self.meta_graph, hidden_feats,
+            hidden_efeats, hidden_feats, device)
         self.h_process4 = HeteroMPNNBlockSimp2(
-            self.meta_graph, hidden_feats*2,
-            hidden_efeats, hidden_feats*2, device)
+            self.meta_graph, hidden_feats,
+            hidden_efeats, hidden_feats, device)
 
         self.h_process5 = HeteroMPNNBlockSimp2(
-            self.meta_graph, hidden_feats*4,
+            self.meta_graph, hidden_feats,
             hidden_efeats, hidden_feats, device)
 
         self.decoder = torch.nn.Linear(hidden_feats, num_classes)
@@ -295,11 +295,9 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
                 '''
 
         if self.ast_label_encoder is not None and self.ast_content_encoder != None:
-            h_g.nodes['ast'].data['h'] = torch.cat((
-                ast_feats, h_g.nodes['ast'].data['h']), -1)
+            h_g.nodes['ast'].data['h'] = ast_feats + h_g.nodes['ast'].data['h']
         if h_g.number_of_nodes('test') > 0:
-            h_g.nodes['test'].data['h'] = torch.cat((
-                test_feats, h_g.nodes['test'].data['h']), -1)
+            h_g.nodes['test'].data['h'] =  test_feats + h_g.nodes['test'].data['h']
 
         h_g = self.h_process3(h_g)
 
@@ -320,11 +318,9 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
                 cfg_feats, h_g.nodes['cfg'].data['h']), -1)
                 '''
         if self.ast_label_encoder is not None and self.ast_content_encoder != None:
-            h_g.nodes['ast'].data['h'] = torch.cat((
-                ast_feats, h_g.nodes['ast'].data['h']), -1)
+            h_g.nodes['ast'].data['h'] = ast_feats + h_g.nodes['ast'].data['h']
         if h_g.number_of_nodes('test') > 0:
-            h_g.nodes['test'].data['h'] = torch.cat((
-                test_feats, h_g.nodes['test'].data['h']), -1)
+            h_g.nodes['test'].data['h'] = test_feats + h_g.nodes['test'].data['h']
 
         h_g = self.h_process5(h_g)
         '''
