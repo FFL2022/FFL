@@ -159,6 +159,8 @@ def train(model, dataloader, n_epochs):
             ast_lb = ast_lb.detach().cpu()
 
             if non_zeros_ast_lbs.shape[0] == 0:
+                del g
+                torch.cuda.empty_cache()
                 continue
             # loss = cfg_loss + 0.5 * ast_loss
 
@@ -198,6 +200,8 @@ def train(model, dataloader, n_epochs):
                 torch.sum(ast_cal == ast_lb).item()/g.number_of_nodes('ast'),
                 g.number_of_nodes('ast'))
             f1_meter.update(ast_cal, ast_lb)
+            del g
+            torch.cuda.empty_cache()
 
             bar.set_postfix(ast_loss=ast_loss.item(), acc=mean_ast_acc.avg)
 
