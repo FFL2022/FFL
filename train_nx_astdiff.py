@@ -271,7 +271,7 @@ def eval(model, dataloader, epoch):
         ast_logits = g.nodes['ast'].data['logits']
 
         # using master node, to be implemented
-        ast_loss = F.cross_entropy(g.nodes['ast'].data['logits'])
+        ast_loss = F.cross_entropy(g.nodes['ast'].data['logits'], ast_lb)
         # cfg_loss = F.cross_entropy(logits, lb)
         loss = ast_loss  # + cfg_loss
         preds = g.nodes['ast'].data['pred'][:, 1]
