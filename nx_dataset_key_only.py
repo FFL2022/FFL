@@ -11,8 +11,8 @@ class CodeflawsNxDataset(object):
     def __init__(self, raw_dataset_dir=ConfigClass.raw_dir,
                  save_dir=ConfigClass.preprocess_dir):
         self.save_dir = save_dir
-        self.graph_save_path = os.path.join(
-            save_dir, 'nx_graphs_keyonly.bin')
+        self.info_path = os.path.join(
+            save_dir, 'nx_key_only_info.pkl')
         self.cfg_etypes = ['parent_child', 'next', 'ref', 'func_call']
         if self.has_cache():
             self.load()
@@ -20,27 +20,51 @@ class CodeflawsNxDataset(object):
             self.process()
             self.save()
 
-        self.active_idxs = len(self.nx_gs)
+        self.active_idxs = len(self.ast_lbs_d)
 
     def __len__(self):
         return len(self.active_idxs)
 
     def __getitem__(self, i):
-        return self.nx_gs[i]
+        return pkl.load(open(
+            f'{self.save_dir}/nx_{self.active_idxs[i]}', 'rb')),\
+            self.ast_lbs_d[self.active_idxs[i]], \
+            self.ast_lbs_i[self.active_idxs[i]], \
+            self.cfg_lbs[self.active_idxs[i]]
 
     def process(self):
-        self.nx_gs = []
         self.ast_types = []
         self.ast_etypes = []
-        self.max_ast_arity = 0
+        self.ast_lbs_i = []
+        self.ast_lbs_d = []
+        self.cfg_lbs = []
         self.keys = []
         error_instance = []
-        bar = tqdm.tqdm(all_codeflaws_keys)
+        bar = tqdm.tqdm(enumerate(all_codeflaws_keys))
         bar.set_description('Loading Nx Data')
         err_count = 0
-        for key in bar:
+        for i, key in bar:
             try:
                 _, _, _, _, _, nx_g = get_cfg_ast_cov(key)
+                ast_lb_d = []
+                ast_lb_i = []
+                cfg_lb = []
+                for n in nx_g.nodes():
+                    if nx_g.nodes[n]['graph'] == 'test':
+                        continue
+                    if nx_g.nodes[n]['graph'] == 'ast':
+                        if nx_g.nodes[n]['status'] == 2:
+                            ast_lb_i.append(n)
+                        elif nx_g.nodes[n]['status'] == 1:
+                            ast_lb_d.append(n)
+                    elif nx_g.nodes[n]['graph'] == 'cfg':
+                        if nx_g.nodes[n]['status'] == 1:
+                            cfg_lb.append(n)
+                    del nx_g.nodes[n]['status']
+                pkl.dump(nx_g,
+                         open(
+                             os.path.join(self.save_dir, f'nx_{i}'),
+                             'wb'))
             except ParseError:
                 err_count += 1
                 print(f"Total syntax error files: {err_count}")
@@ -48,15 +72,13 @@ class CodeflawsNxDataset(object):
                     error_instance.append(key)
                 json.dump(error_instance, open('error_instance.json', 'w'))
                 continue
-            for n in nx_g.nodes():
-                if nx_g.nodes[n]['graph'] == 'ast':
-                    self.max_ast_arity = max(
-                        self.max_ast_arity, nx_g.nodes[n]['n_order'])
             self.keys.append(key)
-            self.nx_gs.append(nx_g)
             self.ast_types.extend(
                 [nx_g.nodes[node]['ntype'] for node in nx_g.nodes()
                  if nx_g.nodes[node]['graph'] == 'ast'])
+            self.ast_lbs_i.append(ast_lb_i)
+            self.ast_lbs_d.append(ast_lb_d)
+            self.cfg_lbs.append(cfg_lb)
 
             self.ast_etypes.extend(
                 [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
@@ -67,20 +89,26 @@ class CodeflawsNxDataset(object):
 
     def save(self):
         os.makedirs(self.save_dir, exist_ok=True)
+        # gs is saved somewhere else
         pkl.dump(
-            {'nx': self.nx_gs, 'max_arity': self.max_ast_arity,
-             'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes},
-            open(self.graph_save_path, 'wb'))
+            {
+                'ast_lb_d': self.ast_lbs_d,
+                'ast_lb_i': self.ast_lbs_i,
+                'cfg_lb': self.cfg_lbs,
+                'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes},
+            open(self.info_path, 'wb'))
 
     def load(self):
-        gs_label = pkl.load(open(self.graph_save_path, 'rb'))
-        self.nx_gs = gs_label['nx']
+        gs_label = pkl.load(open(self.info_path, 'rb'))
         self.ast_types = gs_label['ast_types']
         self.ast_etypes = gs_label['ast_etypes']
-        self.max_ast_arity = gs_label['max_ast_arity']
+        self.ast_lbs_d = gs_label['ast_lb_d']
+        self.ast_lbs_i = gs_label['ast_lb_i']
+        self.cfg_lbs = gs_label['cfg_lb']
 
     def has_cache(self):
-        return os.path.exists(self.graph_save_path)
+        return os.path.exists(self.info_path)
+
 
 if __name__ == '__main__':
     dataset = CodeflawsNxDataset()

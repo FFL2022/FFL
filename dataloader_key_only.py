@@ -20,8 +20,8 @@ class CodeflawsNxDataset(object):
     def __init__(self, raw_dataset_dir=ConfigClass.raw_dir,
                  save_dir=ConfigClass.preprocess_dir):
         self.save_dir = save_dir
-        self.graph_save_path = os.path.join(
-            save_dir, 'nx_graphs_keyonly.bin')
+        self.info_path = os.path.join(
+            save_dir, 'nx_key_only_info.pkl')
         self.cfg_etypes = ['parent_child', 'next', 'ref', 'func_call']
         if self.has_cache():
             self.load()
@@ -29,27 +29,51 @@ class CodeflawsNxDataset(object):
             self.process()
             self.save()
 
-        self.active_idxs = len(self.nx_gs)
+        self.active_idxs = len(self.ast_lbs_d)
 
     def __len__(self):
         return len(self.active_idxs)
 
     def __getitem__(self, i):
-        return self.nx_gs[i]
+        return pkl.load(open(
+            f'{self.save_dir}/nx_{self.active_idxs[i]}', 'rb')),\
+            self.ast_lbs_d[self.active_idxs[i]], \
+            self.ast_lbs_i[self.active_idxs[i]], \
+            self.cfg_lbs[self.active_idxs[i]]
 
     def process(self):
-        self.nx_gs = []
         self.ast_types = []
         self.ast_etypes = []
-        self.max_ast_arity = 0
+        self.ast_lbs_i = []
+        self.ast_lbs_d = []
+        self.cfg_lbs = []
         self.keys = []
         error_instance = []
-        bar = tqdm.tqdm(all_codeflaws_keys)
+        bar = tqdm.tqdm(enumerate(all_codeflaws_keys))
         bar.set_description('Loading Nx Data')
         err_count = 0
-        for key in bar:
+        for i, key in bar:
             try:
                 _, _, _, _, _, nx_g = get_cfg_ast_cov(key)
+                ast_lb_d = []
+                ast_lb_i = []
+                cfg_lb = []
+                for n in nx_g.nodes():
+                    if nx_g.nodes[n]['graph'] == 'test':
+                        continue
+                    if nx_g.nodes[n]['graph'] == 'ast':
+                        if nx_g.nodes[n]['status'] == 2:
+                            ast_lb_i.append(n)
+                        elif nx_g.nodes[n]['status'] == 1:
+                            ast_lb_d.append(n)
+                    elif nx_g.nodes[n]['graph'] == 'cfg':
+                        if nx_g.nodes[n]['status'] == 1:
+                            cfg_lb.append(n)
+                    del nx_g.nodes[n]['status']
+                pkl.dump(nx_g,
+                         open(
+                             os.path.join(self.save_dir, f'nx_{i}'),
+                             'wb'))
             except ParseError:
                 err_count += 1
                 print(f"Total syntax error files: {err_count}")
@@ -57,15 +81,13 @@ class CodeflawsNxDataset(object):
                     error_instance.append(key)
                 json.dump(error_instance, open('error_instance.json', 'w'))
                 continue
-            for n in nx_g.nodes():
-                if nx_g.nodes[n]['graph'] == 'ast':
-                    self.max_ast_arity = max(
-                        self.max_ast_arity, nx_g.nodes[n]['n_order'])
             self.keys.append(key)
-            self.nx_gs.append(nx_g)
             self.ast_types.extend(
                 [nx_g.nodes[node]['ntype'] for node in nx_g.nodes()
                  if nx_g.nodes[node]['graph'] == 'ast'])
+            self.ast_lbs_i.append(ast_lb_i)
+            self.ast_lbs_d.append(ast_lb_d)
+            self.cfg_lbs.append(cfg_lb)
 
             self.ast_etypes.extend(
                 [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
@@ -76,20 +98,25 @@ class CodeflawsNxDataset(object):
 
     def save(self):
         os.makedirs(self.save_dir, exist_ok=True)
+        # gs is saved somewhere else
         pkl.dump(
-            {'nx': self.nx_gs, 'max_arity': self.max_ast_arity,
-             'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes},
-            open(self.graph_save_path, 'wb'))
+            {
+                'ast_lb_d': self.ast_lbs_d,
+                'ast_lb_i': self.ast_lbs_i,
+                'cfg_lb': self.cfg_lbs,
+                'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes},
+            open(self.info_path, 'wb'))
 
     def load(self):
-        gs_label = pkl.load(open(self.graph_save_path, 'rb'))
-        self.nx_gs = gs_label['nx']
+        gs_label = pkl.load(open(self.info_path, 'rb'))
         self.ast_types = gs_label['ast_types']
         self.ast_etypes = gs_label['ast_etypes']
-        self.max_ast_arity = gs_label['max_arity']
+        self.ast_lbs_d = gs_label['ast_lb_d']
+        self.ast_lbs_i = gs_label['ast_lb_i']
+        self.cfg_lbs = gs_label['cfg_lb']
 
     def has_cache(self):
-        return os.path.exists(self.graph_save_path)
+        return os.path.exists(self.info_path)
 
 
 class CodeflawsFullDGLDataset(DGLDataset):
@@ -155,7 +182,8 @@ class CodeflawsFullDGLDataset(DGLDataset):
                   },
                  open(self.info_path, 'wb'))
 
-    def convert_from_nx_to_dgl(self, embedding_model, nx_g):
+    def convert_from_nx_to_dgl(self, embedding_model, nx_g, ast_lb_d,
+                               ast_lb_i, cfg_lb):
         # Create a node mapping for cfg
         n_cfgs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
         cfg2id = dict([n, i] for i, n in enumerate(n_cfgs))
@@ -180,9 +208,7 @@ class CodeflawsFullDGLDataset(DGLDataset):
             self.nx_dataset.ast_types.index(nx_g.nodes[node]['ntype'])
             for node in n_asts], dtype=torch.long
         )
-        ast_arity = torch.tensor(
-            [nx_g.node[node]['n_order']
-             for node in nx_g.nodes()], dtype=torch.long)
+
         ast_contents = torch.stack([
             torch.from_numpy(embedding_model.get_sentence_vector(
                 nx_g.nodes[n]['token'].replace('\n', '')))
@@ -222,21 +248,17 @@ class CodeflawsFullDGLDataset(DGLDataset):
         g.nodes['cfg'].data['label'] = cfg_labels
         g.nodes['cfg'].data['content'] = cfg_contents
         g.nodes['ast'].data['label'] = ast_labels
-        g.nodes['ast'].data['arity'] = ast_arity
         g.nodes['ast'].data['content'] = ast_contents
         g = dgl.add_self_loop(g, etype=('ast', 'a_self_loop', 'ast'))
         g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
         tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
         ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
-        for node in nx_g.nodes():
-            if nx_g.nodes[node]['graph'] == 'cfg':
-                if nx_g.nodes[node]['status'] == 'm':
-                    tgts[cfg2id[node]] = 1
-            if nx_g.nodes[node]['graph'] == 'ast':
-                if nx_g.nodes[node]['status'] == 'i':
-                    ast_tgts[ast2id[node]] = 1
-                if nx_g.nodes[node]['status'] == 'd':
-                    ast_tgts[ast2id[node]] = 2
+        for node in ast_lb_d:
+            ast_tgts[ast2id[node]] = 1
+        for node in ast_lb_i:
+            ast_tgts[ast2id[node]] = 2
+        for node in cfg_lb:
+            tgts[cfg2id[node]] = 1
 
         g.nodes['cfg'].data['tgt'] = tgts
         g.nodes['ast'].data['tgt'] = ast_tgts
@@ -274,8 +296,9 @@ class CodeflawsFullDGLDataset(DGLDataset):
         self.gs = []
         bar = tqdm.tqdm(enumerate(self.nx_dataset))
         bar.set_description("Converting NX to DGL")
-        for i, nx_g in bar:
-            g = self.convert_from_nx_to_dgl(embedding_model, nx_g)
+        for i, (nx_g, ast_lb_d, ast_lb_i, cfg_lb) in bar:
+            g = self.convert_from_nx_to_dgl(embedding_model, nx_g, ast_lb_d,
+                                            ast_lb_i, cfg_lb)
             self.gs.append(g)
             if i == 0:
                 self.cfg_content_dim = g.nodes['cfg'].data['content'].shape[-1]
