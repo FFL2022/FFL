@@ -141,10 +141,11 @@ def train(model, dataloader, n_epochs):
 
             g = g.to(device)
             ast_lb = g.nodes['ast'].data['tgt']
-            non_zeros_ast_lbs = torch.nonzero(ast_lb).detach()
-            ast_lbidxs = torch.flatten(non_zeros_ast_lbs).detach().cpu().tolist()
             # lb = lb.to(device)
             g = model(g)
+
+            non_zeros_ast_lbs = torch.nonzero(ast_lb).detach()
+            ast_lbidxs = torch.flatten(non_zeros_ast_lbs).detach().cpu().tolist()
             # 2 scenario:
             # not using master node
             # logits = g.nodes['cfg'].data['logits']
