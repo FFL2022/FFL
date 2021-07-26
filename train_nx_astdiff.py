@@ -197,7 +197,6 @@ def train(model, dataloader, n_epochs):
             mean_ast_acc.update(
                 torch.sum(ast_cal == ast_lb).item()/g.number_of_nodes('ast'),
                 g.number_of_nodes('ast'))
-            g.clear()
             f1_meter.update(ast_cal, ast_lb)
 
             bar.set_postfix(ast_loss=ast_loss.item(), acc=mean_ast_acc.avg)
