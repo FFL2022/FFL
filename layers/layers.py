@@ -210,7 +210,6 @@ class HeteroMPNNBlockNoAutoSelfLoop(torch.nn.Module):
         return {'h': self.act(nodes.data['h'])}
 
     def forward(self, h_g):
-        print(h_g)
         # 4. Passing message through each of these sub graph onces each
         # TODO: Beware of gradient explodes
         temp_func = {}

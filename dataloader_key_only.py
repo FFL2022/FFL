@@ -154,8 +154,6 @@ class CodeflawsFullDGLDataset(DGLDataset):
     def load(self):
         self.gs = load_graphs(self.graph_save_path)[0]
         self.meta_graph = self.construct_edge_metagraph()
-        print(self.meta_graph)
-        input()
         info_dict = pkl.load(open(self.info_path, 'rb'))
         self.cfg_content_dim = info_dict['cfg_content_dim']
         self.ast_content_dim = info_dict['ast_content_dim']
