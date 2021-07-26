@@ -136,13 +136,12 @@ def train(model, dataloader, n_epochs):
                 continue
             # LB will be preprocessed to have
             # lb = g.nodes['cfg'].data['tgt']
-            ast_lb = g.nodes['ast'].data['tgt']
 
             # non_zeros_lbs = torch.nonzero(lb)
-            non_zeros_ast_lbs = torch.nonzero(ast_lb)
-            if non_zeros_ast_lbs.shape[0] == 0:
-                continue
+
             g = g.to(device)
+            ast_lb = g.nodes['ast'].data['tgt']
+            non_zeros_ast_lbs = torch.nonzero(ast_lb)
             ast_lbidxs = torch.flatten(non_zeros_ast_lbs).cpu().tolist()
             # lb = lb.to(device)
             ast_lb = ast_lb.to(device)
@@ -157,6 +156,9 @@ def train(model, dataloader, n_epochs):
             opt.zero_grad()
             loss.backward()
             opt.step()
+
+            if non_zeros_ast_lbs.shape[0] == 0:
+                continue
             # loss = cfg_loss + 0.5 * ast_loss
 
             # _, cal = torch.max(logits, dim=1)
