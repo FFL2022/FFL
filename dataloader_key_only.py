@@ -29,7 +29,7 @@ class CodeflawsNxDataset(object):
             self.process()
             self.save()
 
-        self.active_idxs = len(self.ast_lbs_d)
+        self.active_idxs = list(range(len(self.ast_lbs_d)))
 
     def __len__(self):
         return len(self.active_idxs)
