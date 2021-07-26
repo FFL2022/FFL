@@ -75,11 +75,12 @@ class BinFullMeter(object):
                 rec = self.tp[i]/(self.tp[i] + self.fn[i])
             if prec != 'unk' and rec != 'unk':
                 aux_f1 = (prec + rec)/2
-        out_dict[i] = {'tpr': tpr, 'tnr': tnr, 'prec': prec, 'rec': rec,
-                       'aux_f1': aux_f1}
+            out_dict[i] = {'tpr': tpr, 'tnr': tnr, 'prec': prec, 'rec': rec,
+                           'aux_f1': aux_f1}
         if all(out_dict[i]['aux_f1'] != 'unk' for i in range(self.num_classes)):
-            out_dict['aux_f1'] = sum(out_dict[i]['aux_f1']
-                                     for i in range(self.num_classes))/self.num_classes
+            out_dict['aux_f1'] = sum(
+                out_dict[i]['aux_f1']
+                for i in range(self.num_classes))/self.num_classes
         else:
             out_dict['aux_f1'] = 'unk'
 
@@ -145,7 +146,8 @@ def train(model, dataloader, n_epochs):
             g = model(g)
 
             non_zeros_ast_lbs = torch.nonzero(ast_lb).detach()
-            ast_lbidxs = torch.flatten(non_zeros_ast_lbs).detach().cpu().tolist()
+            ast_lbidxs = torch.flatten(
+                non_zeros_ast_lbs).detach().cpu().tolist()
             # 2 scenario:
             # not using master node
             # logits = g.nodes['cfg'].data['logits']
@@ -159,8 +161,10 @@ def train(model, dataloader, n_epochs):
             ast_lb = ast_lb.detach().cpu()
 
             if non_zeros_ast_lbs.shape[0] == 0:
+                '''
                 del g
                 torch.cuda.empty_cache()
+                '''
                 continue
             # loss = cfg_loss + 0.5 * ast_loss
 
@@ -200,8 +204,10 @@ def train(model, dataloader, n_epochs):
                 torch.sum(ast_cal == ast_lb).item()/g.number_of_nodes('ast'),
                 g.number_of_nodes('ast'))
             f1_meter.update(ast_cal, ast_lb)
+            '''
             del g
             torch.cuda.empty_cache()
+            '''
 
             bar.set_postfix(ast_loss=ast_loss.item(), acc=mean_ast_acc.avg)
 
