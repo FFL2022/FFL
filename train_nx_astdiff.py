@@ -83,6 +83,7 @@ class BinFullMeter(object):
                 for i in range(self.num_classes))/self.num_classes
         else:
             out_dict['aux_f1'] = 'unk'
+        return out_dict
 
 
 def as_minutes(s):
