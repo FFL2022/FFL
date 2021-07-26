@@ -141,10 +141,9 @@ def train(model, dataloader, n_epochs):
 
             g = g.to(device)
             ast_lb = g.nodes['ast'].data['tgt']
-            non_zeros_ast_lbs = torch.nonzero(ast_lb)
-            ast_lbidxs = torch.flatten(non_zeros_ast_lbs).cpu().tolist()
+            non_zeros_ast_lbs = torch.nonzero(ast_lb).detach()
+            ast_lbidxs = torch.flatten(non_zeros_ast_lbs).detach().cpu().tolist()
             # lb = lb.to(device)
-            ast_lb = ast_lb.to(device)
             g = model(g)
             # 2 scenario:
             # not using master node
@@ -156,15 +155,17 @@ def train(model, dataloader, n_epochs):
             opt.zero_grad()
             loss.backward()
             opt.step()
+            ast_lb = ast_lb.detach().cpu()
 
             if non_zeros_ast_lbs.shape[0] == 0:
                 continue
             # loss = cfg_loss + 0.5 * ast_loss
 
             # _, cal = torch.max(logits, dim=1)
-            _, ast_cal = torch.max(g.nodes['ast'].data['logits'], dim=1)
+            _, ast_cal = torch.max(g.nodes['ast'].data['logits'].detach().cpu(),
+                                   dim=1)
 
-            preds = g.nodes['ast'].data['pred'][:, 1]
+            preds = g.nodes['ast'].data['pred'][:, 1].detach().cpu()
             k = min(g.number_of_nodes('ast'), 10)
             _, indices = torch.topk(preds, k)
             top_10_val = indices[:k].tolist()
