@@ -161,6 +161,8 @@ class CodeflawsFullDGLDataset(DGLDataset):
         self.train_idxs = info_dict['train_idxs']
         self.val_idxs = info_dict['val_idxs']
         self.test_idxs = info_dict['test_idxs']
+        self.test_idxs = list(self.master_idxs[
+            int(len(self.gs)*0.8):int(len(self.gs))])
         self.train()
 
     def save(self):
@@ -172,7 +174,7 @@ class CodeflawsFullDGLDataset(DGLDataset):
         self.val_idxs = list(self.master_idxs[
             int(len(self.gs)*0.6):int(len(self.gs)*0.8)])
         self.test_idxs = list(self.master_idxs[
-            int(len(self.gs)*0.9):int(len(self.gs))])
+            int(len(self.gs)*0.8):int(len(self.gs))])
         pkl.dump({'cfg_content_dim': self.cfg_content_dim,
                   'ast_content_dim': self.ast_content_dim,
                   'master_idxs': self.master_idxs,
