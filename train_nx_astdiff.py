@@ -207,22 +207,22 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         # Calculate scores by lines
         line_score_tensor = torch.zeros(len(all_lines))
         line_tgt_tensor = torch.zeros(len(all_lines), dtype=torch.long)
-        _, g.nodes['ast'].data['new_preds'] = torch.max(
-            g.nodes['ast'].data['preds'], dim=1)
+        _, g.nodes['ast'].data['new_pred'] = torch.max(
+            g.nodes['ast'].data['pred'], dim=1)
 
-        g.nodes['ast'].data['new_preds'][
-            g.nodes['ast'].data['new_preds'] != 0] = 1.0
+        g.nodes['ast'].data['new_pred'][
+            g.nodes['ast'].data['new_pred'] != 0] = 1.0
 
         line_pred_tensor = torch.zeros(len(all_lines))
         for i, line in enumerate(all_lines):
             mask = g.nodes['ast'].data['line'] == line
             line_score_tensor[i] += torch.sum(
-                - g.nodes['ast'].data['preds'][mask][:, 0] + 1.0) /\
+                - g.nodes['ast'].data['pred'][mask][:, 0] + 1.0) /\
                 torch.sum(mask)
             line_tgt_tensor[i] += torch.sum(
                 g.nodes['ast'].data['tgt'][mask][:, 0])
             line_pred_tensor[i] = torch.sum(
-                g.nodes['ast'].data['new_preds'])/torch.sum(mask)
+                g.nodes['ast'].data['new_pred'])/torch.sum(mask)
 
         line_pred_tensor[line_pred_tensor >= 0.5] = 1
         line_pred_tensor[line_pred_tensor < 0.5] = 0
