@@ -203,7 +203,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
             line_mapping_changed = True
 
         g.nodes['ast'].data['line'] = line_mapping[real_idx].to(device)
-        all_lines = torch.unique(line_mapping, sorted=True).tolist()
+        all_lines = torch.unique(line_mapping[real_idx], sorted=True).tolist()
         # Calculate scores by lines
         line_score_tensor = torch.zeros(all_lines.shape[0])
         line_tgt_tensor = torch.zeros(all_lines.shape[0], dtype=torch.long)
