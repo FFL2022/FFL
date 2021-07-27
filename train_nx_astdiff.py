@@ -1,6 +1,4 @@
 from __future__ import print_function, unicode_literals
-import math
-import time
 import torch
 import os
 import torch.nn.functional as F
@@ -10,94 +8,11 @@ from utils.utils import ConfigClass
 import tqdm
 import json
 import glob
+from utils.train_utils import BinFullMeter, KFullMeter, AverageMeter
+import pickle as pkl
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-
-class AverageMeter(object):
-    '''Computes and stores the average and current value'''
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum/self.count
-
-
-class BinFullMeter(object):
-    def __init__(self, num_classes):
-        self.num_classes = num_classes
-        self.reset()
-
-    def reset(self):
-        self.tp = {}
-        self.tn = {}
-        self.fp = {}
-        self.fn = {}
-        for i in range(self.num_classes):
-            self.tn[i] = 0
-            self.tp[i] = 0
-            self.fp[i] = 0
-            self.fn[i] = 0
-
-    def update(self, cal, labels):
-        for i in range(self.num_classes):
-            self.tp[i] += torch.sum((cal[labels == i] == i)).item()
-            self.tn[i] += torch.sum((cal[labels != i] != i)).item()
-            self.fp[i] += torch.sum((cal[labels != i] == i)).item()
-            self.fn[i] += torch.sum((cal[labels == i] != i)).item()
-
-    def get(self):
-        out_dict = {}
-        for i in range(self.num_classes):
-            tnr = 'unk'
-            tpr = 'unk'
-            prec = 'unk'
-            rec = 'unk'
-            aux_f1 = 'unk'
-            if self.tn[i] + self.tp[i] > 0:
-                tnr = self.tn[i]/(self.tn[i] + self.tp[i])
-            if (self.tp[i] + self.tn[i]) > 0:
-                tpr = self.tp[i]/(self.tp[i] + self.fn[i])
-            if (self.tp[i] + self.fp[i]) > 0:
-                prec = self.tp[i]/(self.tp[i] + self.fp[i])
-            if (self.tp[i] + self.fn[i]) > 0:
-                rec = self.tp[i]/(self.tp[i] + self.fn[i])
-            if prec != 'unk' and rec != 'unk':
-                aux_f1 = (prec + rec)/2
-            out_dict[i] = {'tpr': tpr, 'tnr': tnr, 'prec': prec, 'rec': rec,
-                           'aux_f1': aux_f1}
-        if all(out_dict[i]['aux_f1'] != 'unk' for i in range(self.num_classes)):
-            out_dict['aux_f1'] = sum(
-                out_dict[i]['aux_f1']
-                for i in range(self.num_classes))/self.num_classes
-        else:
-            out_dict['aux_f1'] = 'unk'
-        return out_dict
-
-
-def as_minutes(s):
-    m = math.floor(s / 60)
-    s -= m * 60
-    return '%dm %ds' % (m, s)
-
-
-def time_since(since, percent):
-    now = time.time()
-    s = now - since
-    es = s / (percent)
-    rs = es - s
-    return '%s (remain %s)' % (as_minutes(s), as_minutes(rs))
 
 
 def train(model, dataloader, n_epochs):
@@ -113,7 +28,7 @@ def train(model, dataloader, n_epochs):
     top_5_meter = AverageMeter()
     top_10_meter = AverageMeter()
 
-    f1_meter = BinFullMeter(3)
+    f1_meter = KFullMeter(3)
     best_f1 = 0.0
     # model.load_state_dict(torch.load("trained/model_27.pth"))
     # eval(model, dataloader)
@@ -170,10 +85,12 @@ def train(model, dataloader, n_epochs):
             # loss = cfg_loss + 0.5 * ast_loss
 
             # _, cal = torch.max(logits, dim=1)
-            _, ast_cal = torch.max(g.nodes['ast'].data['logits'].detach().cpu(),
-                                   dim=1)
+            _, ast_cal = torch.max(
+                g.nodes['ast'].data['logits'].detach().cpu(),
+                dim=1)
 
-            preds = g.nodes['ast'].data['pred'][:, 1].detach().cpu()
+            # ALl bugs vs not bugs count
+            preds = - g.nodes['ast'].data['pred'][:, 0].detach().cpu()
             k = min(g.number_of_nodes('ast'), 10)
             _, indices = torch.topk(preds, k)
             top_10_val = indices[:k].tolist()
@@ -241,13 +158,124 @@ def train(model, dataloader, n_epochs):
                         ConfigClass.trained_dir, f'model_{epoch}_best.pth'))
 
 
-def eval(model, dataloader, epoch):
-    dataloader.val()
+def get_line_mapping(dataloader, real_idx):
+    nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
+    n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+    line = torch.tensor([nx_g.nodes[n]['coord_line'] for n in n_asts],
+                        dtype=torch.long)
+    return line
+
+
+def eval_by_line(model, dataloader, epoch, mode='val'):
+    # Map from these indices to line
+    # Calculate mean scores for these lines
+    # Get these unique lines
+    # Perform Top K and F1
+    if mode == 'val':
+        dataloader.val()
+    elif mode == 'test':
+        dataloader.test()
+    f1_meter = BinFullMeter()
+    top_1_meter = AverageMeter()
+    top_2_meter = AverageMeter()
+    top_5_meter = AverageMeter()
+    top_10_meter = AverageMeter()
+    model.eval()
+    out_dict = {}
+    line_mapping = None
+    if os.path.exists('preprocessed/line_mapping.pkl'):
+        line_mapping = pkl.load(open('preprocessed/line_mapping.pkl', 'rb'))
+    # Line mapping: index -> ast['line']
+    f1_meter.reset()
+    top_1_meter.reset()
+    top_2_meter.reset()
+    top_5_meter.reset()
+    top_10_meter.reset()
+    line_mapping_changed = False
+    for i in tqdm.trange(len(dataloader)):
+        real_idx = dataloader.active_idxs[i]
+        g = dataloader[i]
+        g.to(device)
+        g = model(g)
+
+        if real_idx not in line_mapping:
+            line_mapping[real_idx] = get_line_mapping(dataloader, real_idx)
+            line_mapping_changed = True
+
+        g.nodes['ast'].data['line'] = line_mapping[real_idx].to(device)
+        all_lines = torch.unique(line_mapping, sorted=True).tolist()
+        # Calculate scores by lines
+        line_score_tensor = torch.zeros(all_lines.shape[0])
+        line_tgt_tensor = torch.zeros(all_lines.shape[0], dtype=torch.long)
+        _, g.nodes['ast'].data['new_preds'] = torch.max(
+            g.nodes['ast']['preds'], dim=1)
+
+        g.nodes['ast'].data['new_preds'][
+            g.nodes['ast'].data['new_preds'] != 0] = 1.0
+
+        line_pred_tensor = torch.zeros((all_lines.shape[0], 2))
+        for i, line in enumerate(all_lines):
+            mask = g.nodes['ast'].data['line'] == line
+            line_score_tensor[i] += torch.sum(
+                - g.nodes['ast'].data['preds'][mask][:, 0] + 1.0) /\
+                torch.sum(mask)
+            line_tgt_tensor[i] += torch.sum(
+                g.nodes['ast'].data['tgt'][mask][:, 0])
+            line_pred_tensor[i] = torch.sum(
+                g.nodes['ast'].data['new_preds'])/torch.sum(mask)
+
+        line_pred_tensor[line_pred_tensor >= 0.5] = 1
+        line_pred_tensor[line_pred_tensor < 0.5] = 0
+
+        line_tgt_tensor[line_tgt_tensor > 0] = 1
+        non_zeros_lbs = torch.nonzero(line_tgt_tensor)
+        if non_zeros_lbs.shape[0] == 0:
+            continue
+        lbidxs = torch.flatten(non_zeros_lbs).tolist()
+        k = min(len(all_lines, 10))
+        _, indices = torch.topk(line_score_tensor, k)
+        top_10_val = indices[:k].tolist()
+        top_10_meter.update(int(any([idx in lbidxs
+                                     for idx in top_10_val])), 1)
+
+        k = min(line_score_tensor, 5)
+        top_5_val = indices[:k].tolist()
+        top_5_meter.update(int(any([idx in lbidxs for idx in top_5_val])), 1)
+
+        k = min(line_score_tensor, 2)
+        top_2_val = indices[:k].tolist()
+        top_2_meter.update(int(any([idx in lbidxs for idx in top_2_val])), 1)
+
+        k = min(line_score_tensor, 1)
+        top_1_val = indices[:k].tolist()
+        top_1_meter.update(int(top_1_val[0] in lbidxs), 1)
+        f1_meter.update(line_pred_tensor, line_tgt_tensor)
+
+    out_dict['top_1'] = top_1_meter.avg
+    out_dict['top_2'] = top_2_meter.avg
+    out_dict['top_5'] = top_5_meter.avg
+    out_dict['top_10'] = top_10_meter.avg
+    out_dict['f1'] = f1_meter.get()
+    print(out_dict)
+    with open(ConfigClass.result_dir +
+              '/eval_dict_by_line_e{}.json'.format(epoch), 'w') as f:
+        json.dump(out_dict, f, indent=2)
+
+    if line_mapping_changed:
+        pkl.dump(open('preprocessed/line_mapping.pkl', 'wb'))
+    return out_dict
+
+
+def eval(model, dataloader, epoch, mode='val'):
+    if mode == 'val':
+        dataloader.val()
+    elif mode == 'test':
+        dataloader.test()
     # mean_loss = AverageMeter()
     # mean_acc = AverageMeter()
     mean_ast_loss = AverageMeter()
     mean_ast_acc = AverageMeter()
-    f1_meter = BinFullMeter(3)
+    f1_meter = KFullMeter(3)
     top_1_meter = AverageMeter()
     top_2_meter = AverageMeter()
     top_5_meter = AverageMeter()
@@ -274,8 +302,7 @@ def eval(model, dataloader, epoch):
         # using master node, to be implemented
         ast_loss = F.cross_entropy(g.nodes['ast'].data['logits'], ast_lb)
         # cfg_loss = F.cross_entropy(logits, lb)
-        loss = ast_loss  # + cfg_loss
-        preds = g.nodes['ast'].data['pred'][:, 1]
+        preds = - g.nodes['ast'].data['pred'][:, 0]
         k = min(g.number_of_nodes('ast'), 10)
         _, indices = torch.topk(preds, k)
         top_10_val = indices[:k].tolist()
@@ -302,8 +329,9 @@ def eval(model, dataloader, epoch):
 
         _, ast_cal = torch.max(ast_logits, dim=1)
         mean_ast_loss.update(ast_loss.item(), g.number_of_nodes('ast'))
-        mean_ast_acc.update(torch.sum(ast_cal == ast_lb).item()/g.number_of_nodes('ast'),
-                            g.number_of_nodes('ast'))
+        mean_ast_acc.update(
+            torch.sum(ast_cal == ast_lb).item()/g.number_of_nodes('ast'),
+            g.number_of_nodes('ast'))
         f1_meter.update(ast_cal, ast_lb)
     out_dict['top_1'] = top_1_meter.avg
     out_dict['top_2'] = top_2_meter.avg
@@ -333,9 +361,17 @@ if __name__ == '__main__':
         ast_content_feats=dataset.ast_content_dim, num_classes_ast=3)
     ConfigClass.preprocess_dir = "{}/{}/{}".format(
         ConfigClass.preprocess_dir, dataset_opt, graph_opt)
-    train(model, dataset, ConfigClass.n_epochs)
+    # train(model, dataset, ConfigClass.n_epochs)
     list_models_paths = list(
         glob.glob(f"{ConfigClass.trained_dir}/model*best.pth"))
+    for model_path in list_models_paths:
+        epoch = int(model_path.split("_")[1])
+        print(f"Evaluating {model_path}:")
+        model.load_state_dict(torch.load(model_path))
+        print("val: ")
+        eval_by_line(model, dataset, epoch, 'val')
+        print('test: ')
+        eval_by_line(model, dataset, epoch, 'test')
     best_latest = max(int(model_path.split("_")[1])
                       for model_path in list_models_paths)
     model_path = f"{ConfigClass.trained_dir}/model_{best_latest}_best.pth"
