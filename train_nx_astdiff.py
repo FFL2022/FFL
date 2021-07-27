@@ -205,8 +205,8 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         g.nodes['ast'].data['line'] = line_mapping[real_idx].to(device)
         all_lines = torch.unique(line_mapping[real_idx], sorted=True).tolist()
         # Calculate scores by lines
-        line_score_tensor = torch.zeros(len(all_lines))
-        line_tgt_tensor = torch.zeros(len(all_lines), dtype=torch.long)
+        line_score_tensor = torch.zeros(len(all_lines)).to(device)
+        line_tgt_tensor = torch.zeros(len(all_lines), dtype=torch.long).to(device)
         _, g.nodes['ast'].data['new_pred'] = torch.max(
             g.nodes['ast'].data['pred'], dim=1)
 
@@ -217,7 +217,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         for i, line in enumerate(all_lines):
             mask = (g.nodes['ast'].data['line'] == line).to(device)
             line_score_tensor[i] += torch.sum(
-                - g.nodes['ast'].data['pred'][mask][:, 0] + 1.0).to(device) /\
+                - g.nodes['ast'].data['pred'][mask][:, 0] + 1.0) /\
                 torch.sum(mask)
             line_tgt_tensor[i] += torch.sum(
                 g.nodes['ast'].data['tgt'][mask][:, 0])
