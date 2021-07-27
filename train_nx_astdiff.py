@@ -262,7 +262,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         json.dump(out_dict, f, indent=2)
 
     if line_mapping_changed:
-        pkl.dump(open('preprocessed/line_mapping.pkl', 'wb'))
+        pkl.dump(line_mapping, open('preprocessed/line_mapping.pkl', 'wb'))
     return out_dict
 
 
