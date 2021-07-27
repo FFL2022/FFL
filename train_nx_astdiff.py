@@ -182,7 +182,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     top_10_meter = AverageMeter()
     model.eval()
     out_dict = {}
-    line_mapping = None
+    line_mapping = {}
     if os.path.exists('preprocessed/line_mapping.pkl'):
         line_mapping = pkl.load(open('preprocessed/line_mapping.pkl', 'rb'))
     # Line mapping: index -> ast['line']
