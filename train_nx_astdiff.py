@@ -232,21 +232,21 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         if non_zeros_lbs.shape[0] == 0:
             continue
         lbidxs = torch.flatten(non_zeros_lbs).tolist()
-        k = min(len(all_lines, 10))
+        k = min(len(all_lines), 10)
         _, indices = torch.topk(line_score_tensor, k)
         top_10_val = indices[:k].tolist()
         top_10_meter.update(int(any([idx in lbidxs
                                      for idx in top_10_val])), 1)
 
-        k = min(line_score_tensor, 5)
+        k = min(len(all_lines), 5)
         top_5_val = indices[:k].tolist()
         top_5_meter.update(int(any([idx in lbidxs for idx in top_5_val])), 1)
 
-        k = min(line_score_tensor, 2)
+        k = min(len(all_lines), 2)
         top_2_val = indices[:k].tolist()
         top_2_meter.update(int(any([idx in lbidxs for idx in top_2_val])), 1)
 
-        k = min(line_score_tensor, 1)
+        k = min(len(all_lines), 1)
         top_1_val = indices[:k].tolist()
         top_1_meter.update(int(top_1_val[0] in lbidxs), 1)
         f1_meter.update(line_pred_tensor, line_tgt_tensor)
