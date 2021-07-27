@@ -208,7 +208,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         line_score_tensor = torch.zeros(len(all_lines))
         line_tgt_tensor = torch.zeros(len(all_lines), dtype=torch.long)
         _, g.nodes['ast'].data['new_preds'] = torch.max(
-            g.nodes['ast']['preds'], dim=1)
+            g.nodes['ast'].data['preds'], dim=1)
 
         g.nodes['ast'].data['new_preds'][
             g.nodes['ast'].data['new_preds'] != 0] = 1.0
