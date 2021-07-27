@@ -217,7 +217,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         for i, line in enumerate(all_lines):
             mask = (g.nodes['ast'].data['line'] == line).to(device)
             line_score_tensor[i] += torch.sum(
-                - g.nodes['ast'].data['pred'][mask][:, 0] + 1.0) /\
+                - g.nodes['ast'].data['pred'][mask][:, 0] + 1.0).to(device) /\
                 torch.sum(mask)
             line_tgt_tensor[i] += torch.sum(
                 g.nodes['ast'].data['tgt'][mask][:, 0])
