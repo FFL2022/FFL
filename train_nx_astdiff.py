@@ -195,7 +195,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     for i in tqdm.trange(len(dataloader)):
         real_idx = dataloader.active_idxs[i]
         g = dataloader[i]
-        g.to(device)
+        g = g.to(device)
         g = model(g)
 
         if real_idx not in line_mapping:
