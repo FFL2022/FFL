@@ -15,7 +15,7 @@ import pickle as pkl
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-def train(model, dataloader, n_epochs):
+def train(model, dataloader, n_epochs, start_epoch=0):
     opt = torch.optim.Adam(model.parameters())
 
     # mean_loss = AverageMeter()
@@ -156,6 +156,8 @@ def train(model, dataloader, n_epochs):
                     best_f1 = f1_eval
                     torch.save(model.state_dict(), os.path.join(
                         ConfigClass.trained_dir, f'model_{epoch}_best.pth'))
+        torch.save(model.state_dict(), os.path.join(
+                   ConfigClass.trained_dir, f'model_last.pth'))
 
 
 def get_line_mapping(dataloader, real_idx):
@@ -216,6 +218,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         line_pred_tensor = torch.zeros(len(all_lines))
         for i, line in enumerate(all_lines):
             mask = (g.nodes['ast'].data['line'] == line).to(device)
+            # Max, Mean
             line_score_tensor[i] += torch.sum(
                 - g.nodes['ast'].data['pred'][mask][:, 0] + 1.0) /\
                 torch.sum(mask)
