@@ -297,7 +297,8 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
         if self.ast_label_encoder is not None and self.ast_content_encoder != None:
             h_g.nodes['ast'].data['h'] = ast_feats + h_g.nodes['ast'].data['h']
         if h_g.number_of_nodes('test') > 0:
-            h_g.nodes['test'].data['h'] =  test_feats + h_g.nodes['test'].data['h']
+            h_g.nodes['test'].data['h'] = test_feats + \
+                h_g.nodes['test'].data['h']
 
         h_g = self.h_process3(h_g)
 
@@ -320,7 +321,8 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
         if self.ast_label_encoder is not None and self.ast_content_encoder != None:
             h_g.nodes['ast'].data['h'] = ast_feats + h_g.nodes['ast'].data['h']
         if h_g.number_of_nodes('test') > 0:
-            h_g.nodes['test'].data['h'] = test_feats + h_g.nodes['test'].data['h']
+            h_g.nodes['test'].data['h'] = test_feats + \
+                h_g.nodes['test'].data['h']
 
         h_g = self.h_process5(h_g)
         '''
@@ -330,6 +332,7 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
         if self.ast_label_encoder is not None and self.ast_content_encoder != None:
             h_g.apply_nodes(self.ast_decode_node_func, ntype='ast')
         return h_g
+
 
 class HeteroMPNNPredictor1TestNodeTypeArity(torch.nn.Module):
     def __init__(self, num_cfg_label, cfg_content_feats,
