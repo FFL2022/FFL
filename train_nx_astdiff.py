@@ -406,6 +406,7 @@ if __name__ == '__main__':
         eval_by_line(model, dataset, epoch, 'val')
         print('Test: ')
         eval_by_line(model, dataset, epoch, 'test')
+    print(ConfigClass.trained_dir)
     best_latest = max(int(model_path.split("_")[1])
                       for model_path in list_models_paths)
     model_path = f"{ConfigClass.trained_dir}/model_{best_latest}_best.pth"
