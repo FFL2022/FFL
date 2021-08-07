@@ -1,16 +1,31 @@
 import networkx as nx
 
+# AST: actual - predicted
+# 3. 1 - 1  Super Red #FF5252
+# 4. 2 - 2  Super Green 67FF4D
+# 5. 1 - 2  Orange #FFBD4D
+# 6. 2 - 1  Blue #4DC3FF
+# 7. 0 - 1  lighter red #EFFCCC
+# 8. 0 - 2 ligher green #CCFFD5
+
+
+# CFG: actual - predicted
+# 1: Yellow "#FFFFCC"
+# 2: 1 - 1 Super Yellow '#FFF386'
+# 3: 0 - 1 Red
+
 
 def set_label_ast(ast, node):
     ast.nodes[node]['label'] = ast.nodes[node]['ntype'] + \
         ' ' + ast.nodes[node]['token']
     if 'status' in ast.nodes[node]:
-        if ast.nodes[node]['status'] == 2:
-            ast.nodes[node]['fillcolor'] = "#CCFFCC"
-            ast.nodes[node]['style'] = "filled"
-        elif ast.nodes[node]['status'] == 1:
-            ast.nodes[node]['fillcolor'] = "#FFCCCC"
-            ast.nodes[node]['style'] = "filled"
+        ast.nodes[node]['style'] = "filled"
+        fillcolormap = {
+            0: '#FFFFFF',
+            2: "#CCFFCC", 1: "#FFCCCC", 3: '#FF5252', 4: '#67FF4D',
+            5: '#FFBD4D', 6: '#4DC3FF', 7: '#EFFCCC', 8: '#CCFFD5'
+        }
+        ast.nodes[node]['fillcolor'] = fillcolormap[ast.nodes[node]['status']]
 
 
 def set_label_cfg(cfg, node):
@@ -21,9 +36,10 @@ def set_label_cfg(cfg, node):
             ' ' + cfg.nodes[node]['funcname'] + ' ' +\
             cfg.nodes[node]['text']
     if 'status' in cfg.nodes[node]:
-        if cfg.nodes[node]['status'] == 1:
-            cfg.nodes[node]['fillcolor'] = "#FFFFCC"
-            cfg.nodes[node]['style'] = "filled"
+        cfg.nodes[node]['style'] = "filled"
+        fillcolormap = {
+            0: '#FFFFFF', 1: '#FFFFCC', 2: "#FFCCCC"}
+        cfg.nodes[node]['fillcolor'] = fillcolormap[cfg.nodes[node]['status']]
 
 
 def cfg_to_agraph(cfg: nx.MultiDiGraph, path: str):

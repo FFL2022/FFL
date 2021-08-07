@@ -8,7 +8,7 @@ from torch.autograd import Variable
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-class ConstantNodeWeighters(torch.nn.Module):
+class ConstantNodeWeighter(torch.nn.Module):
     def __init__(self, val: float = 1.0):
         self.val = val
 
@@ -27,7 +27,7 @@ class ConstantNodeWeighters(torch.nn.Module):
         return h_g
 
 
-class ConstantEdgeWeighters(torch.nn.Module):
+class ConstantEdgeWeighter(torch.nn.Module):
     def __init__(self, meta_graph):
         self.meta_graph = meta_graph
 
@@ -67,8 +67,8 @@ class ResGCN1TestNodeType(torch.nn.Module):
 
         self.meta_graph = meta_graph
 
-        self.node_weighter = ConstantNodeWeighters(1.0)
-        self.edge_weighter = ConstantEdgeWeighters(self.meta_graph)
+        self.node_weighter = ConstantNodeWeighter(1.0)
+        self.edge_weighter = ConstantEdgeWeighter(self.meta_graph)
 
         self.h_process1 = WeightedGCN(self.meta_graph, n_dim, n_dim, device)
 

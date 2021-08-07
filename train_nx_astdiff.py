@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from dataloader_key_only import CodeflawsFullDGLDataset
 from model import HeteroMPNNPredictor1TestNodeType
 from utils.utils import ConfigClass
+from utils.draw_utils import ast_to_agraph
 import tqdm
 import json
 import glob
@@ -168,6 +169,27 @@ def get_line_mapping(dataloader, real_idx):
     return line
 
 
+def map_from_predict_to_node(dataloader, real_idx, node_preds):
+    nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
+    n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+    for i, n in enumerate(n_asts):
+        if node_preds[i] == 0:
+            continue
+        if nx_g.node[n]['status'] == 0:
+            nx_g.node[n]['status'] = 7 + node_preds[i]
+        elif nx_g.node[n]['status'] == 1:
+            if node_preds[i] == nx_g.node[n]['status']:
+                nx_g.node[n]['status'] = 3
+            else:
+                nx_g.node[n]['status'] = 5
+        elif nx_g.node[n]['status'] == 2:
+            if node_preds[i] == nx_g.node[n]['status']:
+                nx_g.node[n]['status'] = 4
+            else:
+                nx_g.node[n]['status'] = 6
+    return nx_g.subgraph(n_asts)
+
+
 def eval_by_line(model, dataloader, epoch, mode='val'):
     # Map from these indices to line
     # Calculate mean scores for these lines
@@ -177,6 +199,8 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         dataloader.val()
     elif mode == 'test':
         dataloader.test()
+
+    os.makedirs(f'images_{epoch}', exists_ok=True)
     f1_meter = BinFullMeter()
     top_1_meter = AverageMeter()
     top_2_meter = AverageMeter()
@@ -208,9 +232,16 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         all_lines = torch.unique(line_mapping[real_idx], sorted=True).tolist()
         # Calculate scores by lines
         line_score_tensor = torch.zeros(len(all_lines)).to(device)
-        line_tgt_tensor = torch.zeros(len(all_lines), dtype=torch.long).to(device)
+        line_tgt_tensor = torch.zeros(
+            len(all_lines), dtype=torch.long).to(device)
         _, g.nodes['ast'].data['new_pred'] = torch.max(
             g.nodes['ast'].data['pred'], dim=1)
+
+        nx_g = map_from_predict_to_node(
+            dataloader, real_idx,
+            g.nodes['ast'].data['new_pred'].detach().cpu().numpy())
+
+        ast_to_agraph(nx_g, f'images_{epoch}/{real_idx}.png')
 
         g.nodes['ast'].data['new_pred'][
             g.nodes['ast'].data['new_pred'] != 0] = 1.0
@@ -371,9 +402,9 @@ if __name__ == '__main__':
         epoch = int(model_path.split("_")[1])
         print(f"Evaluating {model_path}:")
         model.load_state_dict(torch.load(model_path))
-        print("val: ")
+        print("Val: ")
         eval_by_line(model, dataset, epoch, 'val')
-        print('test: ')
+        print('Test: ')
         eval_by_line(model, dataset, epoch, 'test')
     best_latest = max(int(model_path.split("_")[1])
                       for model_path in list_models_paths)
