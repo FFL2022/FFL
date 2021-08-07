@@ -1,4 +1,5 @@
 import networkx as nx
+import re
 
 # AST: actual - predicted
 # 3. 1 - 1  Super Red #FF5252
@@ -15,8 +16,9 @@ import networkx as nx
 
 
 def set_label_ast(ast, node):
+
     ast.nodes[node]['label'] = ast.nodes[node]['ntype'] + \
-        ' ' + ast.nodes[node]['token']
+        ' ' + re.sub(r'[^\x00-\x7F]+', '', ast.nodes[node]['token'])
     if 'status' in ast.nodes[node]:
         ast.nodes[node]['style'] = "filled"
         fillcolormap = {
