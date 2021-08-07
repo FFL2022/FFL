@@ -169,21 +169,22 @@ def get_line_mapping(dataloader, real_idx):
     return line
 
 
-def map_from_predict_to_node(dataloader, real_idx, node_preds):
+def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts):
     nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
     n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
     for i, n in enumerate(n_asts):
+        nx_g.node[n]['status'] = 0
         if node_preds[i] == 0:
             continue
-        if nx_g.node[n]['status'] == 0:
+        if tgts[i] == 0:
             nx_g.node[n]['status'] = 7 + node_preds[i]
-        elif nx_g.node[n]['status'] == 1:
-            if node_preds[i] == nx_g.node[n]['status']:
+        elif tgts[i] == 1:
+            if node_preds[i] == tgts[i]:
                 nx_g.node[n]['status'] = 3
             else:
                 nx_g.node[n]['status'] = 5
-        elif nx_g.node[n]['status'] == 2:
-            if node_preds[i] == nx_g.node[n]['status']:
+        elif tgts[i] == 2:
+            if node_preds[i] == tgts[i]:
                 nx_g.node[n]['status'] = 4
             else:
                 nx_g.node[n]['status'] = 6
@@ -239,7 +240,9 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
 
         nx_g = map_from_predict_to_node(
             dataloader, real_idx,
-            g.nodes['ast'].data['new_pred'].detach().cpu().numpy())
+            g.nodes['ast'].data['new_pred'].detach().cpu().numpy(),
+            g.nodes['ast'].data['tgt'].detach().cpu().numpy()
+        )
 
         ast_to_agraph(nx_g, f'images_{epoch}/{real_idx}.png')
 
