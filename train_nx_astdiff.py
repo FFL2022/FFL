@@ -200,7 +200,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     elif mode == 'test':
         dataloader.test()
 
-    os.makedirs(f'images_{epoch}', exists_ok=True)
+    os.makedirs(f'images_{epoch}', exist_ok=True)
     f1_meter = BinFullMeter()
     top_1_meter = AverageMeter()
     top_2_meter = AverageMeter()
