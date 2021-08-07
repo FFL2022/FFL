@@ -5,9 +5,8 @@ import networkx as nx
 # 4. 2 - 2  Super Green 67FF4D
 # 5. 1 - 2  Orange #FFBD4D
 # 6. 2 - 1  Blue #4DC3FF
-# 7. 0 - 1  lighter red #EFFCCC
-# 8. 0 - 2 ligher green #CCFFD5
-
+# 7. 0 - 1  brown #870009
+# 8. 0 - 2 purple #9200FF
 
 # CFG: actual - predicted
 # 1: Yellow "#FFFFCC"
@@ -23,7 +22,7 @@ def set_label_ast(ast, node):
         fillcolormap = {
             0: '#FFFFFF',
             2: "#CCFFCC", 1: "#FFCCCC", 3: '#FF5252', 4: '#67FF4D',
-            5: '#FFBD4D', 6: '#4DC3FF', 7: '#EFFCCC', 8: '#CCFFD5'
+            5: '#FFBD4D', 6: '#4DC3FF', 7: '#870009', 8: '#9200FF'
         }
         ast.nodes[node]['fillcolor'] = fillcolormap[ast.nodes[node]['status']]
 

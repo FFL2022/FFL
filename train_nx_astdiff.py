@@ -177,7 +177,7 @@ def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts):
         if node_preds[i] == 0:
             continue
         if tgts[i] == 0:
-            nx_g.node[n]['status'] = 7 + node_preds[i]
+            nx_g.node[n]['status'] = 6 + node_preds[i]
         elif tgts[i] == 1:
             if node_preds[i] == tgts[i]:
                 nx_g.node[n]['status'] = 3
