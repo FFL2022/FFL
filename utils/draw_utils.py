@@ -2,6 +2,9 @@ import networkx as nx
 import re
 
 # AST: actual - predicted
+# 0: None, white
+# 1: Deleted - light red
+# 2. Inserted - light green
 # 3. 1 - 1  Super Red #FF5252
 # 4. 2 - 2  Super Green 67FF4D
 # 5. 1 - 2  Orange #FFBD4D

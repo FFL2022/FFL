@@ -244,7 +244,12 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
             g.nodes['ast'].data['tgt'].detach().cpu().numpy()
         )
 
-        ast_to_agraph(nx_g, f'images_{epoch}/{real_idx}.png')
+        if nx_g.number_of_nodes() > 1000:
+            continue
+        try:
+            ast_to_agraph(nx_g, f'images_{epoch}/{real_idx}.png')
+        except:
+            continue
 
         g.nodes['ast'].data['new_pred'][
             g.nodes['ast'].data['new_pred'] != 0] = 1.0
