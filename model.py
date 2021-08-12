@@ -3,8 +3,7 @@ from __future__ import print_function, unicode_literals
 import dgl
 import torch
 import torch.nn as nn
-from layers.layers import HeteroMPNNBlockSimp, \
-    HeteroMPNNBlockNoAutoSelfLoop as HeteroMPNNBlockSimp2
+from layers.layers import GCNLayer, GCNLayerOld
 
 
 __author__ = "Marc: thanhdatn@student.unimelb.edu.au"
@@ -30,7 +29,7 @@ class HeteroMPNNPredictor(torch.nn.Module):
         self.cfg_content_encoder = nn.Linear(
             cfg_content_feats, hidden_feats//2)
 
-        if ast_label_feats != None and ast_content_feats != None:
+        if ast_label_feats is not None and ast_content_feats is not None:
             self.ast_label_encoder = nn.Linear(
                 ast_label_feats, hidden_feats//2)
             self.ast_content_encoder = nn.Linear(
@@ -58,24 +57,19 @@ class HeteroMPNNPredictor(torch.nn.Module):
                 torch.FloatTensor(hidden_efeats))
         '''
 
-        self.h_process1 = HeteroMPNNBlockSimp(
-            self.meta_graph, hidden_feats,
-            hidden_efeats, hidden_feats, device)
+        self.h_process1 = GCNLayerOld(self.meta_graph, hidden_feats,
+                                      hidden_feats, device)
 
-        self.h_process2 = HeteroMPNNBlockSimp(
-            self.meta_graph, hidden_feats,
-            hidden_efeats, hidden_feats, device)
+        self.h_process2 = GCNLayerOld(self.meta_graph, hidden_feats,
+                                      hidden_feats, device)
 
-        self.h_process3 = HeteroMPNNBlockSimp(
-            self.meta_graph, hidden_feats*2,
-            hidden_efeats, hidden_feats*2, device)
-        self.h_process4 = HeteroMPNNBlockSimp(
-            self.meta_graph, hidden_feats*2,
-            hidden_efeats, hidden_feats*2, device)
+        self.h_process3 = GCNLayerOld(self.meta_graph, hidden_feats*2,
+                                      hidden_feats*2, device)
+        self.h_process4 = GCNLayerOld(self.meta_graph, hidden_feats*2,
+                                      hidden_feats*2, device)
 
-        self.h_process5 = HeteroMPNNBlockSimp(
-            self.meta_graph, hidden_feats*4,
-            hidden_efeats, hidden_feats, device)
+        self.h_process5 = GCNLayerOld(self.meta_graph, hidden_feats*4,
+                                      hidden_feats, device)
 
         self.decoder = torch.nn.Linear(hidden_feats, num_classes)
         if num_classes > 1:
@@ -209,22 +203,22 @@ class HeteroMPNNPredictor1TestNodeType(torch.nn.Module):
 
         self.meta_graph = meta_graph
 
-        self.h_process1 = HeteroMPNNBlockSimp2(
+        self.h_process1 = GCNLayer(
             self.meta_graph, hidden_feats,
             hidden_efeats, hidden_feats, device)
 
-        self.h_process2 = HeteroMPNNBlockSimp2(
+        self.h_process2 = GCNLayer(
             self.meta_graph, hidden_feats,
             hidden_efeats, hidden_feats, device)
 
-        self.h_process3 = HeteroMPNNBlockSimp2(
+        self.h_process3 = GCNLayer(
             self.meta_graph, hidden_feats,
             hidden_efeats, hidden_feats, device)
-        self.h_process4 = HeteroMPNNBlockSimp2(
+        self.h_process4 = GCNLayer(
             self.meta_graph, hidden_feats,
             hidden_efeats, hidden_feats, device)
 
-        self.h_process5 = HeteroMPNNBlockSimp2(
+        self.h_process5 = GCNLayer(
             self.meta_graph, hidden_feats,
             hidden_efeats, hidden_feats, device)
 
@@ -364,22 +358,22 @@ class HeteroMPNNPredictor1TestNodeTypeArity(torch.nn.Module):
 
         self.meta_graph = meta_graph
 
-        self.h_process1 = HeteroMPNNBlockSimp2(
+        self.h_process1 = GCNLayer(
             self.meta_graph, hidden_feats,
             hidden_efeats, hidden_feats, device)
 
-        self.h_process2 = HeteroMPNNBlockSimp2(
+        self.h_process2 = GCNLayer(
             self.meta_graph, hidden_feats,
             hidden_efeats, hidden_feats, device)
 
-        self.h_process3 = HeteroMPNNBlockSimp2(
+        self.h_process3 = GCNLayer(
             self.meta_graph, hidden_feats*2,
             hidden_efeats, hidden_feats*2, device)
-        self.h_process4 = HeteroMPNNBlockSimp2(
+        self.h_process4 = GCNLayer(
             self.meta_graph, hidden_feats*2,
             hidden_efeats, hidden_feats*2, device)
 
-        self.h_process5 = HeteroMPNNBlockSimp2(
+        self.h_process5 = GCNLayer(
             self.meta_graph, hidden_feats*4,
             hidden_efeats, hidden_feats, device)
 
@@ -465,3 +459,97 @@ class HeteroMPNNPredictor1TestNodeTypeArity(torch.nn.Module):
         h_g.apply_nodes(self.decode_node_func, ntype='cfg')
         h_g.apply_nodes(self.ast_decode_node_func, ntype='ast')
         return h_g
+
+
+class GCN_A_L_T_1(torch.nn.Module):
+    def __init__(self, hidden_feats, hidden_efeats, meta_graph,
+                 device=device, num_ast_labels=None, num_classes_ast=3):
+        super().__init__()
+        # Passing test overlapp
+        # Failing test: often only one, so more important!
+        # Intuition is failing test is rare, so it might contains more information
+        # Similar to TD-IDF intuition
+        self.ast_label_encoder = nn.Embedding(
+            num_ast_labels, hidden_feats)
+        nn.init.xavier_normal_(self.ast_label_encoder.weight)
+
+        self.test_embedding = nn.Parameter(torch.FloatTensor(hidden_feats))
+        nn.init.normal_(self.test_embedding)
+
+        self.meta_graph = meta_graph
+
+        self.h_process1 = GCNLayer(
+            self.meta_graph, hidden_feats, hidden_feats, device)
+
+        self.h_process2 = GCNLayer(
+            self.meta_graph, hidden_feats, hidden_feats, device)
+
+        self.h_process3 = GCNLayer(
+            self.meta_graph, hidden_feats, hidden_feats, device)
+
+        self.h_process4 = GCNLayer(
+            self.meta_graph, hidden_feats, hidden_feats, device)
+
+        self.h_process5 = GCNLayer(
+            self.meta_graph, hidden_feats, hidden_feats, device)
+
+        self.ast_decoder = torch.nn.Linear(hidden_feats, num_classes_ast)
+        self.last_act = torch.nn.Softmax(dim=1)
+
+        self.device = device
+        self.to(device)
+
+    def ast_decode_node_func(self, nodes):
+        feats = self.ast_decoder(nodes.data['h'])
+        return {
+            'logits': feats,
+            'pred': self.last_act(feats)
+        }
+
+    def forward(self, h_g):
+        h_g.nodes['ast'].data['h'] = self.ast_label_encoder(
+            h_g.nodes['ast'].data['label'])
+
+        if h_g.number_of_nodes('test') > 0:
+            h_g.nodes['test'].data['h'] = torch.cat(
+                h_g.number_of_nodes('test') *
+                [self.test_embedding.unsqueeze(0)])
+
+        # Let's cache stuffs here
+        # Passing message
+        h_g = self.h_process1(h_g)
+        if self.ast_label_encoder is not None:
+            ast_feats = h_g.nodes['ast'].data['h']
+
+        if h_g.number_of_nodes('test') > 0:
+            test_feats = h_g.nodes['test'].data['h']
+
+        h_g = self.h_process2(h_g)
+        if self.ast_label_encoder is not None:
+            h_g.nodes['ast'].data['h'] = ast_feats + h_g.nodes['ast'].data['h']
+
+        if h_g.number_of_nodes('test') > 0:
+            h_g.nodes['test'].data['h'] = test_feats + \
+                h_g.nodes['test'].data['h']
+
+        h_g = self.h_process3(h_g)
+
+        if self.ast_label_encoder is not None:
+            ast_feats = h_g.nodes['ast'].data['h']
+
+        if h_g.number_of_nodes('test') > 0:
+            test_feats = h_g.nodes['test'].data['h']
+
+        h_g = self.h_process4(h_g)
+
+        if self.ast_label_encoder is not None:
+            h_g.nodes['ast'].data['h'] = ast_feats + h_g.nodes['ast'].data['h']
+        if h_g.number_of_nodes('test') > 0:
+            h_g.nodes['test'].data['h'] = test_feats + \
+                h_g.nodes['test'].data['h']
+
+        h_g = self.h_process5(h_g)
+        if self.ast_label_encoder is not None:
+            h_g.apply_nodes(self.ast_decode_node_func, ntype='ast')
+        return h_g
+

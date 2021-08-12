@@ -18,10 +18,14 @@ import re
 # 3: 0 - 1 Red
 
 
-def set_label_ast(ast, node):
+def set_label_ast(ast, node, take_content=True):
 
-    ast.nodes[node]['label'] = ast.nodes[node]['ntype'] + \
-        ' ' + re.sub(r'[^\x00-\x7F]+', '', ast.nodes[node]['token'])
+    if take_content:
+        ast.nodes[node]['label'] = ast.nodes[node]['ntype'] + \
+            ' ' + re.sub(r'[^\x00-\x7F]+', '', ast.nodes[node]['token'])
+    else:
+        ast.nodes[node]['label'] = ast.nodes[node]['ntype']
+
     if 'status' in ast.nodes[node]:
         ast.nodes[node]['style'] = "filled"
         fillcolormap = {
@@ -60,7 +64,7 @@ def cfg_to_agraph(cfg: nx.MultiDiGraph, path: str):
     nx.drawing.nx_agraph.to_agraph(cfg).draw(path, prog='dot')
 
 
-def ast_to_agraph(ast: nx.MultiDiGraph, path: str):
+def ast_to_agraph(ast: nx.MultiDiGraph, path: str, take_content=True):
     ''' Nx Ast to agraph
     Parameters
     ----------
@@ -68,11 +72,11 @@ def ast_to_agraph(ast: nx.MultiDiGraph, path: str):
     path:  str
     '''
     for node in ast.nodes():
-        set_label_ast(ast, node)
+        set_label_ast(ast, node, take_content)
     nx.drawing.nx_agraph.to_agraph(ast).draw(path, prog='dot')
 
 
-def cfg_ast_to_agraph(cfg_ast: nx.MultiDiGraph, path: str):
+def cfg_ast_to_agraph(cfg_ast: nx.MultiDiGraph, path: str, take_content=True):
     ''' Cfg ast to agraph
     Parameters
     ----------
@@ -83,17 +87,18 @@ def cfg_ast_to_agraph(cfg_ast: nx.MultiDiGraph, path: str):
         if cfg_ast.nodes[node]['graph'] == 'cfg':
             set_label_cfg(cfg_ast, node)
         elif cfg_ast.nodes[node]['graph'] == 'ast':
-            set_label_ast(cfg_ast, node)
+            set_label_ast(cfg_ast, node, take_content)
     nx.drawing.nx_agraph.to_agraph(cfg_ast).draw(path, prog='dot')
 
 
-def cfg_ast_cov_to_agraph(cfg_ast_cov: nx.MultiDiGraph, path):
+def cfg_ast_cov_to_agraph(cfg_ast_cov: nx.MultiDiGraph, path,
+                          take_content=True):
     g = cfg_ast_cov
     for node in g.nodes():
         if g.nodes[node]['graph'] == 'cfg':
             set_label_cfg(cfg_ast_cov, node)
         elif g.nodes[node]['graph'] == 'ast':
-            set_label_ast(cfg_ast_cov, node)
+            set_label_ast(cfg_ast_cov, node, take_content)
         else:
             g.nodes[node]['label'] = g.nodes[node]['name']
 
