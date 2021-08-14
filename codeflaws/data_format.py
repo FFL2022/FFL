@@ -32,4 +32,3 @@ def key2fixfile(key):
 def get_gcov_file(key, test):
     return "{}/{}/{}.gcov".format(
         ConfigClass.codeflaws_data_path, key, test)
-
