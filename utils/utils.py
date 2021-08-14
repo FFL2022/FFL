@@ -43,9 +43,9 @@ class ConfigClassThanhServer(object):
 class ConfigClassDat(object):
     pretrained_fastext = 'preprocess/c_pretrained.bin'
 
-    test_verdict_pickle = "data_nbl/nbl_dataset/test_verdict.pkl"
-    nbl_source_path = "data_nbl/nbl_dataset/sources"
-    nbl_test_path = "data_nbl/nbl_dataset/data/tests"
+    nbl_test_verdict_pickle = "data_nbl/test_verdict.pkl"
+    nbl_source_path = "data_nbl/data/sources"
+    nbl_test_path = "data_nbl/data/tests"
 
     codeflaws_data_path = "data_codeflaws/data"
 
@@ -66,11 +66,22 @@ class ConfigClassDat(object):
     bug_lines_info_pkl = "data_nbl/nbl_dataset/bug_lines_info.pkl"
 
     today = date.today().strftime("%b-%d-%Y")
-    preprocess_dir = "./preprocessed"
-    trained_dir = './trained/{}'.format(today)
-    result_dir = './result/{}'.format(today)
-    os.makedirs(result_dir, exist_ok=True)
-    os.makedirs(trained_dir, exist_ok=True)
+    preprocess_dir_codeflaws = "./preprocessed/codeflaws"
+    preprocess_dir_nbl= "./preprocessed/nbl"
+
+    trained_dir_codeflaws = './trained/codeflaws/{}'.format(today)
+    result_dir_codeflaws = './result/codeflaws/{}'.format(today)
+
+    trained_dir_nbl = './trained/nbl/{}'.format(today)
+    result_dir_nbl = './result/nbl/{}'.format(today)
+
+    os.makedirs(result_dir_nbl, exist_ok=True)
+    os.makedirs(trained_dir_nbl, exist_ok=True)
+    os.makedirs(result_dir_codeflaws, exist_ok=True)
+    os.makedirs(trained_dir_codeflaws, exist_ok=True)
+
+    os.makedirs(preprocess_dir_nbl, exist_ok=True)
+    os.makedirs(preprocess_dir_codeflaws, exist_ok=True)
 
     n_epochs = 100
     print_rate = 1

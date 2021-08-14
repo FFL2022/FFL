@@ -3,8 +3,8 @@ from cfg import cfg
 from utils.traverse_utils import build_nx_cfg, build_nx_ast_base,\
     build_nx_ast_full
 from utils.preprocess_helpers import get_coverage, remove_lib
-from utils.codeflaws_data_format import key2bug, key2fix, key2bugfile,\
-    key2fixfile, key2test_verdict
+from codeflaws.data_format import key2bug, key2fix, key2bugfile,\
+    key2fixfile, key2test_verdict, get_gcov_file
 from graph_algos.nx_shortcuts import combine_multi, neighbors_out
 import networkx as nx
 
@@ -95,8 +95,7 @@ def get_coverage_graph_cfg(key: str, nx_cfg, nline_removed):
     tests_list = key2test_verdict(key)
 
     for i, test in enumerate(tests_list):
-        covfile = "{}/{}/{}.gcov".format(
-            ConfigClass.codeflaws_data_path, key, test)
+        covfile = get_gcov_file(key, test)
         coverage_map = get_coverage(covfile, nline_removed)
         test_node = nx_cfg_cov.number_of_nodes()
         nx_cfg_cov.add_node(test_node, name=f'test_{i}',
@@ -131,7 +130,7 @@ def get_coverage_graph_cfg_ast(key, nx_cfg_ast, nline_removed):
     tests_list = key2test_verdict(key)
 
     for i, test in enumerate(tests_list):
-        covfile = f"{ConfigClass.codeflaws_data_path}/{key}/{test}.gcov"
+        covfile = get_gcov_file(key, test)
         coverage_map = get_coverage(covfile, nline_removed)
         test_node = cfg_ast_g.number_of_nodes()
         cfg_ast_g.add_node(test_node, name=f'test_{i}',
