@@ -93,6 +93,3 @@ class ConfigClassDat(object):
 
 
 ConfigClass = ConfigClassDat
-
-if not os.path.exists(ConfigClass.trained_dir):
-    os.makedirs(ConfigClass.trained_dir)
