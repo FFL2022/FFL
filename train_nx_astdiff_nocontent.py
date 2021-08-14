@@ -141,7 +141,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             out_dict['mean_ast_acc'] = mean_ast_acc.avg
             out_dict['mean_ast_loss'] = mean_ast_loss.avg
             out_dict['f1'] = f1_meter.get()
-            with open(ConfigClass.result_dir +
+            with open(ConfigClass.result_dir_codeflaws +
                       '/training_dict_e{}.json'.format(epoch), 'w') as f:
                 json.dump(out_dict, f, indent=2)
             print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
@@ -156,9 +156,9 @@ def train(model, dataloader, n_epochs, start_epoch=0):
                 if f1_eval > best_f1:
                     best_f1 = f1_eval
                     torch.save(model.state_dict(), os.path.join(
-                        ConfigClass.trained_dir, f'model_{epoch}_best.pth'))
+                        ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best.pth'))
         torch.save(model.state_dict(), os.path.join(
-                   ConfigClass.trained_dir, f'model_last.pth'))
+                   ConfigClass.trained_dir_codeflaws, f'model_last.pth'))
 
 
 def get_line_mapping(dataloader, real_idx):
@@ -300,7 +300,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     out_dict['top_10'] = top_10_meter.avg
     out_dict['f1'] = f1_meter.get()
     print(out_dict)
-    with open(ConfigClass.result_dir +
+    with open(ConfigClass.result_dir_codeflaws +
               '/eval_dict_by_line_e{}.json'.format(epoch), 'w') as f:
         json.dump(out_dict, f, indent=2)
 
@@ -383,7 +383,7 @@ def eval(model, dataloader, epoch, mode='val'):
     out_dict['mean_acc'] = mean_ast_acc.avg
     out_dict['mean_loss'] = mean_ast_loss.avg
     out_dict['f1'] = f1_meter.get()
-    with open(ConfigClass.result_dir + f'/eval_dict_e{epoch}.json', 'w') as f:
+    with open(ConfigClass.result_dir_codeflaws + f'/eval_dict_e{epoch}.json', 'w') as f:
         json.dump(out_dict, f, indent=2)
     print(out_dict)
     return mean_ast_loss.avg, mean_ast_acc.avg, f1_meter.get()['aux_f1']
@@ -400,11 +400,11 @@ if __name__ == '__main__':
         128, 32, meta_graph,
         device=device, num_ast_labels=len(dataset.nx_dataset.ast_types),
         num_classes_ast=3)
-    ConfigClass.preprocess_dir = "{}/{}/{}".format(
-        ConfigClass.preprocess_dir, dataset_opt, graph_opt)
+    ConfigClass.preprocess_dir_codeflaws = "{}/{}/{}".format(
+        ConfigClass.preprocess_dir_codeflaws, dataset_opt, graph_opt)
     # train(model, dataset, ConfigClass.n_epochs)
     list_models_paths = list(
-        glob.glob(f"{ConfigClass.trained_dir}/model*best.pth"))
+        glob.glob(f"{ConfigClass.trained_dir_codeflaws}/model*best.pth"))
     for model_path in list_models_paths:
         epoch = int(model_path.split("_")[1])
         print(f"Evaluating {model_path}:")
@@ -413,10 +413,10 @@ if __name__ == '__main__':
         eval_by_line(model, dataset, epoch, 'val')
         print('Test: ')
         eval_by_line(model, dataset, epoch, 'test')
-    print(ConfigClass.trained_dir)
+    print(ConfigClass.trained_dir_codeflaws)
     best_latest = max(int(model_path.split("_")[1])
                       for model_path in list_models_paths)
-    model_path = f"{ConfigClass.trained_dir}/model_{best_latest}_best.pth"
+    model_path = f"{ConfigClass.trained_dir_codeflaws}/model_{best_latest}_best.pth"
     model.load_state_dict(torch.load(model_path))
     print(f"Evaluation: {model_path}")
     dataset.test()
