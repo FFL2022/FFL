@@ -2,7 +2,7 @@ from __future__ import print_function, unicode_literals
 import torch
 import os
 import torch.nn.functional as F
-from dataloader_key_only import CodeflawsFullDGLDataset
+from codeflaws.dataloader_key_only import CodeflawsFullDGLDataset
 from model import HeteroMPNNPredictor1TestNodeType
 from utils.utils import ConfigClass
 from utils.draw_utils import ast_to_agraph
