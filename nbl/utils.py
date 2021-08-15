@@ -7,10 +7,10 @@ import sqlite3
 import pickle
 
 
-def all_buggy_and_fixed(root=ConfigClass.raw_dir):
+def all_buggy_and_fixed(root=ConfigClass.nbl_raw_dir):
     dataset_db = os.path.join(root, 'dataset.db')
     all_data = {}
-    eval_set = np.load(os.path.join(root, 'data/eval_set.py'),
+    eval_set = np.load(os.path.join(root, 'data/eval_set.npy'),
                        allow_pickle=True).item()
     eval_dict = {}
     for problem_id in eval_set:
@@ -57,7 +57,7 @@ def all_buggy_and_fixed(root=ConfigClass.raw_dir):
             values = all_data[problem_id][uid]
             # Sort by ascending timestamp
             ids = list(sorted(ids, key=lambda x: values[x][1]))
-            for i, _id in enumerate(ids[::-1]):
+            for i, _id in enumerate(ids[:-1]):
                 # Next time stamp that have improvements are buggy and fixed
                 next_id = ids[i+1]
                 if values[_id][0] < values[next_id][0]:
