@@ -67,7 +67,7 @@ def get_cfg_ast_cov(key):
 
 
 class NBLNxDataset(object):
-    def __init__(self, raw_dataset_dir=ConfigClass.raw_dir,
+    def __init__(self, raw_dataset_dir=ConfigClass.nbl_raw_dir,
                  save_dir=ConfigClass.preprocess_dir_nbl):
         self.save_dir = save_dir
         self.info_path = os.path.join(
@@ -104,7 +104,7 @@ class NBLNxDataset(object):
         err_count = 0
         for i, key in bar:
             try:
-                _, _, _, _, _, nx_g = get_cfg_ast_cov(key)
+                nx_g = get_cfg_ast_cov(key)
                 ast_lb_d = []
                 ast_lb_i = []
                 cfg_lb = []
@@ -169,7 +169,7 @@ class NBLNxDataset(object):
 
 
 class NBLFullDGLDataset(DGLDataset):
-    def __init__(self, raw_dir=ConfigClass.nbl_data_path,
+    def __init__(self, raw_dir=ConfigClass.nbl_raw_dir,
                  save_dir=ConfigClass.preprocess_dir_nbl):
         self.graph_save_path = os.path.join(
             save_dir, 'dgl_nx_graphs_only_keys.bin')
