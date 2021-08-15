@@ -6,13 +6,11 @@ test_verdict = pickle.load(open(ConfigClass.nbl_test_verdict_pickle,
 
 
 def key2test_verdict(key):
-    info = key.split("-")
+    pid, uid, vid = key.split("-")
     # problem, user, version
-    return test_verdict[info[0]][info[2]].keys()
+    return test_verdict[pid][vid].keys()
 
-def key2bug(key):
-    info = key.split("-")
 
 def get_gcov_file(key, test):
-    info = key.split("-")
-    return f"{ConfigClass.nbl_test_path}/{info[0]}/{test}-{info[2]}.gcov"
+    pid, uid, vid = key.split("-")
+    return f"{ConfigClass.nbl_test_path}/{pid}/{test}-{vid}.gcov"

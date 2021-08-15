@@ -46,11 +46,12 @@ class ConfigClassDat(object):
     nbl_test_verdict_pickle = "data_nbl/test_verdict.pkl"
     nbl_source_path = "data_nbl/data/sources"
     nbl_test_path = "data_nbl/data/tests"
+    os.makedirs(nbl_source_path, exist_ok=True)
 
     codeflaws_data_path = "data_codeflaws/data"
 
     # raw dir
-    raw_dir = "data_nbl/nbl_dataset"
+    nbl_raw_dir = "data_nbl/"
 
     # For training
     train_cfgidx_map_json = "data_nbl/nbl_dataset/training_dat.json"
