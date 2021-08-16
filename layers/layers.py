@@ -236,7 +236,11 @@ class GCNLayer(torch.nn.Module):
         has_edge = False
         for c_etype in self.meta_graph:
             temp_func[c_etype] = self.funcs[c_etype]
-        h_g.multi_update_all(temp_func, 'sum', self.add_act)
+        h_g.multi_update_all(temp_func, 'sum')
+        for ntype in h_g.ntypes:
+            if h_g.number_of_nodes(ntype) > 0:
+                h_g.apply_nodes(self.add_act, ntype=ntype)
+
         return h_g
 
 
