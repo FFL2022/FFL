@@ -131,13 +131,10 @@ class GCN_1E(torch.nn.Module):
         # TODO: sigmoid weight
 
     def compute_send_messages(self, edges):
-        print(edges.edges()[0].shape[0])
-        if edges.edges()[0].shape[0] > 0:
-            x_src = edges.src['h']  # N_n, hidden_dim
-            # print(x_src.shape)
-            msg = self.edge_transform(x_src)
-            return {'msg': msg}
-        return {'msg': ()}
+        x_src = edges.src['h']  # N_n, hidden_dim
+        # print(x_src.shape)
+        msg = self.edge_transform(x_src)
+        return {'msg': msg}
 
     def activate_node(self, nodes, name_in, name_out):
         return {name_out: self.activation(nodes.data[name_in])}
@@ -235,8 +232,11 @@ class GCNLayer(torch.nn.Module):
     def forward(self, h_g):
         # 4. Passing message through each of these sub graph onces each
         # TODO: Beware of gradient explodes
-        has_edge = False
-        h_g.multi_update_all(self.funcs, 'sum')
+        tmp_funcs = {}
+        for c_etype in self.meta_graph:
+            if h_g.number_of_edges(c_etype) > 0:
+                tmp_funcs[c_etype] = self.funcs[c_etype]
+        h_g.multi_update_all(tmp_funcs, 'sum')
 
         for ntype in h_g.ntypes:
             if h_g.number_of_nodes(ntype) > 0:
