@@ -131,12 +131,13 @@ class GCN_1E(torch.nn.Module):
         # TODO: sigmoid weight
 
     def compute_send_messages(self, edges):
+        print(edges.edges()[0].shape[0])
         if edges.edges()[0].shape[0] > 0:
             x_src = edges.src['h']  # N_n, hidden_dim
             # print(x_src.shape)
             msg = self.edge_transform(x_src)
             return {'msg': msg}
-        return {}
+        return {'msg': ()}
 
     def activate_node(self, nodes, name_in, name_out):
         return {name_out: self.activation(nodes.data[name_in])}
