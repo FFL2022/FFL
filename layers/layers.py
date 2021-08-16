@@ -220,8 +220,8 @@ class GCNLayer(torch.nn.Module):
                 hidden_dim, out_dim)
             self.funcs[c_etype] = (
                 per_type_linear[ctype_str].compute_send_messages,
-                per_type_linear[ctype_str].aggregator('msg', 'h'),
-                self.add_act
+                per_type_linear[ctype_str].aggregator('msg', 'h')
+                # self.add_act
             )
 
         self.per_type_linear = torch.nn.ModuleDict(per_type_linear)
@@ -232,11 +232,9 @@ class GCNLayer(torch.nn.Module):
     def forward(self, h_g):
         # 4. Passing message through each of these sub graph onces each
         # TODO: Beware of gradient explodes
-        temp_func = {}
         has_edge = False
-        for c_etype in self.meta_graph:
-            temp_func[c_etype] = self.funcs[c_etype]
-        h_g.multi_update_all(temp_func, 'sum')
+        h_g.multi_update_all(self.funcs, 'sum')
+
         for ntype in h_g.ntypes:
             if h_g.number_of_nodes(ntype) > 0:
                 h_g.apply_nodes(self.add_act, ntype=ntype)
