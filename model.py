@@ -462,7 +462,7 @@ class HeteroMPNNPredictor1TestNodeTypeArity(torch.nn.Module):
 
 
 class GCN_A_L_T_1(torch.nn.Module):
-    def __init__(self, hidden_feats, hidden_efeats, meta_graph,
+    def __init__(self, hidden_feats, meta_graph,
                  device=device, num_ast_labels=None, num_classes_ast=3):
         super().__init__()
         # Passing test overlapp

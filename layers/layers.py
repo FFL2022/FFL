@@ -233,11 +233,9 @@ class GCNLayer(torch.nn.Module):
         # 4. Passing message through each of these sub graph onces each
         # TODO: Beware of gradient explodes
         temp_func = {}
+        has_edge = False
         for c_etype in self.meta_graph:
-            if h_g.number_of_edges(c_etype) > 0:
-                temp_func[c_etype] = self.funcs[c_etype]
-            else:
-                temp_func[c_etype] = (lambda x: {}, lambda x: {})
+            temp_func[c_etype] = self.funcs[c_etype]
         h_g.multi_update_all(temp_func, 'sum', self.add_act)
         return h_g
 
