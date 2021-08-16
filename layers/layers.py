@@ -131,6 +131,7 @@ class GCN_1E(torch.nn.Module):
         # TODO: sigmoid weight
 
     def compute_send_messages(self, edges):
+        print(edges.edges())
         x_src = edges.src['h']  # N_n, hidden_dim
         # print(x_src.shape)
         msg = self.edge_transform(x_src)
@@ -236,6 +237,7 @@ class GCNLayer(torch.nn.Module):
         for c_etype in self.meta_graph:
             if h_g.number_of_edges(c_etype) > 0:
                 tmp_funcs[c_etype] = self.funcs[c_etype]
+        print(tmp_funcs)
         h_g.multi_update_all(tmp_funcs, 'sum')
 
         for ntype in h_g.ntypes:
