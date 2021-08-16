@@ -132,7 +132,6 @@ class GCN_1E(torch.nn.Module):
 
     def compute_send_messages(self, edges):
         src, dst, _ = edges.edges()
-        print(src.shape, dst.shape, torch.max(src), torch.max(dst))
         x_src = edges.src['h']  # N_n, hidden_dim
         # print(x_src.shape)
         msg = self.edge_transform(x_src)
@@ -236,7 +235,8 @@ class GCNLayer(torch.nn.Module):
         # TODO: Beware of gradient explodes
         tmp_funcs = {}
         for c_etype in self.meta_graph:
-            if h_g.number_of_edges(c_etype) > 0:
+            # Preventing some randome error that makes way too many edges
+            if 6000 > h_g.number_of_edges(c_etype) > 0:
                 tmp_funcs[c_etype] = self.funcs[c_etype]
         h_g.multi_update_all(tmp_funcs, 'sum')
 
