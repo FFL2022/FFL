@@ -3,7 +3,7 @@ import torch
 import os
 import torch.nn.functional as F
 from nbl.dataloader_key_only import NBLFullDGLDataset
-from model import GCN_A_L_T_1
+from model import GCN_A_L
 from utils.utils import ConfigClass
 from utils.draw_utils import ast_to_agraph
 import tqdm
@@ -402,11 +402,11 @@ def eval(model, dataloader, epoch, mode='val'):
 
         mfr_val = indices.tolist()
         mfr_meter.update(next((idx+1 for idx, val in enumerate(mfr_val)
-                               if val in lbidxs), 0), 1)
+                               if val in ast_lbidxs), 0), 1)
 
         mar_val = indices.tolist()
         matched_idx = [idx+1 for idx, val in enumerate(mar_val)
-                       if val in lbidxs]
+                       if val in ast_lbidxs]
         mar_meter.update(sum(matched_idx)/len(matched_idx), 1)
 
         # 2 scenario:
@@ -441,7 +441,7 @@ if __name__ == '__main__':
     # loaddataset
     dataset = NBLFullDGLDataset()
     meta_graph = dataset.meta_graph
-    model = GCN_A_L_T_1(
+    model = GCN_A_L(
         128, meta_graph,
         device=device, num_ast_labels=len(dataset.nx_dataset.ast_types),
         num_classes_ast=3)
@@ -449,7 +449,7 @@ if __name__ == '__main__':
     #list_models_paths = list(
     #    glob.glob(f"{ConfigClass.trained_dir_nbl}/model*best.pth"))
     list_models_paths = list(
-        glob.glob("./trained/nbl/Sep-27-2021/model*best.pth"))
+        glob.glob("./trained/nbl_ast/Sep-27-2021/model*best.pth"))
     for model_path in list_models_paths:
         epoch = int(model_path.split("_")[1])
         print(f"Evaluating {model_path}:")
