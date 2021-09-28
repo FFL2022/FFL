@@ -13,8 +13,8 @@ from utils.train_utils import BinFullMeter, KFullMeter, AverageMeter
 import pickle as pkl
 
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
 
 def train(model, dataloader, n_epochs, start_epoch=0):
     opt = torch.optim.Adam(model.parameters())
@@ -147,9 +147,9 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             out_dict['mean_ast_acc'] = mean_ast_acc.avg
             out_dict['mean_ast_loss'] = mean_ast_loss.avg
             out_dict['f1'] = f1_meter.get()
-            with open(ConfigClass.result_dir_nbl +
-                      '/training_dict_e{}.json'.format(epoch), 'w') as f:
-                json.dump(out_dict, f, indent=2)
+            #with open(ConfigClass.result_dir_nbl +
+            #          '/training_dict_e{}.json'.format(epoch), 'w') as f:
+            #    json.dump(out_dict, f, indent=2)
             print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
                   f"top 10 acc: {top_10_meter.avg}, " +
                   f"top 5 acc: {top_5_meter.avg}, " +
@@ -223,6 +223,8 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw = False):
     top_2_meter = AverageMeter()
     top_5_meter = AverageMeter()
     top_10_meter = AverageMeter()
+    mfr_meter = AverageMeter()
+    mar_meter = AverageMeter()
     model.eval()
     out_dict = {}
     line_mapping = {}
@@ -234,6 +236,8 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw = False):
     top_2_meter.reset()
     top_5_meter.reset()
     top_10_meter.reset()
+    mfr_meter.reset()
+    mar_meter.reset()
     line_mapping_changed = False
     for i in tqdm.trange(len(dataloader)):
     #for i in tqdm.trange(1):
@@ -292,8 +296,8 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw = False):
         if non_zeros_lbs.shape[0] == 0:
             continue
         lbidxs = torch.flatten(non_zeros_lbs).tolist()
+        _, indices = torch.topk(line_score_tensor, len(all_lines))
         k = min(len(all_lines), 10)
-        _, indices = torch.topk(line_score_tensor, k)
         top_10_val = indices[:k].tolist()
         top_10_meter.update(int(any([idx in lbidxs
                                      for idx in top_10_val])), 1)
@@ -311,18 +315,29 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw = False):
         top_1_meter.update(int(top_1_val[0] in lbidxs), 1)
         f1_meter.update(line_pred_tensor, line_tgt_tensor)
 
+        mfr_val = indices.tolist()
+        mfr_meter.update(next((idx+1 for idx, val in enumerate(mfr_val)
+                               if val in lbidxs), 0), 1)
+
+        mar_val = indices.tolist()
+        matched_idx = [idx+1 for idx, val in enumerate(mar_val)
+                       if val in lbidxs]
+        mar_meter.update(sum(matched_idx)/len(matched_idx), 1)
+
+    out_dict['mfr'] = mfr.meter.avg
+    out_dict['mar'] = mar.meter.avg
     out_dict['top_1'] = top_1_meter.avg
     out_dict['top_2'] = top_2_meter.avg
     out_dict['top_5'] = top_5_meter.avg
     out_dict['top_10'] = top_10_meter.avg
     out_dict['f1'] = f1_meter.get()
     print(out_dict)
-    with open(ConfigClass.result_dir_nbl +
-              '/eval_dict_by_line_e{}.json'.format(epoch), 'w') as f:
-        json.dump(out_dict, f, indent=2)
+    #with open(ConfigClass.result_dir_nbl +
+    #          '/eval_dict_by_line_e{}.json'.format(epoch), 'w') as f:
+    #    json.dump(out_dict, f, indent=2)
 
-    if line_mapping_changed:
-        pkl.dump(line_mapping, open('preprocessed/nbl/line_mapping.pkl', 'wb'))
+    #if line_mapping_changed:
+    #    pkl.dump(line_mapping, open('preprocessed/nbl/line_mapping.pkl', 'wb'))
     return out_dict
 
 
@@ -338,6 +353,8 @@ def eval(model, dataloader, epoch, mode='val'):
     top_2_meter = AverageMeter()
     top_5_meter = AverageMeter()
     top_10_meter = AverageMeter()
+    mfr_meter = AverageMeter()
+    mar_meter = AverageMeter()
     model.eval()
     out_dict = {}
     for i in tqdm.trange(len(dataloader)):
@@ -361,8 +378,8 @@ def eval(model, dataloader, epoch, mode='val'):
         ast_loss = F.cross_entropy(g.nodes['ast'].data['logits'], ast_lb)
         # cfg_loss = F.cross_entropy(logits, lb)
         preds = - g.nodes['ast'].data['pred'][:, 0]
+        _, indices = torch.topk(preds, g.number_of_nodes('ast'))
         k = min(g.number_of_nodes('ast'), 10)
-        _, indices = torch.topk(preds, k)
         top_10_val = indices[:k].tolist()
         top_10_meter.update(
             int(any([idx in ast_lbidxs for idx in top_10_val])), 1)
@@ -381,6 +398,15 @@ def eval(model, dataloader, epoch, mode='val'):
         top_1_val = indices[:k].tolist()
         top_1_meter.update(int(top_1_val[0] in ast_lbidxs), 1)
 
+        mfr_val = indices.tolist()
+        mfr_meter.update(next((idx+1 for idx, val in enumerate(mfr_val)
+                               if val in lbidxs), 0), 1)
+
+        mar_val = indices.tolist()
+        matched_idx = [idx+1 for idx, val in enumerate(mar_val)
+                       if val in lbidxs]
+        mar_meter.update(sum(matched_idx)/len(matched_idx), 1)
+
         # 2 scenario:
         # not using master node
         # logits = g.nodes['cfg'].data['logits']
@@ -391,6 +417,8 @@ def eval(model, dataloader, epoch, mode='val'):
             torch.sum(ast_cal == ast_lb).item()/g.number_of_nodes('ast'),
             g.number_of_nodes('ast'))
         f1_meter.update(ast_cal, ast_lb)
+    out_dict['mfr'] = mfr_meter.avg
+    out_dict['mar'] = mar_meter.avg
     out_dict['top_1'] = top_1_meter.avg
     out_dict['top_2'] = top_2_meter.avg
     out_dict['top_5'] = top_5_meter.avg
@@ -398,8 +426,8 @@ def eval(model, dataloader, epoch, mode='val'):
     out_dict['mean_acc'] = mean_ast_acc.avg
     out_dict['mean_loss'] = mean_ast_loss.avg
     out_dict['f1'] = f1_meter.get()
-    with open(ConfigClass.result_dir_nbl + f'/eval_dict_e{epoch}.json', 'w') as f:
-        json.dump(out_dict, f, indent=2)
+    #with open(ConfigClass.result_dir_nbl + f'/eval_dict_e{epoch}.json', 'w') as f:
+    #    json.dump(out_dict, f, indent=2)
     print(out_dict)
     return mean_ast_loss.avg, mean_ast_acc.avg, f1_meter.get()['aux_f1']
 
@@ -415,9 +443,11 @@ if __name__ == '__main__':
         128, meta_graph,
         device=device, num_ast_labels=len(dataset.nx_dataset.ast_types),
         num_classes_ast=3)
-    train(model, dataset, ConfigClass.n_epochs)
+    # train(model, dataset, ConfigClass.n_epochs)
+    #list_models_paths = list(
+    #    glob.glob(f"{ConfigClass.trained_dir_nbl}/model*best.pth"))
     list_models_paths = list(
-        glob.glob(f"{ConfigClass.trained_dir_nbl}/model*best.pth"))
+        glob.glob("./trained/nbl/Sep-27-2021/model*best.pth"))
     for model_path in list_models_paths:
         epoch = int(model_path.split("_")[1])
         print(f"Evaluating {model_path}:")
@@ -427,7 +457,8 @@ if __name__ == '__main__':
     print(ConfigClass.trained_dir_nbl)
     best_latest = max(int(model_path.split("_")[1])
                       for model_path in list_models_paths)
-    model_path = f"{ConfigClass.trained_dir_nbl}/model_{best_latest}_best.pth"
+    #model_path = f"{ConfigClass.trained_dir_nbl}/model_{best_latest}_best.pth"
+    model_path = "./trained/nbl/Sep-27-2021/model_{best_latest}_best.pth"
     model.load_state_dict(torch.load(model_path))
     print(f"Evaluation: {model_path}")
     dataset.val()

@@ -14,7 +14,7 @@ import pickle as pkl
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+#device = torch.device('cpu')
 
 def train(model, dataloader, n_epochs, start_epoch=0):
     opt = torch.optim.Adam(model.parameters())
@@ -31,10 +31,6 @@ def train(model, dataloader, n_epochs, start_epoch=0):
 
     f1_meter = KFullMeter(3)
     best_f1 = 0.0
-    best_top1 = -1.0
-    best_top2 = -1.0
-    best_top5 = -1.0
-    best_top10 = -1.0
     # model.load_state_dict(torch.load("trained/model_27.pth"))
     # eval(model, dataloader)
     for epoch in range(n_epochs):
@@ -51,10 +47,8 @@ def train(model, dataloader, n_epochs, start_epoch=0):
 
         model.train()
         bar = tqdm.trange(len(dataloader))
-        #bar = tqdm.trange(5)
         bar.set_description(f'Epoch {epoch}')
         for i in bar:
-
             g = dataloader[i]
             if g is None:
                 continue
@@ -157,26 +151,14 @@ def train(model, dataloader, n_epochs, start_epoch=0):
                   f"top 1 acc {top_1_meter.avg}")
             print(f1_meter.get())
         if epoch % ConfigClass.save_rate == 0:
-            eval_dict  = eval_by_line(model, dataloader, epoch)
-            if eval_dict['f1']['aux_f1'] != "unk":
-                if eval_dict['f1']['aux_f1'] > best_f1:
-                    best_f1 = eval_dict['f1']['aux_f1']
+            l_eval, acc_eval, f1_eval = eval(model, dataloader, epoch)
+            if f1_eval != "unk":
+                if f1_eval > best_f1:
+                    best_f1 = f1_eval
                     torch.save(model.state_dict(), os.path.join(
-                        ConfigClass.trained_dir_nbl, f'model_{epoch}_bestf1.pth'))
-            if eval_dict['top_1'] > best_top1:
-                    best_top1 = eval_dict['top_1']
-                    torch.save(model.state_dict(), os.path.join(ConfigClass.trained_dir_nbl, f'model_{epoch}_besttop1.pth'))
-            if eval_dict['top_2'] > best_top2:
-                best_top2 = eval_dict['top_2']
-                torch.save(model.state_dict(), os.path.join(ConfigClass.trained_dir_nbl, f'model_{epoch}_besttop2.pth'))
-            if eval_dict['top_5'] > best_top5:
-                best_top5 = eval_dict['top_5']
-                torch.save(model.state_dict(), os.path.join(ConfigClass.trained_dir_nbl, f'model_{epoch}_besttop5.pth'))
-            if eval_dict['top_10'] > best_top10:
-                best_top10 = eval_dict['top_10']
-                torch.save(model.state_dict(), os.path.join(ConfigClass.trained_dir_nbl, f'model_{epoch}_besttop10.pth'))
-        print("Best_result: Top 1:{}, Top 2: {}, Top 5: {}, Top 10: {}, F1: {}".format(best_top1, best_top2, best_top5, best_top10, best_f1))
-        torch.save(model.state_dict(), os.path.join(ConfigClass.trained_dir_nbl, f'model_last.pth'))
+                        ConfigClass.trained_dir_nbl, f'model_{epoch}_best.pth'))
+        torch.save(model.state_dict(), os.path.join(
+                   ConfigClass.trained_dir_nbl, f'model_last.pth'))
 
 
 def get_line_mapping(dataloader, real_idx):
@@ -209,7 +191,7 @@ def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts):
     return nx_g.subgraph(n_asts)
 
 
-def eval_by_line(model, dataloader, epoch, mode='val', draw = False):
+def eval_by_line(model, dataloader, epoch, mode='val'):
     # Map from these indices to line
     # Calculate mean scores for these lines
     # Get these unique lines
@@ -236,7 +218,6 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw = False):
     top_10_meter.reset()
     line_mapping_changed = False
     for i in tqdm.trange(len(dataloader)):
-    #for i in tqdm.trange(1):
         real_idx = dataloader.active_idxs[i]
         g = dataloader[i]
         g = g.to(device)
@@ -261,13 +242,13 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw = False):
             g.nodes['ast'].data['tgt'].detach().cpu().numpy()
         )
 
-        if nx_g.number_of_nodes() > 1000 and not draw:
-            continue
-        try:
-            ast_to_agraph(nx_g, f'images_nbl_{epoch}/{real_idx}.png',
-                          take_content=False)
-        except:
-            continue
+        #if nx_g.number_of_nodes() > 1000:
+        #    continue
+        #try:
+        #    ast_to_agraph(nx_g, f'images_nbl_{epoch}/{real_idx}.png',
+        #                  take_content=False)
+        #except:
+        #    continue
 
         g.nodes['ast'].data['new_pred'][
             g.nodes['ast'].data['new_pred'] != 0] = 1.0
@@ -415,21 +396,22 @@ if __name__ == '__main__':
         128, meta_graph,
         device=device, num_ast_labels=len(dataset.nx_dataset.ast_types),
         num_classes_ast=3)
-    train(model, dataset, ConfigClass.n_epochs)
-    list_models_paths = list(
-        glob.glob(f"{ConfigClass.trained_dir_nbl}/model*best.pth"))
-    for model_path in list_models_paths:
-        epoch = int(model_path.split("_")[1])
-        print(f"Evaluating {model_path}:")
-        model.load_state_dict(torch.load(model_path))
-        print("Val: ")
-        eval_by_line(model, dataset, epoch, 'val')
-    print(ConfigClass.trained_dir_nbl)
-    best_latest = max(int(model_path.split("_")[1])
-                      for model_path in list_models_paths)
-    model_path = f"{ConfigClass.trained_dir_nbl}/model_{best_latest}_best.pth"
+    # train(model, dataset, ConfigClass.n_epochs)
+    #list_models_paths = list(
+    #    glob.glob(f"{ConfigClass.trained_dir_nbl}/model*best.pth"))
+    #for model_path in list_models_paths:
+    #    epoch = int(model_path.split("_")[1])
+    #    print(f"Evaluating {model_path}:")
+    #    model.load_state_dict(torch.load(model_path))
+    #    print("Val: ")
+    #    eval_by_line(model, dataset, epoch, 'val')
+    #print(ConfigClass.trained_dir_nbl)
+    #best_latest = max(int(model_path.split("_")[1])
+    #                  for model_path in list_models_paths)
+    #model_path = f"{ConfigClass.trained_dir_nbl}/model_{best_latest}_best.pth"
+    best_lastest = 3
+    model_path = "/home/theengineer/dataDrive3/GNNs/GNN4FL/trained/nbl/Aug-17-2021/model_3_best.pth"
     model.load_state_dict(torch.load(model_path))
     print(f"Evaluation: {model_path}")
     dataset.val()
-    eval_by_line(model, dataset, best_latest)
-
+    eval_by_line(model, dataset, best_lastest)

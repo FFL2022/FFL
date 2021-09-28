@@ -12,7 +12,7 @@ import fasttext
 from utils.utils import ConfigClass
 from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.nx_graph_builder import augment_with_reverse_edge
-from nbl.utils import all_keys
+from nbl.utils import all_keys, eval_set, mapping_eval
 from utils.get_bug_localization import get_bug_localization
 from graph_algos.nx_shortcuts import combine_multi, neighbors_out
 
@@ -194,7 +194,7 @@ class NBLFullDGLDataset(DGLDataset):
         self.active_idxs = self.val_idxs
 
     def test(self):
-        self.active_idxs = self.test_idxs
+        self.active_idxs = self.val_idxs
 
     def has_cache(self):
         return os.path.exists(self.graph_save_path) and\
@@ -209,27 +209,26 @@ class NBLFullDGLDataset(DGLDataset):
         self.master_idxs = info_dict['master_idxs']
         self.train_idxs = info_dict['train_idxs']
         self.val_idxs = info_dict['val_idxs']
-        self.test_idxs = info_dict['test_idxs']
-        self.test_idxs = list(self.master_idxs[
-            int(len(self.gs)*0.8):int(len(self.gs))])
         self.train()
 
     def save(self):
         os.makedirs(self.save_dir, exist_ok=True)
         save_graphs(self.graph_save_path, self.gs)
         self.master_idxs = list(range(len(self.gs)))
-        random.shuffle(self.master_idxs)
-        self.train_idxs = list(self.master_idxs[:int(len(self.gs)*0.6)])
-        self.val_idxs = list(self.master_idxs[
-            int(len(self.gs)*0.6):int(len(self.gs)*0.8)])
-        self.test_idxs = list(self.master_idxs[
-            int(len(self.gs)*0.8):int(len(self.gs))])
+        self.train_idxs = []
+        self.val_idxs = []
+        for i in self.master_idxs:
+            key = all_keys[i]
+            if int(key['buggy']) in mapping_eval:
+                self.val_idxs.append(i)
+            else:
+                self.train_idxs.append(i)
+
         pkl.dump({'cfg_content_dim': self.cfg_content_dim,
                   'ast_content_dim': self.ast_content_dim,
                   'master_idxs': self.master_idxs,
                   'train_idxs': self.train_idxs,
                   'val_idxs': self.val_idxs,
-                  'test_idxs': self.test_idxs
                   },
                  open(self.info_path, 'wb'))
 

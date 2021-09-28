@@ -86,7 +86,7 @@ class ConfigClassDat(object):
 
     n_epochs = 100
     print_rate = 1
-    save_rate = 3
+    save_rate = 1
 
     cfg_label_corpus = ["entry_node", "COMMON", "IF", "ELSE",
                         "ELSE_IF", "END_IF", "FOR", "WHILE",

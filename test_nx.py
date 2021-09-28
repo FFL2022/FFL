@@ -98,6 +98,7 @@ def train(model, dataloader, n_epochs):
 
     f1_meter = BinFullMeter()
     best_f1 = 0.0
+    best_top_k = [0.0, 0.0, 0.0] # 1, 2, 5
     # model.load_state_dict(torch.load("trained/model_27.pth"))
     # eval(model, dataloader)
     for epoch in range(n_epochs):
@@ -188,6 +189,13 @@ def train(model, dataloader, n_epochs):
                     best_f1 = f1_eval
                     torch.save(model.state_dict(), os.path.join(
                         ConfigClass.trained_dir, f'model_{epoch}_best.pth'))
+            for i in range(3):
+                if top_k_eval[i] != "unk":
+                    if top_k_eval[i] > best_top_k[i]:
+                        best_top_k[i] = top_k_eval[i]
+                        torch.save(model.state_dict(), os.path.join(
+                            ConfigClass.trained_dir,
+                            f'model_{epoch}_best_top{[1, 2, 5][i]}.pth'))
 
 
 def eval(model, dataloader, epoch):
@@ -255,7 +263,8 @@ def eval(model, dataloader, epoch):
     with open(ConfigClass.result_dir + f'/eval_dict_e{epoch}.json', 'w') as f:
         json.dump(out_dict, f, indent=2)
     print(out_dict)
-    return mean_loss.avg, mean_acc.avg, f1_meter.get()['aux_f1']
+    return mean_loss.avg, mean_acc.avg, f1_meter.get()['aux_f1'],\
+                [out_dict['top_{}'.format(k)] for k in [1, 2, 5]]
 
 
 if __name__ == '__main__':
@@ -281,7 +290,7 @@ if __name__ == '__main__':
         dataset.ast_content_dim)
     ConfigClass.preprocess_dir = "{}/{}/{}".format(
         ConfigClass.preprocess_dir, dataset_opt, graph_opt)
-    # train(model, dataset, ConfigClass.n_epochs)
+    train(model, dataset, 1)
     list_models_paths = list(
         glob.glob(f"{ConfigClass.trained_dir}/model*best.pth"))
     best_latest = max(int(model_path.split("_")[1])

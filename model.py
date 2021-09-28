@@ -9,7 +9,6 @@ from layers.layers import GCNLayer, GCNLayerOld
 __author__ = "Marc: thanhdatn@student.unimelb.edu.au"
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 edge_types = ['tb', 'lr', 'bt', 'child', 'parent', 'master']
 e2idmap = [(e, i) for i, e in enumerate(edge_types)]
 
@@ -553,3 +552,70 @@ class GCN_A_L_T_1(torch.nn.Module):
             h_g.apply_nodes(self.ast_decode_node_func, ntype='ast')
         return h_g
 
+
+class GCN_A_L(torch.nn.Module):
+    def __init__(self, hidden_feats, meta_graph,
+                 device=device, num_ast_labels=None, num_classes_ast=3):
+        super().__init__()
+        self.ast_label_encoder = nn.Embedding(
+            num_ast_labels, hidden_feats)
+        nn.init.xavier_normal_(self.ast_label_encoder.weight)
+
+        self.meta_graph = meta_graph
+
+        self.h_process1 = GCNLayer(
+            self.meta_graph, hidden_feats, hidden_feats, device)
+
+        self.h_process2 = GCNLayer(
+            self.meta_graph, hidden_feats, hidden_feats, device)
+
+        self.h_process3 = GCNLayer(
+            self.meta_graph, hidden_feats, hidden_feats, device)
+
+        self.h_process4 = GCNLayer(
+            self.meta_graph, hidden_feats, hidden_feats, device)
+
+        self.h_process5 = GCNLayer(
+            self.meta_graph, hidden_feats, hidden_feats, device)
+
+        self.ast_decoder = torch.nn.Linear(hidden_feats, num_classes_ast)
+        self.last_act = torch.nn.Softmax(dim=1)
+
+        self.device = device
+        self.to(device)
+
+    def ast_decode_node_func(self, nodes):
+        feats = self.ast_decoder(nodes.data['h'])
+        return {
+            'logits': feats,
+            'pred': self.last_act(feats)
+        }
+
+    def forward(self, h_g):
+        h_g.nodes['ast'].data['h'] = self.ast_label_encoder(
+            h_g.nodes['ast'].data['label'])
+
+        # Let's cache stuffs here
+        # Passing message
+        h_g = self.h_process1(h_g)
+        if self.ast_label_encoder is not None:
+            ast_feats = h_g.nodes['ast'].data['h']
+
+        h_g = self.h_process2(h_g)
+        if self.ast_label_encoder is not None:
+            h_g.nodes['ast'].data['h'] = ast_feats + h_g.nodes['ast'].data['h']
+
+        h_g = self.h_process3(h_g)
+
+        if self.ast_label_encoder is not None:
+            ast_feats = h_g.nodes['ast'].data['h']
+
+        h_g = self.h_process4(h_g)
+
+        if self.ast_label_encoder is not None:
+            h_g.nodes['ast'].data['h'] = ast_feats + h_g.nodes['ast'].data['h']
+
+        h_g = self.h_process5(h_g)
+        if self.ast_label_encoder is not None:
+            h_g.apply_nodes(self.ast_decode_node_func, ntype='ast')
+        return h_g
