@@ -409,8 +409,8 @@ if __name__ == '__main__':
     #best_latest = max(int(model_path.split("_")[1])
     #                  for model_path in list_models_paths)
     #model_path = f"{ConfigClass.trained_dir_nbl}/model_{best_latest}_best.pth"
-    best_lastest = 3
-    model_path = "/home/theengineer/dataDrive3/GNNs/GNN4FL/trained/nbl/Aug-17-2021/model_3_best.pth"
+    best_lastest = 13
+    model_path = "/home/theengineer/dataDrive3/GNNs/GNN4FL/trained/nbl/Sep-27-2021/model_13_besttop1.pth"
     model.load_state_dict(torch.load(model_path))
     print(f"Evaluation: {model_path}")
     dataset.val()

@@ -13,8 +13,8 @@ from utils.train_utils import BinFullMeter, KFullMeter, AverageMeter
 import pickle as pkl
 
 
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = torch.device('cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cpu')
 
 def train(model, dataloader, n_epochs, start_epoch=0):
     opt = torch.optim.Adam(model.parameters())
@@ -239,8 +239,8 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw = False):
     mfr_meter.reset()
     mar_meter.reset()
     line_mapping_changed = False
-    for i in tqdm.trange(len(dataloader)):
-    #for i in tqdm.trange(1):
+    #for i in tqdm.trange(len(dataloader)):
+    for i in tqdm.trange(1):
         real_idx = dataloader.active_idxs[i]
         g = dataloader[i]
         g = g.to(device)
@@ -297,6 +297,8 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw = False):
             continue
         lbidxs = torch.flatten(non_zeros_lbs).tolist()
         _, indices = torch.topk(line_score_tensor, len(all_lines))
+        print("#lbidxs:\n", lbidxs)
+        print("#indices:\n", indices)
         k = min(len(all_lines), 10)
         top_10_val = indices[:k].tolist()
         top_10_meter.update(int(any([idx in lbidxs
@@ -324,8 +326,8 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw = False):
                        if val in lbidxs]
         mar_meter.update(sum(matched_idx)/len(matched_idx), 1)
 
-    out_dict['mfr'] = mfr.meter.avg
-    out_dict['mar'] = mar.meter.avg
+    out_dict['mfr'] = mfr_meter.avg
+    out_dict['mar'] = mar_meter.avg
     out_dict['top_1'] = top_1_meter.avg
     out_dict['top_2'] = top_2_meter.avg
     out_dict['top_5'] = top_5_meter.avg
@@ -357,7 +359,8 @@ def eval(model, dataloader, epoch, mode='val'):
     mar_meter = AverageMeter()
     model.eval()
     out_dict = {}
-    for i in tqdm.trange(len(dataloader)):
+    #for i in tqdm.trange(len(dataloader)):
+    for i in tqdm.trange(1):
         g = dataloader[i]
         # lb = g.nodes['cfg'].data['tgt']
         if g is None:
@@ -447,7 +450,7 @@ if __name__ == '__main__':
     #list_models_paths = list(
     #    glob.glob(f"{ConfigClass.trained_dir_nbl}/model*best.pth"))
     list_models_paths = list(
-        glob.glob("./trained/nbl/Sep-27-2021/model*best.pth"))
+        glob.glob("./trained/nbl/Sep-27-2021/model*bestf1.pth"))
     for model_path in list_models_paths:
         epoch = int(model_path.split("_")[1])
         print(f"Evaluating {model_path}:")
@@ -458,7 +461,7 @@ if __name__ == '__main__':
     best_latest = max(int(model_path.split("_")[1])
                       for model_path in list_models_paths)
     #model_path = f"{ConfigClass.trained_dir_nbl}/model_{best_latest}_best.pth"
-    model_path = "./trained/nbl/Sep-27-2021/model_{best_latest}_best.pth"
+    model_path = f"./trained/nbl/Sep-27-2021/model_{best_latest}_bestf1.pth"
     model.load_state_dict(torch.load(model_path))
     print(f"Evaluation: {model_path}")
     dataset.val()

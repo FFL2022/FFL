@@ -76,6 +76,8 @@ class ConfigClassDat(object):
     trained_dir_nbl = './trained/nbl/{}'.format(today)
     result_dir_nbl = './result/nbl/{}'.format(today)
 
+    trained_dir_nbl_a = './trained/nbl/{}'.format(today)
+
     os.makedirs(result_dir_nbl, exist_ok=True)
     os.makedirs(trained_dir_nbl, exist_ok=True)
     os.makedirs(result_dir_codeflaws, exist_ok=True)

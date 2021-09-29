@@ -391,7 +391,7 @@ class NBLASTDGLDataset(DGLDataset):
         self.vocab_dict = dict(tuple(line.split()) for line in open(
             'preprocess/nbl_vocab.txt', 'r'))
 
-        super(NBLFullDGLDataset, self).__init__(
+        super(NBLASTDGLDataset, self).__init__(
             name='nbl_dgl',
             url=None,
             raw_dir=raw_dir,
