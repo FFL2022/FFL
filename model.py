@@ -508,7 +508,7 @@ class GCN_A_L_T_1(torch.nn.Module):
     def forward(self, h_g):
         h_g.nodes['ast'].data['h'] = self.ast_label_encoder(
             h_g.nodes['ast'].data['label'])
-
+        #print(h_g.nodes['ast'].data['h'])
         if h_g.number_of_nodes('test') > 0:
             h_g.nodes['test'].data['h'] = torch.cat(
                 h_g.number_of_nodes('test') *
@@ -594,7 +594,7 @@ class GCN_A_L(torch.nn.Module):
     def forward(self, h_g):
         h_g.nodes['ast'].data['h'] = self.ast_label_encoder(
             h_g.nodes['ast'].data['label'])
-
+        #print(h_g.nodes['ast'].data['h'])
         # Let's cache stuffs here
         # Passing message
         h_g = self.h_process1(h_g)

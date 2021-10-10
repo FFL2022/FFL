@@ -448,7 +448,7 @@ if __name__ == '__main__':
         num_classes_ast=3)
     # train(model, dataset, ConfigClass.n_epochs)
     #list_models_paths = list(
-    #    glob.glob(f"{ConfigClass.trained_dir_nbl}/model*best.pth"))
+    #    glob.glob(f"{ConfigClass.trained_dir_nbl}/model*bestf1.pth"))
     list_models_paths = list(
         glob.glob("./trained/nbl/Sep-27-2021/model*bestf1.pth"))
     for model_path in list_models_paths:
@@ -460,7 +460,7 @@ if __name__ == '__main__':
     print(ConfigClass.trained_dir_nbl)
     best_latest = max(int(model_path.split("_")[1])
                       for model_path in list_models_paths)
-    #model_path = f"{ConfigClass.trained_dir_nbl}/model_{best_latest}_best.pth"
+    #model_path = f"{ConfigClass.trained_dir_nbl}/model_{best_latest}_bestf1.pth"
     model_path = f"./trained/nbl/Sep-27-2021/model_{best_latest}_bestf1.pth"
     model.load_state_dict(torch.load(model_path))
     print(f"Evaluation: {model_path}")

@@ -205,6 +205,8 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     top_2_meter = AverageMeter()
     top_5_meter = AverageMeter()
     top_10_meter = AverageMeter()
+    mfr_meter = AverageMeter()
+    mar_meter = AverageMeter()
     model.eval()
     out_dict = {}
     line_mapping = {}
@@ -216,6 +218,8 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     top_2_meter.reset()
     top_5_meter.reset()
     top_10_meter.reset()
+    mfr_meter.reset()
+    mar_meter.reset()
     line_mapping_changed = False
     for i in tqdm.trange(len(dataloader)):
         real_idx = dataloader.active_idxs[i]
@@ -273,7 +277,8 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         if non_zeros_lbs.shape[0] == 0:
             continue
         lbidxs = torch.flatten(non_zeros_lbs).tolist()
-        k = min(len(all_lines), 10)
+        #k = min(len(all_lines), 10)
+        k = len(all_lines)
         _, indices = torch.topk(line_score_tensor, k)
         top_10_val = indices[:k].tolist()
         top_10_meter.update(int(any([idx in lbidxs
@@ -283,7 +288,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         top_5_val = indices[:k].tolist()
         top_5_meter.update(int(any([idx in lbidxs for idx in top_5_val])), 1)
 
-        k = min(len(all_lines), 2)
+        k = min(len(all_lines), 3)
         top_2_val = indices[:k].tolist()
         top_2_meter.update(int(any([idx in lbidxs for idx in top_2_val])), 1)
 
@@ -291,12 +296,22 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         top_1_val = indices[:k].tolist()
         top_1_meter.update(int(top_1_val[0] in lbidxs), 1)
         f1_meter.update(line_pred_tensor, line_tgt_tensor)
-
+        mfr_val = indices.tolist()
+        mfr_meter.update(next((idx+1 for idx, val in enumerate(mfr_val) if val in lbidxs), 0), 1)
+        mar_val = indices.tolist()
+        print(mar_val)
+        print(lbidxs)
+        matched_idx = [idx+1 for idx, val in enumerate(mar_val) if val in lbidxs]
+        print(matched_idx)
+        mar_meter.update(sum(matched_idx)/len(matched_idx), 1)
     out_dict['top_1'] = top_1_meter.avg
     out_dict['top_2'] = top_2_meter.avg
     out_dict['top_5'] = top_5_meter.avg
     out_dict['top_10'] = top_10_meter.avg
     out_dict['f1'] = f1_meter.get()
+    out_dict['mfr'] = mfr_meter.avg
+    out_dict['mar'] = mar_meter.avg
+
     print(out_dict)
     with open(ConfigClass.result_dir_nbl +
               '/eval_dict_by_line_e{}.json'.format(epoch), 'w') as f:
@@ -409,8 +424,8 @@ if __name__ == '__main__':
     #best_latest = max(int(model_path.split("_")[1])
     #                  for model_path in list_models_paths)
     #model_path = f"{ConfigClass.trained_dir_nbl}/model_{best_latest}_best.pth"
-    best_lastest = 13
-    model_path = "/home/theengineer/dataDrive3/GNNs/GNN4FL/trained/nbl/Sep-27-2021/model_13_besttop1.pth"
+    best_lastest = 17
+    model_path = "/home/theengineer/dataDrive3/GNNs/GNN4FL/trained/nbl/Sep-27-2021/model_17_besttop1.pth"
     model.load_state_dict(torch.load(model_path))
     print(f"Evaluation: {model_path}")
     dataset.val()
