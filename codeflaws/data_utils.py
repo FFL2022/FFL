@@ -2,11 +2,12 @@ import os
 from utils.utils import ConfigClass
 from cfg import cfg
 from codeflaws.data_format import key2bug, key2bugfile,\
-    key2fixfile, key2test_verdict, get_gcov_file
+    key2fixfile, key2test_verdict, get_gcov_file, test_verdict
 from graph_algos.nx_shortcuts import neighbors_out
 from utils.get_bug_localization import get_bug_localization
 from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.nx_graph_builder import build_nx_graph_cfg_ast
+from utils.gumtree_utils import GumtreeBasedAnnotation
 import pickle as pkl
 
 root = ConfigClass.codeflaws_data_path
@@ -59,6 +60,7 @@ def get_coverage_graph_cfg(key: str, nx_cfg, nline_removed):
         test_node = nx_cfg_cov.number_of_nodes()
         nx_cfg_cov.add_node(test_node, name=f'test_{i}',
                             ntype='test', graph='test')
+        link_type = 'pass' if tests_list[test] > 0 else 'fail'
         for node in nx_cfg_cov.nodes():
             # Check the line
             if nx_cfg_cov.nodes[node]['graph'] != 'cfg':
@@ -74,12 +76,7 @@ def get_coverage_graph_cfg(key: str, nx_cfg, nline_removed):
                     # The condition of parent node passing is less strict
                     if coverage_map[line] > 0:
                         nx_cfg_cov.add_edge(
-                            node, test_node, label='c_pass_test')
-                    else:
-                        # 2 case, since a common parent line might only have
-                        # 1 line
-                        nx_cfg_cov.add_edge(
-                            node, test_node, label='c_fail_test')
+                            node, test_node, label=f'c_{link_type}_test')
     return nx_cfg_cov
 
 
@@ -226,3 +223,37 @@ if os.path.exists(ConfigClass.codeflaws_all_keys):
 else:
     all_codeflaws_keys = get_all_keys()
     pkl.dump(all_codeflaws_keys, open(ConfigClass.codeflaws_all_keys, 'wb'))
+
+
+def get_nx_ast_node_annt_gumtree(key):
+    src_b = key2bugfile(key)
+    src_f = key2fixfile(key)
+    test_list = key2test_verdict(key)
+    cov_maps = []
+    verdicts = []
+    for i, test in enumerate(test_list):
+        covfile = get_gcov_file(key, test)
+        cov_maps.append(get_coverage(covfile, 0))
+        verdicts.append(test_list[test] > 0)
+
+    return GumtreeBasedAnnotation.build_nx_ast_cov_annt(
+        src_b, src_f, cov_maps,
+        verdicts,
+        GumtreeBasedAnnotation.build_nx_graph_node_annt)
+
+
+def get_nx_ast_stmt_annt_gumtree(key):
+    src_b = key2bugfile(key)
+    src_f = key2fixfile(key)
+    test_list = key2test_verdict(key)
+    cov_maps = []
+    verdicts = []
+    for i, test in enumerate(test_list):
+        covfile = get_gcov_file(key, test)
+        cov_maps.append(get_coverage(covfile, 0))
+        verdicts.append(test_list[test] > 0)
+
+    return GumtreeBasedAnnotation.build_nx_ast_cov_annt(
+        src_b, src_f, cov_maps,
+        verdicts,
+        GumtreeBasedAnnotation.build_nx_graph_stmt_annt)
