@@ -11,7 +11,6 @@ import os
 import random
 import pickle as pkl
 import json
-import fasttext
 import torch
 import tqdm
 
