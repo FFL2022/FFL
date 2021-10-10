@@ -1,6 +1,6 @@
 # GNN4FL
 ## Enviroment
-- Server 202.191.56.67: 
+- Server: 
 ```
 conda activate gbl
 ```
@@ -15,3 +15,11 @@ python3 dataset.py
 ```bash
 python3 -m selfunittest.test_nx_graph_build.py
 ```
+## New guide
+### Prerequisite:
+- anaconda
+- srcml
+- java 1.11 + (Version 16+ SDK)
+### Download:
+Download jars file [here](https://drive.google.com/file/d/1gM1j_sJRhrpcGoJgyd2Hyot-aZqIMRdl/view?usp=sharing) and unzip to the root directory
+

@@ -7,6 +7,8 @@ from codeflaws.data_format import key2bug, key2fix, key2bugfile,\
     key2fixfile, key2test_verdict, get_gcov_file
 from graph_algos.nx_shortcuts import combine_multi, neighbors_out
 import networkx as nx
+import json
+import os
 
 
 def augment_cfg_with_content(nx_cfg: nx.MultiDiGraph, code: list):
@@ -293,3 +295,15 @@ def augment_with_reverse_edge_cat(nx_g, ast_etypes, cfg_etypes):
 # TODO:
 # Tobe considered:
 # - Syntax error: statc num[3]; in graph 35
+
+
+def get_tree_diff(path1: str, path2: str):
+    # Note: Please change to JAVA 11 before running this
+    if path1.endswith('java'):
+        cmd = ConfigClass.ast_java_command + path1 + ' ' + path2
+    elif path1.endswith('c') or path1.endswith('cpp') or path1.endswith('cxx'):
+        cmd = ConfigClass.ast_cpp_command + path1 + ' ' + path2
+    json_str = '\n'.join(os.popen(cmd).read().split("\n")[1:])  # ignore 1st l
+    map_dict = json.loads(json_str)
+    map_dict['mapping'] = {int(k): int(v) for k, v in map_dict['mapping'].items()}
+    return map_dict

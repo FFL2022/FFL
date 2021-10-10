@@ -93,6 +93,17 @@ class ConfigClassDat(object):
     cfg_label_corpus = ["entry_node", "COMMON", "IF", "ELSE",
                         "ELSE_IF", "END_IF", "FOR", "WHILE",
                         "DO_WHILE", "PSEUDO", "CALL", "END"]
+    ast_cpp_command = "java -jar ./jars/ast_extractor_cpp.jar "
+    ast_java_command = "java -jar ./jars/ast_extractor_java.jar "
 
+    def check_is_stmt_java(ntype):
+        return 'Statement' in ntype
+
+    def check_is_stmt_cpp(ntype):
+        return ntype in ['for', 'while', 'switch', 'decl_stmt',
+                         'if_stmt', 'case', 'else', 'break', 'do',
+                         'continue', 'goto', 'empty_stmt', 'expr_stmt',
+                         'default', 'label', 'continue', 'return',
+                         'placeholder_stmt']
 
 ConfigClass = ConfigClassDat
