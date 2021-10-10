@@ -30,6 +30,7 @@ def get_cfg_ast_cov(key):
     tests_list = list(test_verdict[pid][vid].keys())
     nx_cat = nx_ca1.copy()
     for i, test in enumerate(tests_list):
+        link_type = 'pass' if test_verdict[pid][vid][test] == 1 else 'fail'
         covfile = f"{ConfigClass.nbl_test_path}/{pid}/{test}-{vid}.gcov"
         coverage_map = get_coverage(covfile, nline_removed1)
         t_n = nx_cat.number_of_nodes()
@@ -42,27 +43,29 @@ def get_cfg_ast_cov(key):
             end = nx_cat.nodes[n]['end_line']
             if end - start > 0:     # This is a parent node
                 continue
+            # Get corresponding lines
             for line in coverage_map:
                 if line == start:
                     # The condition of parent node passing is less strict
                     if coverage_map[line] > 0:
-                        nx_cat.add_edge(n, t_n, label='c_pass_test')
-                    for a_n in neighbors_out(
-                            n, nx_cat,
-                            filter_func=lambda u, v, k, e: e['label'] ==
-                            'corresponding_ast'):
                         nx_cat.add_edge(
-                            a_n, t_n, label='a_pass_test')
-                else:
-                    # 2 case, since a common parent line might only have
-                    # 1 line
-                    nx_cat.add_edge(n, t_n, label='c_fail_test')
-                    for a_n in neighbors_out(
+                            n, t_n, label=f'c_{link_type}_test')
+                        queue = neighbors_out(
                             n, nx_cat,
-                            filter_func=lambda u, v, k, e: e['label'] ==
-                            'corresponding_ast'):
-                        nx_cat.add_edge(
-                            a_n, t_n, label='a_fail_test')
+                            lambda u, v, k, e: e['label'] =='corresponding_ast')
+                        while len(queue) > 0:
+                            a_n = queue.pop()
+                            if len(neighbors_out(
+                                a_n, nx_cat,
+                                lambda u, v, k, e: v == t_n)
+                            ) > 0:
+                                # Visited
+                                continue
+                            nx_cat.add_edge(
+                                a_n, t_n, label=f'a_{link_type}_test')
+                            queue.extend(neighbors_out(
+                                a_n, nx_cat,
+                                lambda u, v, k, e: nx_cat.nodes[v]['graph'] == 'ast'))
     return nx_cat
 
 

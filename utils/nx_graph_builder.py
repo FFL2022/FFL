@@ -161,49 +161,49 @@ def get_coverage_graph_ast(key, nx_ast_g, nline_removed):
     return nx_ast_g
 
 def get_coverage_graph_cfg_ast(key: str, nx_cfg_ast, nline_removed):
-    nx_cfg_ast_cov = nx_cfg_ast.copy()
+    nx_cat = nx_cfg_ast.copy()  # CFG AST Test, CAT
 
     tests_list = key2test_verdict(key)
 
     for i, test in enumerate(tests_list):
         covfile = get_gcov_file(key, test)
         coverage_map = get_coverage(covfile, nline_removed)
-        test_node = nx_cfg_ast_cov.number_of_nodes()
-        nx_cfg_ast_cov.add_node(test_node, name=f'test_{i}',
+        t_n = nx_cat.number_of_nodes()
+        nx_cat.add_node(t_n, name=f'test_{i}',
                                 ntype='test', graph='test')
         link_type = 'fail' if 'neg' in covfile else 'pass'
-        for node in nx_cfg_ast_cov.nodes():
+        for c_n in nx_cat.nodes():
             # Check the line
-            if nx_cfg_ast_cov.nodes[node]['graph'] == 'cfg':
+            if nx_cat.nodes[c_n]['graph'] == 'cfg':
                 # Get corresponding lines
-                start = nx_cfg_ast_cov.nodes[node]['start_line']
-                end = nx_cfg_ast_cov.nodes[node]['end_line']
+                start = nx_cat.nodes[c_n]['start_line']
+                end = nx_cat.nodes[c_n]['end_line']
                 if end - start > 0:     # This is a parent node
                     continue
 
                 for line in coverage_map:
                     if line == start:
                         # The condition of parent node passing is less strict
-                        if coverage_map[line] > 0:
-                            nx_cfg_ast_cov.add_edge(
-                                node, test_node, label=f'c_{link_type}_test')
-                            queue = neighbors_out(
-                                node, nx_cfg_ast,
-                                lambda u, v, k, e: e['label'] =='corresponding_ast')
-                            while len(queue) > 0:
-                                node = queue.pop()
-                                if len(neighbors_out(
-                                    node, nx_cfg_ast_cov,
-                                    lambda u, v, k, e: v == test_node)
-                                ) > 0:
-                                    # Visited
-                                    continue
-                                nx_cfg_ast_cov.add_edge(
-                                    node, test_node, label=f'a_{link_type}_test')
-                                queue.extend(neighbors_out(
-                                    node, nx_cfg_ast_cov,
-                                    lambda u, v, k, e: nx_cfg_ast_cov.nodes[v]['graph'] == 'ast'))
-    return nx_cfg_ast_cov
+                        if coverage_map[line] <= 0:
+                            continue
+                        nx_cat.add_edge(
+                            c_n, t_n, label=f'c_{link_type}_test')
+                        queue = neighbors_out(
+                            c_n, nx_cat,
+                            lambda u, v, k, e: e['label'] =='corresponding_ast')
+                        while len(queue) > 0:
+                            a_n = queue.pop()
+                            if len(neighbors_out(
+                                a_n, nx_cat, lambda u, v, k, e: v == t_n)
+                            ) > 0:
+                                # Visited
+                                continue
+                            nx_cat.add_edge(
+                                a_n, t_n, label=f'a_{link_type}_test')
+                            queue.extend(neighbors_out(
+                                a_n, nx_cat,
+                                lambda u, v, k, e: nx_cat.nodes[v]['graph'] == 'ast'))
+    return nx_cat
 
 
 def build_nx_cfg_coverage_codeflaws(key):
