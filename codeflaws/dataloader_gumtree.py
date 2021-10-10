@@ -17,8 +17,8 @@ import tqdm
 from json import JSONDecodeError
 
 
-class CodeflawsGumtreeNxStmtDataset(object):
-    def __init__(self, raw_dataset_dir=ConfigClass.raw_dir,
+class CodeflawsGumtreeNxStatementDataset(object):
+    def __init__(self, raw_dataset_dir=ConfigClass.codeflaws_data_path,
                  save_dir=ConfigClass.preprocess_dir_codeflaws):
         self.save_dir = save_dir
         self.info_path = os.path.join(
@@ -71,6 +71,7 @@ class CodeflawsGumtreeNxStmtDataset(object):
                  nx_g.nodes[n]['graph'] == 'ast'
                  and GumtreeASTUtils.check_is_stmt_cpp(nx_g.nodes[n]['ntype'])]
             ))
+            break
 
         self.ast_types = list(set(self.ast_types))
         self.ast_etypes = list(set(self.ast_etypes))
@@ -97,7 +98,7 @@ class CodeflawsGumtreeNxStmtDataset(object):
 
 
 class CodeflawsGumtreeNxNodeDataset(object):
-    def __init__(self, raw_dataset_dir=ConfigClass.raw_dir,
+    def __init__(self, raw_dataset_dir=ConfigClass.codeflaws_data_path,
                  save_dir=ConfigClass.preprocess_dir_codeflaws):
         self.save_dir = save_dir
         self.info_path = os.path.join(
@@ -175,18 +176,18 @@ class CodeflawsGumtreeNxNodeDataset(object):
         return os.path.exists(self.info_path)
 
 
-class CodeflawsDGLStatementDataset(DGLDataset):
+class CodeflawsGumtreeDGLStatementDataset(DGLDataset):
     def __init__(self, raw_dir=ConfigClass.codeflaws_data_path,
                  save_dir=ConfigClass.preprocess_dir_codeflaws):
         self.graph_save_path = os.path.join(
             save_dir, 'dgl_nx_gumtree_stmt.bin')
         self.info_path = os.path.join(
             save_dir, 'dgl_nx_gumtree_stmt_info.pkl')
-        self.nx_dataset = CodeflawsGumtreeNxStmtDataset(raw_dir, save_dir)
+        self.nx_dataset = CodeflawsGumtreeNxStatementDataset(raw_dir, save_dir)
         self.vocab_dict = dict(tuple(line.split()) for line in open(
             'preprocess/codeflaws_vocab.txt', 'r'))
 
-        super(CodeflawsDGLStatementDataset, self).__init__(
+        super(CodeflawsGumtreeDGLStatementDataset, self).__init__(
             name='codeflaws_dgl',
             url=None,
             raw_dir=raw_dir,
@@ -322,6 +323,7 @@ class CodeflawsDGLStatementDataset(DGLDataset):
             self.gs.append(g)
             if i == 0:
                 self.ast_content_dim = g.nodes['ast'].data['content'].shape[-1]
+            break
 
     def __len__(self):
         return len(self.active_idxs)
