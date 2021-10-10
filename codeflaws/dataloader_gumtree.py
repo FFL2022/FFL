@@ -329,4 +329,4 @@ class CodeflawsDGLStatementDataset(DGLDataset):
 
     def __getitem__(self, i):
         return self.gs[self.active_idxs[i]], \
-            self.stmt_idxss[self.active_idxs[i]]
+            self.stmt_idxs[self.active_idxs[i]]
