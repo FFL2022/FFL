@@ -161,8 +161,6 @@ class CodeflawsFullDGLDataset(DGLDataset):
         self.train_idxs = info_dict['train_idxs']
         self.val_idxs = info_dict['val_idxs']
         self.test_idxs = info_dict['test_idxs']
-        self.test_idxs = list(self.master_idxs[
-            int(len(self.gs)*0.8):int(len(self.gs))])
         self.train()
 
     def save(self):
