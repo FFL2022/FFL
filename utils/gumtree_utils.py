@@ -31,7 +31,7 @@ class GumtreeASTUtils:
 
     def check_is_stmt_cpp(ntype):
         return ntype in ['for', 'while', 'switch', 'decl_stmt',
-                         'if_stmt', 'case', 'else', 'break', 'do',
+                         'if_stmt', 'case', 'break', 'do',
                          'continue', 'goto', 'empty_stmt', 'expr_stmt',
                          'default', 'label', 'continue', 'return',
                          'placeholder_stmt']
@@ -91,8 +91,7 @@ class GumtreeBasedAnnotation:
             child_stmts = neighbors_out(
                 node, nx_ast, lambda u, v, k, e: GumtreeASTUtils.check_is_stmt_cpp(
                             nx_ast.nodes[v]['ntype']))
-            if len(child_stmts) > 0:
-                child_stmts = neighbors_out(node, nx_ast)
+            if len(child_stmts) > 0:# or nx_ast.nodes[node]['ntype'] in ['block_content', 'if_stmt', 'for', 'switch', 'case']:
                 new_node = max(nx_ast.nodes()) + 1
                 if len(child_stmts) > 0:
                     end_line = max([nx_ast.nodes[c]['end_line']

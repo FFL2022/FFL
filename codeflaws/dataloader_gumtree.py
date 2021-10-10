@@ -49,11 +49,17 @@ class CodeflawsGumtreeNxStatementDataset(object):
         bar = tqdm.tqdm(list(enumerate(all_codeflaws_keys)))
         bar.set_description('Loading Nx Data with gumtree')
         for i, key in bar:
+
             try:
-                nx_g = get_nx_ast_stmt_annt_gumtree(key)
-                pkl.dump(nx_g, open(
-                    f'{self.save_dir}/nx_gumtree_stmt_{i}.pkl', 'wb')
-                )
+                if not os.path.exists(f'{self.save_dir}/nx_gumtree_stmt_{i}.pkl'):
+                    nx_g = get_nx_ast_stmt_annt_gumtree(key)
+                    pkl.dump(nx_g, open(
+                        f'{self.save_dir}/nx_gumtree_stmt_{i}.pkl', 'wb')
+                    )
+                else:
+                    nx_g = pkl.load(open(
+                        f'{self.save_dir}/nx_gumtree_stmt_{i}.pkl', 'rb')
+                    )
             except JSONDecodeError:
                 self.err_idxs.append(i)
                 count = len(self.err_idxs)
@@ -73,7 +79,6 @@ class CodeflawsGumtreeNxStatementDataset(object):
                  nx_g.nodes[n]['graph'] == 'ast'
                  and GumtreeASTUtils.check_is_stmt_cpp(nx_g.nodes[n]['ntype'])]
             ))
-            break
 
         self.ast_types = list(set(self.ast_types))
         self.ast_etypes = list(set(self.ast_etypes))
@@ -327,7 +332,6 @@ class CodeflawsGumtreeDGLStatementDataset(DGLDataset):
             self.gs.append(g)
             if i == 0:
                 self.ast_content_dim = g.nodes['ast'].data['content'].shape[-1]
-            break
 
     def __len__(self):
         return len(self.active_idxs)
