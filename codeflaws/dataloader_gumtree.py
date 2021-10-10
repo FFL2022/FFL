@@ -46,7 +46,6 @@ class CodeflawsGumtreeNxStmtDataset(object):
         self.stmt_nodes = []
         self.keys = []
         self.err_idxs = []
-        error_instance = []
         bar = tqdm.tqdm(list(enumerate(all_codeflaws_keys)))
         bar.set_description('Loading Nx Data with gumtree')
         for i, key in bar:
@@ -126,7 +125,6 @@ class CodeflawsGumtreeNxNodeDataset(object):
         self.stmt_nodes = []
         self.keys = []
         self.err_idxs = []
-        error_instance = []
         bar = tqdm.tqdm(list(enumerate(all_codeflaws_keys)))
         bar.set_description('Loading Nx Data Node level with gumtree')
         for i, key in bar:
