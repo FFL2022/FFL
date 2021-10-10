@@ -29,7 +29,6 @@ class CodeflawsGumtreeNxStatementDataset(object):
             self.process()
             self.save()
 
-        self.active_idxs = list(range(len(self.ast_lbs)))
 
     def len(self):
         return len(self.active_idxs)
@@ -37,7 +36,7 @@ class CodeflawsGumtreeNxStatementDataset(object):
     def __getitem__(self, i):
         return pkl.load(open(
             f'{self.save_dir}/nx_gumtree_stmt_{self.active_idxs[i]}', 'rb')),\
-            self.stmt_nodes[self.active_idxs[i]]
+            self.stmt_nodes[i]
 
     def process(self):
         self.ast_types = []
@@ -45,6 +44,8 @@ class CodeflawsGumtreeNxStatementDataset(object):
         self.stmt_nodes = []
         self.keys = []
         self.err_idxs = []
+        self.active_idxs = []
+
         bar = tqdm.tqdm(list(enumerate(all_codeflaws_keys)))
         bar.set_description('Loading Nx Data with gumtree')
         for i, key in bar:
@@ -58,6 +59,7 @@ class CodeflawsGumtreeNxStatementDataset(object):
                 count = len(self.err_idxs)
                 print(f"Total syntax error files: {count}")
                 continue
+            self.active_idxs.append(i)
             self.keys.append(key)
             self.ast_types.extend(
                 [nx_g.nodes[node]['ntype'] for node in nx_g.nodes()
@@ -82,7 +84,8 @@ class CodeflawsGumtreeNxStatementDataset(object):
         pkl.dump(
             {
                 'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes,
-                'keys': self.keys, 'err_idxs': self.err_idxs
+                'keys': self.keys, 'err_idxs': self.err_idxs,
+                'active_idxs': self.active_idxs
             },
             open(self.info_path, 'wb'))
 
@@ -92,6 +95,7 @@ class CodeflawsGumtreeNxStatementDataset(object):
         self.ast_etypes = info_dict['ast_etypes']
         self.keys = info_dict['keys']
         self.err_idxs = info_dict['err_idxs']
+        self.active_idxs = info_dict['active_idxs']
 
     def has_cache(self):
         return os.path.exists(self.info_path)
