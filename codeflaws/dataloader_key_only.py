@@ -3,7 +3,7 @@ from dgl import save_graphs, load_graphs
 import dgl
 from utils.utils import ConfigClass
 from codeflaws.data_utils import get_cfg_ast_cov, all_codeflaws_keys
-from utils.nx_graph_builder import augment_with_reverse_edge
+from utils.nx_graph_builder import augment_with_reverse_edge_cat
 import os
 import random
 import pickle as pkl
@@ -236,7 +236,7 @@ class CodeflawsFullDGLDataset(DGLDataset):
             else:
                 line2cfg[nx_g.nodes[n]['start_line']].append(n)
         '''
-        nx_g = augment_with_reverse_edge(nx_g, self.nx_dataset.ast_etypes,
+        nx_g = augment_with_reverse_edge_cat(nx_g, self.nx_dataset.ast_etypes,
                                          self.nx_dataset.cfg_etypes)
 
         for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
@@ -444,8 +444,9 @@ class CodeflawsFullDGLDatasetCFG(DGLDataset):
                 line2cfg[nx_g.nodes[n]['start_line']] = [n]
             else:
                 line2cfg[nx_g.nodes[n]['start_line']].append(n)
-        nx_g = augment_with_reverse_edge(nx_g, self.nx_dataset.ast_etypes,
-                                         self.nx_dataset.cfg_etypes)
+        nx_g = augment_with_reverse_edge_cat(
+            nx_g, self.nx_dataset.ast_etypes,
+            self.nx_dataset.cfg_etypes)
 
         for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
             if nx_g.nodes[u]['graph'] == 'cfg' or nx_g.nodes[v]['graph'] == 'cfg':
@@ -654,8 +655,9 @@ class CodeflawsASTDGLDataset(DGLDataset):
             else:
                 line2cfg[nx_g.nodes[n]['start_line']].append(n)
         '''
-        nx_g = augment_with_reverse_edge(nx_g, self.nx_dataset.ast_etypes,
-                                         self.nx_dataset.cfg_etypes)
+        nx_g = augment_with_reverse_edge_cat(
+            nx_g, self.nx_dataset.ast_etypes,
+            self.nx_dataset.cfg_etypes)
 
         for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
             if nx_g.nodes[u]['graph'] == 'cfg' or nx_g.nodes[v]['graph'] == 'cfg':
