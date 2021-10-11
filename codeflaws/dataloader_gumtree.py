@@ -35,7 +35,7 @@ class CodeflawsGumtreeNxStatementDataset(object):
 
     def __getitem__(self, i):
         return pkl.load(open(
-            f'{self.save_dir}/nx_gumtree_stmt_{self.active_idxs[i]}', 'rb')),\
+            f'{self.save_dir}/nx_gumtree_stmt_{self.active_idxs[i]}.pkl', 'rb')),\
             self.stmt_nodes[i]
 
     def process(self):
