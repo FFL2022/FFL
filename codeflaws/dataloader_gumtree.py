@@ -223,7 +223,6 @@ class CodeflawsGumtreeDGLStatementDataset(DGLDataset):
         self.gs = load_graphs(self.graph_save_path)[0]
         self.meta_graph = self.construct_edge_metagraph()
         info_dict = pkl.load(open(self.info_path, 'rb'))
-        self.ast_content_dim = info_dict['ast_content_dim']
         self.master_idxs = info_dict['master_idxs']
         self.train_idxs = info_dict['train_idxs']
         self.val_idxs = info_dict['val_idxs']
@@ -242,7 +241,6 @@ class CodeflawsGumtreeDGLStatementDataset(DGLDataset):
         self.test_idxs = list(self.master_idxs[
             int(len(self.gs)*0.9):int(len(self.gs))])
         pkl.dump({
-            'ast_content_dim': self.ast_content_dim,
             'master_idxs': self.master_idxs,
             'train_idxs': self.train_idxs,
             'val_idxs': self.val_idxs,
@@ -332,8 +330,6 @@ class CodeflawsGumtreeDGLStatementDataset(DGLDataset):
             g, stmt_idx = self.convert_from_nx_to_dgl(nx_g, stmt_nodes)
             stmt_idxs.append(torch.tensor(stmt_idxs).long())
             self.gs.append(g)
-            if i == 0:
-                self.ast_content_dim = g.nodes['ast'].data['content'].shape[-1]
 
     def __len__(self):
         return len(self.active_idxs)
