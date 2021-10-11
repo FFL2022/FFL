@@ -90,6 +90,7 @@ class CodeflawsGumtreeNxStatementDataset(object):
             {
                 'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes,
                 'keys': self.keys, 'err_idxs': self.err_idxs,
+                'stmt_nodes': self.stmt_nodes,
                 'active_idxs': self.active_idxs
             },
             open(self.info_path, 'wb'))
@@ -100,6 +101,7 @@ class CodeflawsGumtreeNxStatementDataset(object):
         self.ast_etypes = info_dict['ast_etypes']
         self.keys = info_dict['keys']
         self.err_idxs = info_dict['err_idxs']
+        self.stmt_nodes = info_dict['stmt_nodes']
         self.active_idxs = info_dict['active_idxs']
 
     def has_cache(self):
@@ -273,7 +275,7 @@ class CodeflawsGumtreeDGLStatementDataset(DGLDataset):
         for k in self.meta_graph:
             all_canon_etypes[k] = []
         nx_g = augment_with_reverse_edge_cat(nx_g, self.nx_dataset.ast_etypes,
-                                             self.nx_dataset.cfg_etypes)
+                                             [])
 
         for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
             if nx_g.nodes[u]['graph'] == 'cfg' or nx_g.nodes[v]['graph'] == 'cfg':
