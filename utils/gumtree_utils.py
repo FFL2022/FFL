@@ -91,7 +91,7 @@ class GumtreeBasedAnnotation:
             child_stmts = neighbors_out(
                 node, nx_ast, lambda u, v, k, e: GumtreeASTUtils.check_is_stmt_cpp(
                             nx_ast.nodes[v]['ntype']))
-            if len(child_stmts) > 0:# or nx_ast.nodes[node]['ntype'] in ['block_content', 'if_stmt', 'for', 'switch', 'case']:
+            if len(child_stmts) > 0 or nx_ast.nodes[node]['ntype'] in ['block_content',  'case']:
                 new_node = max(nx_ast.nodes()) + 1
                 if len(child_stmts) > 0:
                     end_line = max([nx_ast.nodes[c]['end_line']
@@ -108,9 +108,7 @@ class GumtreeBasedAnnotation:
                                 )
                 nx_ast.add_edge(node, new_node, label='parent_child')
                 child_stmts = child_stmts + [len(nx_ast.nodes())-1]
-                queue.extend(child_stmts)
-            else:
-                queue.extend(neighbors_out(node, nx_ast))
+            queue.extend(neighbors_out(node, nx_ast))
         return nx_ast
     def check_statement_elem_removed(
             n, nx_ast, ldels, check_func=GumtreeASTUtils.check_is_stmt_java):
@@ -172,9 +170,14 @@ class GumtreeBasedAnnotation:
             dst_p = neighbors_in(s_i, nx_ast_dst)[0]
             dst_prev_sibs = GumtreeASTUtils.get_prev_sibs(s_i, nx_ast_dst)
             dst_prev_sibs = [n for n in dst_prev_sibs if n not in lisrts]
+            src_p = rev_map_dict[dst_p]
+            # print("node: ", src_p)
+            # for n in neighbors_out(src_p, nx_ast_src):
+            #    print(nx_ast_src.nodes[n])
             if len(dst_prev_sibs) > 0:
                 src_prev_sib = rev_map_dict[max(dst_prev_sibs)]
                 try:
+                    # print(GumtreeASTUtils.get_next_sibs(src_prev_sib, nx_ast_src))
                     src_next_sib = min(
                         GumtreeASTUtils.get_next_sibs(src_prev_sib, nx_ast_src)
                     )
