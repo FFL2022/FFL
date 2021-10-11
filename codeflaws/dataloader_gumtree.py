@@ -34,9 +34,16 @@ class CodeflawsGumtreeNxStatementDataset(object):
         return len(self.active_idxs)
 
     def __getitem__(self, i):
-        return pkl.load(open(
-            f'{self.save_dir}/nx_gumtree_stmt_{self.active_idxs[i]}.pkl', 'rb')),\
-            self.stmt_nodes[i]
+        try:
+            nx_g = pkl.load(open(
+                f'{self.save_dir}/nx_gumtree_stmt_{self.active_idxs[i]}.pkl', 'rb'))
+        except UnicodeDecodeError:
+            nx_g = get_nx_ast_stmt_annt_gumtree(all_codeflaws_keys[self.active_idxs[i]])
+            pkl.dump(nx_g,
+                     open(
+                         f'{self.save_dir}/nx_gumtree_stmt_{self.active_idxs[i]}.pkl', 'wb')
+                    )
+        return nx_g, self.stmt_nodes[i]
 
     def process(self):
         self.ast_types = []
