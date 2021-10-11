@@ -95,7 +95,7 @@ class CodeflawsGumtreeNxStatementDataset(object):
             open(self.info_path, 'wb'))
 
     def load(self):
-        info_dict = pkl.load(open(self.info_dict, 'rb'))
+        info_dict = pkl.load(open(self.info_path, 'rb'))
         self.ast_types = info_dict['ast_types']
         self.ast_etypes = info_dict['ast_etypes']
         self.keys = info_dict['keys']
