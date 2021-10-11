@@ -193,10 +193,14 @@ def eval(model, dataloader, epoch):
     model.eval()
     bar = tqdm.trange(len(dataloader))
     bar.set_description(f'Eval epoch {epoch}')
-    best_top1 = 0
-    best_top2 = 0
-    best_top5 = 0
-    best_top10 = 0
+    mean_ast_loss = AverageMeter()
+    mean_ast_acc = AverageMeter()
+
+    top_1_meter = AverageMeter()
+    top_2_meter = AverageMeter()
+    top_5_meter = AverageMeter()
+    top_10_meter = AverageMeter()
+
     for i in bar:
         g, mask_stmt = dataloader[i]
         if g is None:
@@ -220,49 +224,45 @@ def eval(model, dataloader, epoch):
             continue
 
         _, ast_cal = torch.max(
-            g.nodes['ast'].data['logits'][mask_stmt].detach().cpu(),
-            dim=1)
+                g.nodes['ast'].data['logits'][mask_stmt].detach().cpu(),
+                dim=1)
 
-        ast_lb = ast_lb.detach().cpu()
         # ALl bugs vs not bugs count
-        # But recall are filtered
         preds = g.nodes['ast'].data['pred'][mask_stmt, 1].detach().cpu()
-
-
-
         k = min(mask_stmt.shape[0], 10)
         _, indices = torch.topk(preds, k)
         top_10_val = indices[:k].tolist()
-        best_top10 = max(
-            int(any([idx in ast_lbidxs for idx in top_10_val])), best_top10)
+        top_10_meter.update(
+            int(any([idx in ast_lbidxs for idx in top_10_val])), 1)
 
         k = min(mask_stmt.shape[0], 5)
         top_5_val = indices[:k].tolist()
-        best_top5 = max(
-            int(any([idx in ast_lbidxs for idx in top_5_val])), best_top5)
+        top_5_meter.update(
+            int(any([idx in ast_lbidxs for idx in top_5_val])), 1)
 
         k = min(mask_stmt.shape[0], 2)
         top_2_val = indices[:k].tolist()
-        best_top2 = max(int(any([idx in ast_lbidxs for idx in top_2_val])),
-                        best_top2)
+        top_2_meter.update(
+            int(any([idx in ast_lbidxs for idx in top_2_val])), 1)
 
         k = min(mask_stmt.shape[0], 1)
         top_1_val = indices[:k].tolist()
-        best_top1 = max(int(top_1_val[0] in ast_lbidxs), best_top1)
+        top_1_meter.update(int(top_1_val[0] in ast_lbidxs), 1)
 
         # mean_loss.update(cfg_loss.item(), g.number_of_nodes('ast'))
         mean_ast_loss.update(ast_loss.item(), mask_stmt.shape[0])
         mean_ast_acc.update(
             torch.sum(ast_cal == ast_lb).item()/g.number_of_nodes('ast'),
             g.number_of_nodes('ast'))
+
         f1_meter.update(ast_cal, ast_lb)
         bar.set_postfix(ast_loss=ast_loss.item(), acc=mean_ast_acc.avg)
 
     out_dict = {}
-    out_dict['top_1'] = best_top1
-    out_dict['top_2'] = best_top2
-    out_dict['top_5'] = best_top5
-    out_dict['top_10'] = best_top10
+    out_dict['top_1'] = top_1_meter.avg
+    out_dict['top_2'] = top_2_meter.avg
+    out_dict['top_5'] = top_5_meter.avg
+    out_dict['top_10'] = top_10_meter.avg
     out_dict['mean_acc'] = mean_ast_acc.avg
     out_dict['mean_loss'] = mean_ast_loss.avg
     out_dict['mean_ast_acc'] = mean_ast_acc.avg
@@ -274,10 +274,10 @@ def eval(model, dataloader, epoch):
               '/eval_dict_e{}.json'.format(epoch), 'w') as f:
         json.dump(out_dict, f, indent=2)
     print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
-          f"top 10 acc: {best_top10}, " +
-          f"top 5 acc: {best_top5}, " +
-          f"top 2 acc: {best_top2}, " +
-          f"top 1 acc: {best_top1}, " +
+          f"top 10 acc: {top_1_meter.avg}, " +
+          f"top 5 acc: {top_1_meter.avg}, " +
+          f"top 2 acc: {top_1_meter.avg}, " +
+          f"top 1 acc: {top_1_meter.avg}, " +
           f'f1: {f1}'
           )
     return out_dict
