@@ -328,7 +328,7 @@ class CodeflawsGumtreeDGLStatementDataset(DGLDataset):
         stmt_idxs = []
         for i, (nx_g, stmt_nodes) in bar:
             g, stmt_idx = self.convert_from_nx_to_dgl(nx_g, stmt_nodes)
-            stmt_idxs.append(torch.tensor(stmt_idxs).long())
+            stmt_idxs.append(torch.tensor(stmt_idx).long())
             self.gs.append(g)
 
     def __len__(self):
