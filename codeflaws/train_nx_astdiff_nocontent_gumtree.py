@@ -135,8 +135,8 @@ def train(model, dataloader, n_epochs, start_epoch=0):
         if f1_meter.get()['aux_f1'] != 'unk':
             best_f1_train = max(best_f1_train, f1_meter.get()['aux_f1'])
 
-        with open(Config.result_dir_d4j +
-                    f'/training_dict_e{epoch}.json', 'w') as f:
+        with open(ConfigClass.trained_dir_codeflaws +
+                    f'/training_dict_gumtree_e{epoch}.json', 'w') as f:
             json.dump(out_dict, f, indent=2)
         print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
                 f"top 10 acc: {top_10_meter.avg}, " +
@@ -145,28 +145,28 @@ def train(model, dataloader, n_epochs, start_epoch=0):
                 f"top 1 acc {top_1_meter.avg}, ")
         print(f1_meter.get())
 
-        if epoch % Config.save_rate == 0:
+        if epoch % ConfigClass.save_rate == 0:
             eval_dict = eval(model, dataloader, epoch)
             if eval_dict['f1'] != "unk":
                 if eval_dict['f1'] > best_f1:
                     best_f1 = eval_dict['f1']
                     torch.save(model.state_dict(), os.path.join(
-                        Config.trained_dir_d4j, f'model_{epoch}_best_f1.pth'))
+                        ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_f1_gumtree.pth'))
             if eval_dict['top_1'] > best_top1:
                 torch.save(model.state_dict(), os.path.join(
-                    Config.trained_dir_d4j, f'model_{epoch}_best_top1.pth'))
+                    ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_top1_gumtree.pth'))
                 best_top1 = eval_dict['top_1']
             if eval_dict['top_2'] > best_top2:
                 torch.save(model.state_dict(), os.path.join(
-                    Config.trained_dir_d4j, f'model_{epoch}_best_top2.pth'))
+                    ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_top2_gumtree.pth'))
                 best_top2 = eval_dict['top_2']
             if eval_dict['top_5'] > best_top5:
                 torch.save(model.state_dict(), os.path.join(
-                    Config.trained_dir_d4j, f'model_{epoch}_best_top5.pth'))
+                    ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_top5_gumtree.pth'))
                 best_top5 = eval_dict['top_5']
             if eval_dict['top_10'] > best_top10:
                 torch.save(model.state_dict(), os.path.join(
-                    Config.trained_dir_d4j, f'model_{epoch}_best_top10.pth'))
+                    ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_top10_gumtree.pth'))
                 best_top10 = eval_dict['top_10']
     return {'top1_train': best_top1_train,
             'top1_val': best_top1,
@@ -226,10 +226,7 @@ def eval(model, dataloader, epoch):
         ast_lb = ast_lb.detach().cpu()
         # ALl bugs vs not bugs count
         # But recall are filtered
-        preds = (
-            g.nodes['ast'].data['pred'][mask_stmt, 1] *
-            mask[mask_stmt]
-        ).detach().cpu()
+        preds = g.nodes['ast'].data['pred'][mask_stmt, 1].detach().cpu()
 
 
 
@@ -273,7 +270,7 @@ def eval(model, dataloader, epoch):
     f1 = f1_meter.get()['aux_f1']
 
     out_dict['f1'] = f1
-    with open(Config.result_dir_d4j +
+    with open(ConfigClass.result_dir_codeflaws +
               '/eval_dict_e{}.json'.format(epoch), 'w') as f:
         json.dump(out_dict, f, indent=2)
     print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
@@ -293,7 +290,7 @@ if __name__ == '__main__':
 
     model = GCN_A_L_T_1(
         128, meta_graph,
-        device=device, 
+        device=device,
         num_ast_labels=len(dataset.nx_dataset.ast_types),
         num_classes_ast=2)
 
