@@ -112,8 +112,8 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             # mean_loss.update(cfg_loss.item(), g.number_of_nodes('ast'))
             mean_ast_loss.update(ast_loss.item(), mask_stmt.shape[0])
             mean_ast_acc.update(
-                torch.sum(ast_cal == ast_lb).item()/g.number_of_nodes('ast'),
-                g.number_of_nodes('ast'))
+                torch.sum(ast_cal.cpu() == ast_lb.cpu()).item()/mask_stmt.shape[0],
+                mask_stmt.shape[0])
             f1_meter.update(ast_cal, ast_lb)
             bar.set_postfix(ast_loss=ast_loss.item(), acc=mean_ast_acc.avg)
 
@@ -252,8 +252,8 @@ def eval(model, dataloader, epoch):
         # mean_loss.update(cfg_loss.item(), g.number_of_nodes('ast'))
         mean_ast_loss.update(ast_loss.item(), mask_stmt.shape[0])
         mean_ast_acc.update(
-            torch.sum(ast_cal == ast_lb).item()/g.number_of_nodes('ast'),
-            g.number_of_nodes('ast'))
+            torch.sum(ast_cal.cpu() == ast_lb.cpu()).item()/mask_stmt.shape[0],
+            mask_stmt.shape[0])
 
         f1_meter.update(ast_cal, ast_lb)
         bar.set_postfix(ast_loss=ast_loss.item(), acc=mean_ast_acc.avg)

@@ -16,11 +16,13 @@ def test1():
                                      f"visualize_nx_graphs/cfg_ast_diff_{i}.png")
                                      '''
 def test2():
-    idx = 471
-    key = all_codeflaws_keys[idx]
-    nx_g = get_nx_ast_stmt_annt_gumtree(key)
-    os.makedirs('visualize_nx_graphs', exist_ok=True)
-    draw_utils.ast_to_agraph(nx_g.subgraph([n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']),
-                             f"visualize_nx_graphs/ast_gumtree_diff_{idx}.png")
+    for i, key in enumerate(all_codeflaws_keys):
+        try:
+            nx_g = get_nx_ast_stmt_annt_gumtree(key)
+            os.makedirs('visualize_nx_graphs', exist_ok=True)
+            draw_utils.ast_to_agraph(nx_g.subgraph([n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']),
+                                    f"visualize_nx_graphs/ast_gumtree_diff_{i}.png")
+        except:
+            continue
 if __name__ == '__main__':
     test2()

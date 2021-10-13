@@ -170,6 +170,40 @@ def careful_slow_ast_match(ast1: nx.MultiDiGraph, ast2: nx.MultiDiGraph):
     return forward_mapping, backward_mapping
 
 
+def get_asts_mapping(file1, file2):
+    nline_removed1 = remove_lib(file1)
+    graph = cfg.CFG("temp.c")
+
+    with open("temp.c", 'r') as f:
+        code = [line for line in f]
+
+    # Full ast false for easier matching
+    nx_cfg1, nx_ast1, _ = build_nx_graph_cfg_ast(graph, code, full_ast=True)
+
+    nline_removed2 = remove_lib(file2)
+    graph = cfg.CFG("temp.c")
+    with open("temp.c", 'r') as f:
+        code = [line for line in f]
+
+    nx_cfg2, nx_ast2, _ = build_nx_graph_cfg_ast(graph, code, full_ast=True)
+    # 2 Scenarios
+    # 1.
+    # Take differences betweeen AST and AST
+
+    forward_mapping, backward_mapping = full_ast_match(nx_ast1, nx_ast2)
+    deleteds = [n for n in nx_ast1.nodes() if n not in forward_mapping]
+    inserteds = [n for n in nx_ast1.nodes() if n not in backward_mapping]
+    map_dict = {'mapping': forward_mapping,
+                'rev_map_dict': backward_mapping,
+                'deleted': deleteds,
+                'inserted': inserteds
+                }
+    # #TODO: remember doing this after you done labeling
+    # nx_ast1 = convert_from_arity_to_rel(nx_ast1)
+    # nx_ast2 = convert_from_arity_to_rel(nx_ast2)
+    return map_dict, nx_ast1, nx_ast2
+
+
 def get_bug_localization(file1, file2):
     nline_removed1 = remove_lib(file1)
     graph = cfg.CFG("temp.c")
