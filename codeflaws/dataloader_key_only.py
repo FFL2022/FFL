@@ -17,7 +17,7 @@ embedding_model = fasttext.load_model(ConfigClass.pretrained_fastext)
 
 
 class CodeflawsNxDataset(object):
-    def __init__(self, raw_dataset_dir=ConfigClass.raw_dir,
+    def __init__(self, raw_dataset_dir=ConfigClass.codeflaws_data_path,
                  save_dir=ConfigClass.preprocess_dir_codeflaws):
         self.save_dir = save_dir
         self.info_path = os.path.join(
