@@ -103,7 +103,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             top_5_meter.update(
                 int(any([idx in ast_lbidxs for idx in top_5_val])), 1)
 
-            k = min(g.number_of_nodes('ast'), 2)
+            k = min(g.number_of_nodes('ast'), 3)
             top_3_val = indices[:k].tolist()
             top_3_meter.update(
                 int(any([idx in ast_lbidxs for idx in top_3_val])), 1)
@@ -147,7 +147,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
                   f"top 10 acc: {top_10_meter.avg}, " +
                   f"top 5 acc: {top_5_meter.avg}, " +
-                  f"top 2 acc {top_3_meter.avg}" +
+                  f"top 3 acc {top_3_meter.avg}" +
                   f"top 1 acc {top_1_meter.avg}")
             print(f1_meter.get())
         if epoch % ConfigClass.save_rate == 0:
@@ -357,7 +357,7 @@ def eval(model, dataloader, epoch, mode='val'):
         top_5_meter.update(
             int(any([idx in ast_lbidxs for idx in top_5_val])), 1)
 
-        k = min(g.number_of_nodes('ast'), 2)
+        k = min(g.number_of_nodes('ast'), 3)
         top_3_val = indices[:k].tolist()
         top_3_meter.update(
             int(any([idx in ast_lbidxs for idx in top_3_val])), 1)
