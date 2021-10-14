@@ -54,14 +54,14 @@ def traverse_ast(node, index, parent, parent_index):
     curr_index = index
     node_token = get_token(node)
     if node_token == "TypeDecl":
-        coord_line = node.type.coord.line
+        start_line = node.type.coord.line
     else:
         try:
-            coord_line = node.coord.line
+            start_line = node.coord.line
         except AttributeError:
-            coord_line = parent.coord.line
+            start_line = parent.coord.line
 
-    tmp_n[index] = [node_token, coord_line]
+    tmp_n[index] = [node_token, start_line]
 
     for edgetype, child in node.children():
         if child is not None:
@@ -306,7 +306,7 @@ def build_nx_ast_full(ast):
     ast2nx = {ast: 0}
 
     g.add_node(0, ntype=ast.__class__.__name__,
-               token=get_token(ast), coord_line=-1, n_order=0)
+               token=get_token(ast), start_line=-1, n_order=0)
     queue = [ast]
 
     while len(queue) > 0:
@@ -323,16 +323,16 @@ def build_nx_ast_full(ast):
                     child_token = get_token(child)
                     try:
                         if child_token == "TypeDecl":
-                            coord_line = node.type.coord.line
+                            start_line = node.type.coord.line
                         else:
-                            coord_line = node.coord.line
+                            start_line = node.coord.line
                     except AttributeError:
-                        coord_line = g.nodes[ast2nx[node]]['coord_line']
+                        start_line = g.nodes[ast2nx[node]]['start_line']
                     ast2nx[child] = g.number_of_nodes()
                     g.add_node(g.number_of_nodes(),
                                ntype=child.__class__.__name__,
                                token=get_token(child),
-                               coord_line=coord_line, n_order=i)
+                               start_line=start_line, n_order=i)
                     g.add_edge(ast2nx[node], ast2nx[child], label=etype)
                     '''
                     if i > 0:
@@ -349,7 +349,7 @@ def build_nx_ast_base(ast):
     ast2nx = {ast: 0}
 
     g.add_node(0, ntype=ast.__class__.__name__,
-               token=get_token(ast), coord_line=-1)
+               token=get_token(ast), start_line=-1)
     queue = [ast]
     while len(queue) > 0:
         node = queue.pop()
@@ -359,16 +359,16 @@ def build_nx_ast_base(ast):
             child_token = get_token(child)
             try:
                 if child_token == "TypeDecl":
-                    coord_line = node.type.coord.line
+                    start_line = node.type.coord.line
                 else:
-                    coord_line = node.coord.line
+                    start_line = node.coord.line
             except AttributeError:
-                coord_line = g.nodes[ast2nx[node]]['coord_line']
+                start_line = g.nodes[ast2nx[node]]['start_line']
             ast2nx[child] = g.number_of_nodes()
             g.add_node(g.number_of_nodes(),
                        ntype=child.__class__.__name__,
                        token=get_token(child),
-                       coord_line=coord_line)
+                       start_line=start_line)
             g.add_edge(ast2nx[node], ast2nx[child], label=child_name)
             queue.insert(0, child)
 
