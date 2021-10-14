@@ -25,7 +25,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
     mean_ast_acc = AverageMeter()
 
     top_1_meter = AverageMeter()
-    top_2_meter = AverageMeter()
+    top_3_meter = AverageMeter()
     top_5_meter = AverageMeter()
     top_10_meter = AverageMeter()
 
@@ -42,7 +42,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
         f1_meter.reset()
         top_10_meter.reset()
         top_5_meter.reset()
-        top_2_meter.reset()
+        top_3_meter.reset()
         top_1_meter.reset()
 
         model.train()
@@ -104,9 +104,9 @@ def train(model, dataloader, n_epochs, start_epoch=0):
                 int(any([idx in ast_lbidxs for idx in top_5_val])), 1)
 
             k = min(g.number_of_nodes('ast'), 2)
-            top_2_val = indices[:k].tolist()
-            top_2_meter.update(
-                int(any([idx in ast_lbidxs for idx in top_2_val])), 1)
+            top_3_val = indices[:k].tolist()
+            top_3_meter.update(
+                int(any([idx in ast_lbidxs for idx in top_3_val])), 1)
 
             k = min(g.number_of_nodes('ast'), 1)
             top_1_val = indices[:k].tolist()
@@ -133,7 +133,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
         if epoch % ConfigClass.print_rate == 0:
             out_dict = {}
             out_dict['top_1'] = top_1_meter.avg
-            out_dict['top_2'] = top_2_meter.avg
+            out_dict['top_3'] = top_3_meter.avg
             out_dict['top_5'] = top_5_meter.avg
             out_dict['top_10'] = top_10_meter.avg
             out_dict['mean_acc'] = mean_ast_acc.avg
@@ -147,7 +147,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
                   f"top 10 acc: {top_10_meter.avg}, " +
                   f"top 5 acc: {top_5_meter.avg}, " +
-                  f"top 2 acc {top_2_meter.avg}" +
+                  f"top 2 acc {top_3_meter.avg}" +
                   f"top 1 acc {top_1_meter.avg}")
             print(f1_meter.get())
         if epoch % ConfigClass.save_rate == 0:
@@ -204,7 +204,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     os.makedirs(f'images_{epoch}', exist_ok=True)
     f1_meter = BinFullMeter()
     top_1_meter = AverageMeter()
-    top_2_meter = AverageMeter()
+    top_3_meter = AverageMeter()
     top_5_meter = AverageMeter()
     top_10_meter = AverageMeter()
     model.eval()
@@ -215,7 +215,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     # Line mapping: index -> ast['line']
     f1_meter.reset()
     top_1_meter.reset()
-    top_2_meter.reset()
+    top_3_meter.reset()
     top_5_meter.reset()
     top_10_meter.reset()
     line_mapping_changed = False
@@ -286,8 +286,8 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         top_5_meter.update(int(any([idx in lbidxs for idx in top_5_val])), 1)
 
         k = min(len(all_lines), 2)
-        top_2_val = indices[:k].tolist()
-        top_2_meter.update(int(any([idx in lbidxs for idx in top_2_val])), 1)
+        top_3_val = indices[:k].tolist()
+        top_3_meter.update(int(any([idx in lbidxs for idx in top_3_val])), 1)
 
         k = min(len(all_lines), 1)
         top_1_val = indices[:k].tolist()
@@ -295,7 +295,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         f1_meter.update(line_pred_tensor, line_tgt_tensor)
 
     out_dict['top_1'] = top_1_meter.avg
-    out_dict['top_2'] = top_2_meter.avg
+    out_dict['top_3'] = top_3_meter.avg
     out_dict['top_5'] = top_5_meter.avg
     out_dict['top_10'] = top_10_meter.avg
     out_dict['f1'] = f1_meter.get()
@@ -320,7 +320,7 @@ def eval(model, dataloader, epoch, mode='val'):
     mean_ast_acc = AverageMeter()
     f1_meter = KFullMeter(3)
     top_1_meter = AverageMeter()
-    top_2_meter = AverageMeter()
+    top_3_meter = AverageMeter()
     top_5_meter = AverageMeter()
     top_10_meter = AverageMeter()
     model.eval()
@@ -358,9 +358,9 @@ def eval(model, dataloader, epoch, mode='val'):
             int(any([idx in ast_lbidxs for idx in top_5_val])), 1)
 
         k = min(g.number_of_nodes('ast'), 2)
-        top_2_val = indices[:k].tolist()
-        top_2_meter.update(
-            int(any([idx in ast_lbidxs for idx in top_2_val])), 1)
+        top_3_val = indices[:k].tolist()
+        top_3_meter.update(
+            int(any([idx in ast_lbidxs for idx in top_3_val])), 1)
 
         k = min(g.number_of_nodes('ast'), 1)
         top_1_val = indices[:k].tolist()
@@ -377,7 +377,7 @@ def eval(model, dataloader, epoch, mode='val'):
             g.number_of_nodes('ast'))
         f1_meter.update(ast_cal, ast_lb)
     out_dict['top_1'] = top_1_meter.avg
-    out_dict['top_2'] = top_2_meter.avg
+    out_dict['top_3'] = top_3_meter.avg
     out_dict['top_5'] = top_5_meter.avg
     out_dict['top_10'] = top_10_meter.avg
     out_dict['mean_acc'] = mean_ast_acc.avg
