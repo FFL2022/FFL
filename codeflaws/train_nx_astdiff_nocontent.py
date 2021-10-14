@@ -164,7 +164,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
 def get_line_mapping(dataloader, real_idx):
     nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
     n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
-    line = torch.tensor([nx_g.nodes[n]['coord_line'] for n in n_asts],
+    line = torch.tensor([nx_g.nodes[n]['start_line'] for n in n_asts],
                         dtype=torch.long)
     return line
 

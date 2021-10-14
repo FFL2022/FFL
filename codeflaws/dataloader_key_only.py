@@ -104,6 +104,7 @@ class CodeflawsNxDataset(object):
                 'ast_lb_d': self.ast_lbs_d,
                 'ast_lb_i': self.ast_lbs_i,
                 'cfg_lb': self.cfg_lbs,
+                'keys': self.keys,
                 'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes},
             open(self.info_path, 'wb'))
 
@@ -114,6 +115,7 @@ class CodeflawsNxDataset(object):
         self.ast_lbs_d = gs_label['ast_lb_d']
         self.ast_lbs_i = gs_label['ast_lb_i']
         self.cfg_lbs = gs_label['cfg_lb']
+        self.keys = gs_label['keys']
 
     def has_cache(self):
         return os.path.exists(self.info_path)
