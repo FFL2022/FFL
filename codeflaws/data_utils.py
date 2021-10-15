@@ -277,10 +277,10 @@ def cfl_add_placeholder_stmts_cpp(nx_ast):
         if len(child_stmts) > 0: # or nx_ast.nodes[node]['ntype'] in ['block_content',  'case']:
             new_node = max(nx_ast.nodes()) + 1
             if len(child_stmts) > 0:
-                end_line = max([nx_ast.nodes[c]['coord_line']
+                end_line = max([nx_ast.nodes[c]['start_line']
                                 for c in child_stmts])
             else:
-                end_line = nx_ast.nodes[node]['coord_line']
+                end_line = nx_ast.nodes[node]['start_line']
             n_orders = [nx_ast.nodes[n]['n_order'] for n in child_stmts]
             nx_ast.add_node(new_node,
                             ntype='placeholder_stmt',
