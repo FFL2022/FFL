@@ -8,12 +8,12 @@ import os
 import random
 import pickle as pkl
 import json
-# import fasttext
+import fasttext
 import torch
 import tqdm
 from pycparser.plyparser import ParseError
 
-# embedding_model = fasttext.load_model(ConfigClass.pretrained_fastext)
+embedding_model = fasttext.load_model(ConfigClass.pretrained_fastext)
 
 
 class CodeflawsNxDataset(object):
@@ -120,7 +120,7 @@ class CodeflawsNxDataset(object):
         self.ast_lbs_i = gs_label['ast_lb_i']
         self.cfg_lbs = gs_label['cfg_lb']
         self.keys = gs_label['keys']
-        self.active_idxs = gs_label['self.active_idxs']
+        self.active_idxs = gs_label['active_idxs']
 
     def has_cache(self):
         return os.path.exists(self.info_path)
