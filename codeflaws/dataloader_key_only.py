@@ -17,7 +17,7 @@ embedding_model = fasttext.load_model(ConfigClass.pretrained_fastext)
 
 
 class CodeflawsNxDataset(object):
-    def __init__(self, raw_dataset_dir=ConfigClass.raw_dir,
+    def __init__(self, raw_dataset_dir=ConfigClass.codeflaws_data_path,
                  save_dir=ConfigClass.preprocess_dir_codeflaws):
         self.save_dir = save_dir
         self.info_path = os.path.join(
@@ -28,8 +28,6 @@ class CodeflawsNxDataset(object):
         else:
             self.process()
             self.save()
-
-        self.active_idxs = list(range(len(self.ast_lbs_d)))
 
     def __len__(self):
         return len(self.active_idxs)
@@ -48,13 +46,17 @@ class CodeflawsNxDataset(object):
         self.ast_lbs_d = []
         self.cfg_lbs = []
         self.keys = []
+        self.active_idxs = []
         error_instance = []
         bar = tqdm.tqdm(enumerate(all_codeflaws_keys))
         bar.set_description('Loading Nx Data')
         err_count = 0
         for i, key in bar:
             try:
-                _, _, _, _, _, nx_g = get_cfg_ast_cov(key)
+                if os.path.exists(f'{self.save_dir}/nx_{i}'):
+                    nx_g = pkl.load(open(f'{self.save_dir}/nx_{i}', 'rb'))
+                else:
+                    _, _, _, _, _, nx_g = get_cfg_ast_cov(key)
                 ast_lb_d = []
                 ast_lb_i = []
                 cfg_lb = []
@@ -85,6 +87,7 @@ class CodeflawsNxDataset(object):
             self.ast_types.extend(
                 [nx_g.nodes[node]['ntype'] for node in nx_g.nodes()
                  if nx_g.nodes[node]['graph'] == 'ast'])
+            self.active_idxs.append(i)
             self.ast_lbs_i.append(ast_lb_i)
             self.ast_lbs_d.append(ast_lb_d)
             self.cfg_lbs.append(cfg_lb)
@@ -104,6 +107,8 @@ class CodeflawsNxDataset(object):
                 'ast_lb_d': self.ast_lbs_d,
                 'ast_lb_i': self.ast_lbs_i,
                 'cfg_lb': self.cfg_lbs,
+                'keys': self.keys,
+                'active_idxs': self.active_idxs,
                 'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes},
             open(self.info_path, 'wb'))
 
@@ -114,6 +119,8 @@ class CodeflawsNxDataset(object):
         self.ast_lbs_d = gs_label['ast_lb_d']
         self.ast_lbs_i = gs_label['ast_lb_i']
         self.cfg_lbs = gs_label['cfg_lb']
+        self.keys = gs_label['keys']
+        self.active_idxs = gs_label['self.active_idxs']
 
     def has_cache(self):
         return os.path.exists(self.info_path)
