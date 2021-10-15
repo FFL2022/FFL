@@ -8,12 +8,12 @@ import os
 import random
 import pickle as pkl
 import json
-import fasttext
+# import fasttext
 import torch
 import tqdm
 from pycparser.plyparser import ParseError
 
-embedding_model = fasttext.load_model(ConfigClass.pretrained_fastext)
+# embedding_model = fasttext.load_model(ConfigClass.pretrained_fastext)
 
 
 class CodeflawsNxDataset(object):
