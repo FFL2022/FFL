@@ -35,9 +35,9 @@ class CodeflawsNxDataset(object):
     def __getitem__(self, i):
         return pkl.load(open(
             f'{self.save_dir}/nx_{self.active_idxs[i]}', 'rb')),\
-            self.ast_lbs_d[self.active_idxs[i]], \
-            self.ast_lbs_i[self.active_idxs[i]], \
-            self.cfg_lbs[self.active_idxs[i]]
+            self.ast_lbs_d[i], \
+            self.ast_lbs_i[i], \
+            self.cfg_lbs[i]
 
     def process(self):
         self.ast_types = []
