@@ -48,15 +48,17 @@ def combine_ast_cfg(nx_ast, nx_cfg):
             continue
         # only take on-liners
         # Get corresponding lines
+
         start = nx_h_g.nodes[node]['start_line']
         end = nx_h_g.nodes[node]['end_line']
         if end - start > 0:  # This is a parent node
             continue
-
+        # for n in nx_h_g.nodes():
+        #     print(nx_h_g.nodes[n])
         corresponding_ast_nodes = [n for n in nx_h_g.nodes()
                                    if nx_h_g.nodes[n]['graph'] == 'ast' and
-                                   nx_h_g.nodes[n]['start_line'] >= start and
-                                   nx_h_g.nodes[n]['start_line'] <= end]
+                                   nx_h_g.nodes[n]['coord_line'] >= start and
+                                   nx_h_g.nodes[n]['coord_line'] <= end]
         for ast_node in corresponding_ast_nodes:
             nx_h_g.add_edge(node, ast_node, label='corresponding_ast')
     return nx_h_g

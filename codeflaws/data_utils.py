@@ -3,11 +3,13 @@ from utils.utils import ConfigClass
 from cfg import cfg
 from codeflaws.data_format import key2bug, key2bugfile,\
     key2fixfile, key2test_verdict, get_gcov_file, test_verdict
-from graph_algos.nx_shortcuts import neighbors_out
+from graph_algos.nx_shortcuts import neighbors_out, neighbors_in
 from utils.get_bug_localization import get_bug_localization
 from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.nx_graph_builder import build_nx_graph_cfg_ast
 from utils.gumtree_utils import GumtreeBasedAnnotation
+from utils.get_bug_localization import get_asts_mapping
+from utils.traverse_utils import convert_from_arity_to_rel
 import pickle as pkl
 
 root = ConfigClass.codeflaws_data_path
@@ -257,3 +259,73 @@ def get_nx_ast_stmt_annt_gumtree(key):
         src_b, src_f, cov_maps,
         verdicts,
         GumtreeBasedAnnotation.build_nx_graph_stmt_annt)
+
+
+def cfl_check_is_stmt_cpp(node_dict):
+    return node_dict['ntype'] in ['Break', 'Return', 'Case', 'DoWhile', 'Decl', 'Default', 
+                     'If', 'FuncCall', 'Continue', 'Goto', 'EmptyStatement', 
+                     'While', 'ExprList', 'Switch', 'For', 'FuncDef'] and \
+                     node_dict['p_ntype'] in ['If', 'Else', 'For', 'Compound']
+
+def cfl_add_placeholder_stmts_cpp(nx_ast):
+    ''' add PlaceholderStatement for each block '''
+    queue = [0]
+    while (len(queue) > 0):
+        node = queue.pop(0)
+        child_stmts = neighbors_out(
+            node, nx_ast, lambda u, v, k, e: cfl_check_is_stmt_cpp(nx_ast.nodes[v]))
+        if len(child_stmts) > 0: # or nx_ast.nodes[node]['ntype'] in ['block_content',  'case']:
+            new_node = max(nx_ast.nodes()) + 1
+            if len(child_stmts) > 0:
+                end_line = max([nx_ast.nodes[c]['coord_line']
+                                for c in child_stmts])
+            else:
+                end_line = nx_ast.nodes[node]['coord_line']
+            n_orders = [nx_ast.nodes[n]['n_order'] for n in child_stmts]
+            nx_ast.add_node(new_node,
+                            ntype='placeholder_stmt',
+                            p_ntype=nx_ast.nodes[node]['ntype'],
+                            token='',
+                            graph='ast',
+                            start_line=end_line,
+                            end_line=end_line,
+                            n_order=0 if all(item==0 for item in n_orders) else max(n_orders)+1,
+                            status=0
+                            )
+            labels = list(set([e['label'] for u, v, k, e in nx_ast.edges(keys=True, data=True) 
+                                                            if u==node]))
+
+            nx_ast.add_edge(node, new_node, label='parent_child' if len(labels)>1 else labels[0])
+            child_stmts = child_stmts + [len(nx_ast.nodes())-1]
+        queue.extend(neighbors_out(node, nx_ast))
+    return nx_ast
+
+def get_nx_ast_stmt_annt_cfl(key):
+    src_b = key2bugfile(key)
+    src_f = key2fixfile(key)
+    test_list = key2test_verdict(key)
+    cov_maps = []
+    verdicts = []
+    for i, test in enumerate(test_list):
+        covfile = get_gcov_file(key, test)
+        cov_maps.append(get_coverage(covfile, 0))
+        verdicts.append(test_list[test] > 0)
+
+    map_dict, nx_ast_src, nx_ast_dst = get_asts_mapping(src_b, src_f)
+
+    nx_ast_src.nodes[0]['p_ntype'] = ''
+    for n in nx_ast_src.nodes():
+        p_ntype = nx_ast_src.nodes[n]['ntype']
+        for cn in neighbors_out(n, nx_ast_src):
+            nx_ast_src.nodes[cn]['p_ntype'] = p_ntype
+
+        nx_ast_src.nodes[n]['status'] = 0
+        if n in map_dict['deleted']:
+            nx_ast_src.nodes[n]['status'] = 1
+        if n in map_dict['inserted']:
+            nx_ast_src.nodes[n]['status'] = 1
+
+    nx_ast_src = cfl_add_placeholder_stmts_cpp(nx_ast_src)
+    nx_ast_src = convert_from_arity_to_rel(nx_ast_src)
+
+    return nx_ast_src
