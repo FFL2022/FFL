@@ -36,7 +36,7 @@ class CodeflawsGumtreeNxNodeDataset(object):
     def __getitem__(self, i):
         idx = self.active_idxs[i]
         try:
-            nx_g = pkl.load(open(f'{self.save_dir}/nx_new_gumtree_node_{idx}', 'rb'))
+            nx_g = pkl.load(open(f'{self.save_dir}/nx_new_gumtree_node_{idx}.pkl', 'rb'))
         except pkl.UnpicklingError:
             nx_g = get_nx_ast_node_annt_gumtree(all_codeflaws_keys[idx])
             pkl.dump(nx_g, open(
