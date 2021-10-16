@@ -234,6 +234,17 @@ class GumtreeBasedAnnotation:
                 nx_ast_dst.add_edge(
                     ndict['parent_id'], ndict['id'], label='parent_child')
         nx_ast_src = add_placeholder_func(nx_ast_src)
+
+        # Node post processing, recheck if token equal
+        for n_s in nx_ast_src.nodes():
+            if n_s in map_dict['mapping']:
+                n_d = map_dict['mapping'][n_s]
+                if nx_ast_src.nodes[n_s]['token'] != nx_ast_dst.nodes[n_d]['token']:
+                    del map_dict['mapping'][n_s]
+                    map_dict['deleted'].append(n_s)
+                    map_dict['inserted'].append(n_d)
+
+
         rev_map_dict = {v: k for k, v in map_dict['mapping'].items()}
 
         # moved nodes: check parent
