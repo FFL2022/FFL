@@ -1,5 +1,6 @@
 from codeflaws.data_utils import all_codeflaws_keys, get_cfg_ast_cov, \
-    get_nx_ast_stmt_annt_gumtree, get_nx_ast_stmt_annt_cfl
+    get_nx_ast_stmt_annt_gumtree, get_nx_ast_stmt_annt_cfl, \
+    get_nx_ast_node_annt_gumtree
 from utils import draw_utils
 import tqdm
 import os
@@ -18,17 +19,23 @@ def test1():
                                      f"visualize_nx_graphs/cfg_ast_diff_{i}.png")
                                      '''
 def test2():
-    for key in tqdm.tqdm(all_codeflaws_keys):
+    bar = tqdm.tqdm(all_codeflaws_keys)
+    count = 0
+    for key in bar:
         try:
-            filename = f"visualize_nx_graphs/{key}.png"
+            filename = f"visualize_nx_graphs/gumtree_node/{key}.png"
             if os.path.exists(filename):
                 continue
-            nx_g = get_nx_ast_stmt_annt_cfl(key)
-            os.makedirs('visualize_nx_graphs', exist_ok=True)
+            nx_g = get_nx_ast_node_annt_gumtree(key)
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
             draw_utils.ast_to_agraph(nx_g.subgraph([n for n in nx_g.nodes() 
                 if nx_g.nodes[n]['graph'] == 'ast']), filename)
         except ParseError:
-            print('ParseError')
+            count += 1
+            bar.set_postfix(parse_error_files=count)
+            continue
+        except OSError:
+            print(key)
             continue
         except:
             raise

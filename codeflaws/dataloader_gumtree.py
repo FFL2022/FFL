@@ -22,7 +22,7 @@ class CodeflawsGumtreeNxStatementDataset(object):
                  save_dir=ConfigClass.preprocess_dir_codeflaws):
         self.save_dir = save_dir
         self.info_path = os.path.join(
-            save_dir, 'nx_gumtree_stmt_dataset_info.pkl')
+            save_dir, 'nx_new_gumtree_stmt_dataset_info.pkl')
         if self.has_cache():
             self.load()
         else:
@@ -36,12 +36,12 @@ class CodeflawsGumtreeNxStatementDataset(object):
     def __getitem__(self, i):
         try:
             nx_g = pkl.load(open(
-                f'{self.save_dir}/nx_gumtree_stmt_{self.active_idxs[i]}.pkl', 'rb'))
+                f'{self.save_dir}/nx_new_gumtree_stmt_{self.active_idxs[i]}.pkl', 'rb'))
         except UnicodeDecodeError:
             nx_g = get_nx_ast_stmt_annt_gumtree(all_codeflaws_keys[self.active_idxs[i]])
             pkl.dump(nx_g,
                      open(
-                         f'{self.save_dir}/nx_gumtree_stmt_{self.active_idxs[i]}.pkl', 'wb')
+                         f'{self.save_dir}/nx_new_gumtree_stmt_{self.active_idxs[i]}.pkl', 'wb')
                     )
         return nx_g, self.stmt_nodes[i]
 
@@ -58,14 +58,14 @@ class CodeflawsGumtreeNxStatementDataset(object):
         for i, key in bar:
 
             try:
-                if not os.path.exists(f'{self.save_dir}/nx_gumtree_stmt_{i}.pkl'):
+                if not os.path.exists(f'{self.save_dir}/nx_new_gumtree_stmt_{i}.pkl'):
                     nx_g = get_nx_ast_stmt_annt_gumtree(key)
                     pkl.dump(nx_g, open(
-                        f'{self.save_dir}/nx_gumtree_stmt_{i}.pkl', 'wb')
+                        f'{self.save_dir}/nx_new_gumtree_stmt_{i}.pkl', 'wb')
                     )
                 else:
                     nx_g = pkl.load(open(
-                        f'{self.save_dir}/nx_gumtree_stmt_{i}.pkl', 'rb')
+                        f'{self.save_dir}/nx_new_gumtree_stmt_{i}.pkl', 'rb')
                     )
             except JSONDecodeError:
                 self.err_idxs.append(i)
@@ -198,9 +198,9 @@ class CodeflawsGumtreeDGLStatementDataset(DGLDataset):
     def __init__(self, raw_dir=ConfigClass.codeflaws_data_path,
                  save_dir=ConfigClass.preprocess_dir_codeflaws):
         self.graph_save_path = os.path.join(
-            save_dir, 'dgl_nx_gumtree_stmt.bin')
+            save_dir, 'dgl_nx_new_gumtree_stmt.bin')
         self.info_path = os.path.join(
-            save_dir, 'dgl_nx_gumtree_stmt_info.pkl')
+            save_dir, 'dgl_nx_new_gumtree_stmt_info.pkl')
         self.nx_dataset = CodeflawsGumtreeNxStatementDataset(raw_dir, save_dir)
         self.vocab_dict = dict(tuple(line.split()) for line in open(
             'preprocess/codeflaws_vocab.txt', 'r'))
