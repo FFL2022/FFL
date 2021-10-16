@@ -1,7 +1,9 @@
 from codeflaws.data_utils import all_codeflaws_keys, get_cfg_ast_cov, \
     get_nx_ast_stmt_annt_gumtree, get_nx_ast_stmt_annt_cfl
 from utils import draw_utils
+import tqdm
 import os
+from pycparser.plyparser import ParseError
 
 def test1():
     for i in list(range(10)) + [28] + [715]:
@@ -16,18 +18,21 @@ def test1():
                                      f"visualize_nx_graphs/cfg_ast_diff_{i}.png")
                                      '''
 def test2():
-    for i, key in enumerate(all_codeflaws_keys):
+    for key in tqdm.tqdm(all_codeflaws_keys):
         try:
+            filename = f"visualize_nx_graphs/{key}.png"
+            if os.path.exists(filename):
+                continue
             nx_g = get_nx_ast_stmt_annt_cfl(key)
             os.makedirs('visualize_nx_graphs', exist_ok=True)
             draw_utils.ast_to_agraph(nx_g.subgraph([n for n in nx_g.nodes() 
-                                                      if nx_g.nodes[n]['graph'] == 'ast']),
-                                     f"visualize_nx_graphs/{key}.png")
-        except KeyboardInterrupt:
-            raise
+                if nx_g.nodes[n]['graph'] == 'ast']), filename)
+        except ParseError:
+            print('ParseError')
+            continue
         except:
             raise
-        break
+        # break
             
 if __name__ == '__main__':
     test2()

@@ -15,6 +15,7 @@ import pickle as pkl
 import json
 import torch
 import tqdm
+from pycparser.plyparser import ParseError
 
 from json import JSONDecodeError
 
@@ -71,13 +72,13 @@ class CodeflawsCFLNxStatementDataset(object):
                     nx_g = pkl.load(open(
                         f'{self.save_dir}/nx_cfl_stmt_{i}.pkl', 'rb')
                     )
-            except KeyboardInterrupt:
-                raise
-            except:
+            except ParseError:
                 self.err_idxs.append(i)
                 count = len(self.err_idxs)
-                print(f"Total syntax error files: {count}")
+                bar.set_postfix(syntax_error_files=count)
                 continue    
+            except:
+                raise
             self.active_idxs.append(i)
             self.keys.append(key)
             self.ast_types.extend(

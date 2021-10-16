@@ -7,7 +7,7 @@ from graph_algos.nx_shortcuts import neighbors_out, neighbors_in
 from utils.get_bug_localization import get_bug_localization
 from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.nx_graph_builder import build_nx_graph_cfg_ast
-from utils.gumtree_utils import GumtreeBasedAnnotation
+from utils.gumtree_utils import GumtreeBasedAnnotation, GumtreeASTUtils
 from utils.get_bug_localization import get_asts_mapping
 from utils.traverse_utils import convert_from_arity_to_rel
 import pickle as pkl
@@ -423,8 +423,14 @@ def get_nx_ast_stmt_annt_cfl(key):
     for st_n in find_inserted_statement(
             nx_ast_src, nx_ast_dst, rev_map_dict,
             map_dict['inserted']):
-        for _ in st_n:
-            nx_ast_src.nodes[_]['status'] = 1
+        # print(st_n)
+        if type(st_n) == list:
+            for _ in st_n:
+                nx_ast_src.nodes[_]['status'] = 1
+        elif type(st_n) == int:
+            nx_ast_src.nodes[st_n]['status'] = 1
+        else:
+            raise
 
     nx_ast_src = convert_from_arity_to_rel(nx_ast_src)
 
