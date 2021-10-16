@@ -23,10 +23,10 @@ def test2():
     count = 0
     for key in bar:
         try:
-            filename = f"visualize_nx_graphs/gumtree_node/{key}.png"
+            filename = f"visualize_nx_graphs/cfl/{key}.png"
             if os.path.exists(filename):
                 continue
-            nx_g = get_nx_ast_node_annt_gumtree(key)
+            nx_g = get_nx_ast_stmt_annt_cfl(key)
             os.makedirs(os.path.dirname(filename), exist_ok=True)
             draw_utils.ast_to_agraph(nx_g.subgraph([n for n in nx_g.nodes() 
                 if nx_g.nodes[n]['graph'] == 'ast']), filename)
