@@ -53,9 +53,9 @@ class CodeflawsGumtreeNxStatementDataset(object):
         self.err_idxs = []
         self.active_idxs = []
 
-        bar = tqdm.tqdm(list(enumerate(all_codeflaws_keys)))
+        bar = tqdm.tqdm(list(all_codeflaws_keys))
         bar.set_description('Loading Nx Data with gumtree')
-        for i, key in bar:
+        for i, key in enumerate(bar):
 
             try:
                 if not os.path.exists(f'{self.save_dir}/nx_new_gumtree_stmt_{i}.pkl'):
@@ -330,10 +330,10 @@ class CodeflawsGumtreeDGLStatementDataset(DGLDataset):
     def process(self):
         self.meta_graph = self.construct_edge_metagraph()
         self.gs = []
-        bar = tqdm.tqdm(enumerate(self.nx_dataset))
+        bar = tqdm.tqdm(self.nx_dataset)
         bar.set_description("Converting NX to DGL")
         self.stmt_idxs = []
-        for i, (nx_g, stmt_nodes) in bar:
+        for i, (nx_g, stmt_nodes) in enumerate(bar):
             g, stmt_idx = self.convert_from_nx_to_dgl(nx_g, stmt_nodes)
             self.stmt_idxs.append(torch.tensor(stmt_idx).long())
             self.gs.append(g)
