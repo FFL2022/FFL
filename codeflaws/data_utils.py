@@ -353,23 +353,22 @@ def find_inserted_statement(nx_ast_src, nx_ast_dst, rev_map_dict, lisrts):
         dst_p = neighbors_in(s_i, nx_ast_dst)[0]
         dst_prev_sibs = GumtreeASTUtils.get_prev_sibs(s_i, nx_ast_dst)
         dst_prev_sibs = [n for n in dst_prev_sibs if n not in lisrts]
-        src_p = rev_map_dict[dst_p]
-        # print("node: ", src_p)
+        # src_p = rev_map_dict[dst_p]
         # for n in neighbors_out(src_p, nx_ast_src):
         #    print(nx_ast_src.nodes[n])
         if len(dst_prev_sibs) > 0:
             src_prev_sib = rev_map_dict[max(dst_prev_sibs)]
+            src_prev_sib = src_prev_sib if type(src_prev_sib)==int else src_prev_sib[0]
             try:
                 # print(GumtreeASTUtils.get_next_sibs(src_prev_sib, nx_ast_src))
-                src_next_sib = min(
-                    GumtreeASTUtils.get_next_sibs(src_prev_sib, nx_ast_src)
-                )
+                src_next_sib = min(GumtreeASTUtils.get_next_sibs(src_prev_sib, nx_ast_src))
             except:
                 print(nx_ast_dst.nodes[dst_p]['ntype'])
         else:
             # get the first child in the block
-            src_next_sib = min(
-                neighbors_out(rev_map_dict[dst_p], nx_ast_src))
+            src_prev_sib = rev_map_dict[dst_p]
+            src_prev_sib = src_prev_sib if type(src_prev_sib)==int else src_prev_sib[0]
+            src_next_sib = min(neighbors_out(src_prev_sib, nx_ast_src))
         inserted_stmts.append(src_next_sib)
 
     ns_ni = [n for n in ns if n not in lisrts]
