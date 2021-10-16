@@ -300,6 +300,84 @@ def cfl_add_placeholder_stmts_cpp(nx_ast):
         queue.extend(neighbors_out(node, nx_ast))
     return nx_ast
 
+def check_statement_elem_removed(
+        n, nx_ast, ldels):
+    queue = [n]
+    started = False
+    while len(queue) > 0:
+        n = queue.pop(0)
+        if cfl_check_is_stmt_cpp(nx_ast.nodes[n]) and started:
+            continue
+        if n in ldels:
+            return True
+        queue.extend(neighbors_out(n, nx_ast))
+        started = True
+    return False
+
+def check_statement_elem_inserted(
+        n, nx_ast, lisrts):
+    queue = [n]
+    started = False
+    while len(queue) > 0:
+        n = queue.pop(0)
+        if cfl_check_is_stmt_cpp(nx_ast.nodes[n]) and started:
+            continue
+        if n in lisrts:
+            return True
+        queue.extend(neighbors_out(n, nx_ast))
+        started = True
+    return False
+
+def get_non_inserted_ancestor(rev_map_dict, dst_n, nx_ast_dst):
+    parents = neighbors_in(dst_n, nx_ast_dst)
+    while(len(parents) > 0):
+        parent = parents[0]
+        if parent not in rev_map_dict:
+            parents = neighbors_in(parent, nx_ast_dst)
+        else:
+            return parent
+
+def find_modified_statement(nx_ast_src, ldels):
+    ns = [n for n in nx_ast_src.nodes() if cfl_check_is_stmt_cpp(nx_ast_src.nodes[n])]
+    ns = [n for n in ns if check_statement_elem_removed(n, nx_ast_src, ldels)]
+    return ns
+
+def find_inserted_statement(nx_ast_src, nx_ast_dst, rev_map_dict, lisrts):
+    ns = [n for n in nx_ast_dst.nodes() if cfl_check_is_stmt_cpp(nx_ast_dst.nodes[n])]
+    inserted_stmts = []
+    # First, check if the statement itself is inserted
+    ns_i = [n for n in ns if n in lisrts]
+    for s_i in ns_i:
+        if neighbors_in(s_i, nx_ast_dst)[0] in lisrts:
+            continue
+        dst_p = neighbors_in(s_i, nx_ast_dst)[0]
+        dst_prev_sibs = GumtreeASTUtils.get_prev_sibs(s_i, nx_ast_dst)
+        dst_prev_sibs = [n for n in dst_prev_sibs if n not in lisrts]
+        src_p = rev_map_dict[dst_p]
+        # print("node: ", src_p)
+        # for n in neighbors_out(src_p, nx_ast_src):
+        #    print(nx_ast_src.nodes[n])
+        if len(dst_prev_sibs) > 0:
+            src_prev_sib = rev_map_dict[max(dst_prev_sibs)]
+            try:
+                # print(GumtreeASTUtils.get_next_sibs(src_prev_sib, nx_ast_src))
+                src_next_sib = min(
+                    GumtreeASTUtils.get_next_sibs(src_prev_sib, nx_ast_src)
+                )
+            except:
+                print(nx_ast_dst.nodes[dst_p]['ntype'])
+        else:
+            # get the first child in the block
+            src_next_sib = min(
+                neighbors_out(rev_map_dict[dst_p], nx_ast_src))
+        inserted_stmts.append(src_next_sib)
+
+    ns_ni = [n for n in ns if n not in lisrts]
+    for s_n in ns_ni:
+        if check_statement_elem_inserted(s_n, nx_ast_dst, lisrts):
+            inserted_stmts.append(rev_map_dict[s_n])
+    return inserted_stmts
+
 def get_nx_ast_stmt_annt_cfl(key):
     src_b = key2bugfile(key)
     src_f = key2fixfile(key)
@@ -325,7 +403,29 @@ def get_nx_ast_stmt_annt_cfl(key):
         if n in map_dict['inserted']:
             nx_ast_src.nodes[n]['status'] = 1
 
+
+    nx_ast_dst.nodes[0]['p_ntype'] = ''
+    for n in nx_ast_dst.nodes():
+        p_ntype = nx_ast_dst.nodes[n]['ntype']
+        for cn in neighbors_out(n, nx_ast_dst):
+            nx_ast_dst.nodes[cn]['p_ntype'] = p_ntype
+        nx_ast_dst.nodes[n]['status'] = 0
+
     nx_ast_src = cfl_add_placeholder_stmts_cpp(nx_ast_src)
+
+    rev_map_dict = map_dict['rev_map_dict']
+
+    for st_n in find_modified_statement(
+            nx_ast_src, map_dict['deleted']):
+        nx_ast_src.nodes[st_n]['status'] = 1
+
+    # inserted nodes: check sibling
+    for st_n in find_inserted_statement(
+            nx_ast_src, nx_ast_dst, rev_map_dict,
+            map_dict['inserted']):
+        for _ in st_n:
+            nx_ast_src.nodes[_]['status'] = 1
+
     nx_ast_src = convert_from_arity_to_rel(nx_ast_src)
 
     return nx_ast_src

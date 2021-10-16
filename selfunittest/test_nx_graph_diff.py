@@ -20,11 +20,14 @@ def test2():
         try:
             nx_g = get_nx_ast_stmt_annt_cfl(key)
             os.makedirs('visualize_nx_graphs', exist_ok=True)
-            draw_utils.ast_to_agraph(nx_g.subgraph([n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']),
-                                    f"visualize_nx_graphs/ast_cfl_diff_{i}.png")
+            draw_utils.ast_to_agraph(nx_g.subgraph([n for n in nx_g.nodes() 
+                                                      if nx_g.nodes[n]['graph'] == 'ast']),
+                                     f"visualize_nx_graphs/{key}.png")
+        except KeyboardInterrupt:
+            raise
         except:
-            # continue
             raise
         break
+            
 if __name__ == '__main__':
     test2()
