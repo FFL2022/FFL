@@ -396,6 +396,7 @@ if __name__ == '__main__':
     graph_opt = 2  # 1, 2
     # loaddataset
     dataset = CodeflawsGumtreeDGLNodeDataset()
+    exit()
     meta_graph = dataset.meta_graph
     model = GCN_A_L_T_1(
         128, meta_graph,

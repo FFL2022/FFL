@@ -377,7 +377,7 @@ class GumtreeBasedAnnotation:
                             ]['status'] = 1
                             nx_ast_dst.nodes[max(dst_prev_sibs)]['status'] = 1
                         else:
-                            src_p = rev_map_dict[dst_p]
+                            src_p = rev_map_dict[pdid]
                             childs = neighbors_out(src_p, nx_ast_src)
                             if len(childs) > 0:
                                 prev_sib = min(childs)
