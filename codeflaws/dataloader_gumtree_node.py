@@ -36,39 +36,18 @@ class CodeflawsGumtreeNxNodeDataset(object):
     def __getitem__(self, i):
         idx = self.active_idxs[i]
         try:
-            nx_g = pkl.load(open(f'{self.save_dir}/nx_{idx}', 'rb'))
+            nx_g = pkl.load(open(f'{self.save_dir}/nx_new_gumtree_node_{idx}', 'rb'))
         except pkl.UnpicklingError:
             nx_g = get_nx_ast_node_annt_gumtree(all_codeflaws_keys[idx])
-            ast_lb_d = []
-            ast_lb_i = []
-            cfg_lb = []
-            for n in nx_g.nodes():
-                if nx_g.nodes[n]['graph'] == 'test':
-                    continue
-                if nx_g.nodes[n]['graph'] == 'ast':
-                    if nx_g.nodes[n]['status'] == 2:
-                        ast_lb_i.append(n)
-                    elif nx_g.nodes[n]['status'] == 1:
-                        ast_lb_d.append(n)
-                elif nx_g.nodes[n]['graph'] == 'cfg':
-                    if nx_g.nodes[n]['status'] == 1:
-                        cfg_lb.append(n)
-                del nx_g.nodes[n]['status']
             pkl.dump(nx_g,
                      open(
                          os.path.join(self.save_dir, f'nx_{idx}'),
                          'wb'))
-        return nx_g,\
-            self.ast_lbs_d[i], \
-            self.ast_lbs_i[i], \
-            self.cfg_lbs[i]
+        return nx_g
 
     def process(self):
         self.ast_types = []
         self.ast_etypes = []
-        self.ast_lbs_i = []
-        self.ast_lbs_d = []
-        self.cfg_lbs = []
         self.keys = []
         self.active_idxs = []
         error_instance = []
@@ -86,40 +65,18 @@ class CodeflawsGumtreeNxNodeDataset(object):
                     nx_g = pkl.load(open(
                         f'{self.save_dir}/nx_new_gumtree_node_{i}.pkl', 'rb')
                     )
-                ast_lb_d = []
-                ast_lb_i = []
-                cfg_lb = []
-                for n in nx_g.nodes():
-                    if nx_g.nodes[n]['graph'] == 'test':
-                        continue
-                    if nx_g.nodes[n]['graph'] == 'ast':
-                        if nx_g.nodes[n]['status'] == 2:
-                            ast_lb_i.append(n)
-                        elif nx_g.nodes[n]['status'] == 1:
-                            ast_lb_d.append(n)
-                    elif nx_g.nodes[n]['graph'] == 'cfg':
-                        if nx_g.nodes[n]['status'] == 1:
-                            cfg_lb.append(n)
-                    del nx_g.nodes[n]['status']
-                pkl.dump(nx_g,
-                         open(
-                             os.path.join(self.save_dir, f'nx_{i}'),
-                             'wb'))
             except ParseError:
                 err_count += 1
                 print(f"Total syntax error files: {err_count}")
                 if key not in error_instance:
                     error_instance.append(key)
-                json.dump(error_instance, open('error_instance.json', 'w'))
+                json.dump(error_instance, open('error_instance_gumtree_node.json', 'w'))
                 continue
             self.keys.append(key)
             self.ast_types.extend(
                 [nx_g.nodes[node]['ntype'] for node in nx_g.nodes()
                  if nx_g.nodes[node]['graph'] == 'ast'])
             self.active_idxs.append(i)
-            self.ast_lbs_i.append(ast_lb_i)
-            self.ast_lbs_d.append(ast_lb_d)
-            self.cfg_lbs.append(cfg_lb)
 
             self.ast_etypes.extend(
                 [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
@@ -133,9 +90,6 @@ class CodeflawsGumtreeNxNodeDataset(object):
         # gs is saved somewhere else
         pkl.dump(
             {
-                'ast_lb_d': self.ast_lbs_d,
-                'ast_lb_i': self.ast_lbs_i,
-                'cfg_lb': self.cfg_lbs,
                 'keys': self.keys,
                 'active_idxs': self.active_idxs,
                 'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes},
@@ -145,9 +99,6 @@ class CodeflawsGumtreeNxNodeDataset(object):
         gs_label = pkl.load(open(self.info_path, 'rb'))
         self.ast_types = gs_label['ast_types']
         self.ast_etypes = gs_label['ast_etypes']
-        self.ast_lbs_d = gs_label['ast_lb_d']
-        self.ast_lbs_i = gs_label['ast_lb_i']
-        self.cfg_lbs = gs_label['cfg_lb']
         self.keys = gs_label['keys']
         self.active_idxs = gs_label['active_idxs']
 
@@ -218,8 +169,7 @@ class CodeflawsGumtreeDGLNodeDataset(DGLDataset):
                   },
                  open(self.info_path, 'wb'))
 
-    def convert_from_nx_to_dgl(self, embedding_model, nx_g, ast_lb_d,
-                               ast_lb_i, cfg_lb):
+    def convert_from_nx_to_dgl(self, embedding_model, nx_g):
         '''
         # Create a node mapping for cfg
         n_cfgs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
@@ -300,10 +250,8 @@ class CodeflawsGumtreeDGLNodeDataset(DGLDataset):
         # g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
         # tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
         ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
-        for node in ast_lb_d:
-            ast_tgts[ast2id[node]] = 1
-        for node in ast_lb_i:
-            ast_tgts[ast2id[node]] = 2
+        for node in nx_g.nodes():
+            ast_tgts[ast2id[node]] = nx_g.nodes[node]['status']
         '''
         for node in cfg_lb:
             tgts[cfg2id[node]] = 1
@@ -350,9 +298,8 @@ class CodeflawsGumtreeDGLNodeDataset(DGLDataset):
         self.gs = []
         bar = tqdm.tqdm(self.nx_dataset)
         bar.set_description("Converting NX to DGL")
-        for i, (nx_g, ast_lb_d, ast_lb_i, cfg_lb) in enumerate(bar):
-            g = self.convert_from_nx_to_dgl(embedding_model, nx_g, ast_lb_d,
-                                            ast_lb_i, cfg_lb)
+        for i, nx_g in enumerate(bar):
+            g = self.convert_from_nx_to_dgl(embedding_model, nx_g)
             self.gs.append(g)
             if i == 0:
                 # self.cfg_content_dim = g.nodes['cfg'].data['content'].shape[-1]
@@ -364,5 +311,3 @@ class CodeflawsGumtreeDGLNodeDataset(DGLDataset):
 
     def __getitem__(self, i):
         return self.gs[self.active_idxs[i]]
-
-

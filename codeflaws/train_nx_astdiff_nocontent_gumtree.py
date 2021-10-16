@@ -286,7 +286,6 @@ def eval(model, dataloader, epoch):
 
 if __name__ == '__main__':
     dataset = CodeflawsGumtreeDGLStatementDataset()
-    exit()
     meta_graph = dataset.meta_graph
 
     model = GCN_A_L_T_1(
