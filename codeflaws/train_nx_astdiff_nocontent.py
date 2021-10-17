@@ -163,7 +163,8 @@ def train(model, dataloader, n_epochs, start_epoch=0):
 
 
 def get_line_mapping(dataloader, real_idx):
-    nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
+    # nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
+    nx_g = dataloader.nx_dataset[real_idx]
     n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
     line = torch.tensor([nx_g.nodes[n]['start_line'] for n in n_asts],
                         dtype=torch.long)
@@ -171,7 +172,8 @@ def get_line_mapping(dataloader, real_idx):
 
 
 def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts):
-    nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
+    # nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
+    nx_g = dataloader.nx_dataset[real_idx]
     n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
     for i, n in enumerate(n_asts):
         nx_g.nodes[n]['status'] = 0
@@ -396,13 +398,12 @@ if __name__ == '__main__':
     graph_opt = 2  # 1, 2
     # loaddataset
     dataset = CodeflawsGumtreeDGLNodeDataset()
-    exit()
     meta_graph = dataset.meta_graph
     model = GCN_A_L_T_1(
-        128, meta_graph,
+        256, meta_graph,
         device=device, num_ast_labels=len(dataset.nx_dataset.ast_types),
         num_classes_ast=3)
-    train(model, dataset, ConfigClass.n_epochs)
+    # train(model, dataset, ConfigClass.n_epochs)
     list_models_paths = list(
         glob.glob(f"{ConfigClass.trained_dir_codeflaws}/model*best.pth"))
     for model_path in list_models_paths:

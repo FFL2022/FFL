@@ -305,7 +305,7 @@ class CodeflawsGumtreeDGLStatementDataset(DGLDataset):
         # tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
         ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
         for node in ast2id:
-            ast_tgts[ast2id[node]] = 1
+            ast_tgts[ast2id[node]] = nx_g.nodes[node]['status']
         g.nodes['ast'].data['tgt'] = ast_tgts
         stmt_idxs = [ast2id[n] for n in stmt_nodes]
         return g, stmt_idxs
