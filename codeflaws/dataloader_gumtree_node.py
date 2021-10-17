@@ -36,7 +36,24 @@ class CodeflawsGumtreeNxNodeDataset(object):
     def __getitem__(self, i):
         idx = self.active_idxs[i]
         try:
-            nx_g = pkl.load(open(f'{self.save_dir}/nx_new_gumtree_node_{idx}.pkl', 'rb'))
+            nx_g = pkl.load(open(
+                f'{self.save_dir}/nx_new_gumtree_node_{idx}.pkl',
+                'rb'))
+            check_status = True
+            for n in nx_g.nodes():
+                if nx_g.nodes[n]['graph'] != 'ast':
+                    continue
+                if 'status' not in nx_g.nodes[n]:
+                    check_status = False
+                    break
+                else:
+                    break
+            if not check_status:
+                nx_g = get_nx_ast_node_annt_gumtree(all_codeflaws_keys[idx])
+                pkl.dump(nx_g, open(
+                    f'{self.save_dir}/nx_new_gumtree_node_{idx}.pkl', 'wb')
+                )
+
         except pkl.UnpicklingError:
             nx_g = get_nx_ast_node_annt_gumtree(all_codeflaws_keys[idx])
             pkl.dump(nx_g, open(
@@ -250,6 +267,8 @@ class CodeflawsGumtreeDGLNodeDataset(DGLDataset):
         # tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
         ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
         for node in nx_g.nodes():
+            if nx_g.nodes[node]['graph'] != 'ast':
+                continue
             ast_tgts[ast2id[node]] = nx_g.nodes[node]['status']
         '''
         for node in cfg_lb:
