@@ -275,9 +275,9 @@ def eval(model, dataloader, epoch):
               '/eval_dict_e{}.json'.format(epoch), 'w') as f:
         json.dump(out_dict, f, indent=2)
     print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
-          f"top 10 acc: {top_1_meter.avg}, " +
-          f"top 5 acc: {top_1_meter.avg}, " +
-          f"top 2 acc: {top_1_meter.avg}, " +
+          f"top 10 acc: {top_10_meter.avg}, " +
+          f"top 5 acc: {top_5_meter.avg}, " +
+          f"top 3 acc: {top_3_meter.avg}, " +
           f"top 1 acc: {top_1_meter.avg}, " +
           f'f1: {f1}'
           )
