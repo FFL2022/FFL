@@ -360,9 +360,10 @@ def find_inserted_statement(nx_ast_src, nx_ast_dst, rev_map_dict, lisrts):
             src_prev_sib = rev_map_dict[max(dst_prev_sibs)]
             src_prev_sib = src_prev_sib if type(src_prev_sib)==int else src_prev_sib[0]
             try:
-                # print(GumtreeASTUtils.get_next_sibs(src_prev_sib, nx_ast_src))
+                print(src_prev_sib, GumtreeASTUtils.get_next_sibs(src_prev_sib, nx_ast_src))
                 src_next_sib = min(GumtreeASTUtils.get_next_sibs(src_prev_sib, nx_ast_src))
             except:
+                raise
                 print(nx_ast_dst.nodes[dst_p]['ntype'])
         else:
             # get the first child in the block
@@ -419,17 +420,17 @@ def get_nx_ast_stmt_annt_cfl(key):
         nx_ast_src.nodes[st_n]['status'] = 1
 
     # inserted nodes: check sibling
-    for st_n in find_inserted_statement(
-            nx_ast_src, nx_ast_dst, rev_map_dict,
-            map_dict['inserted']):
-        # print(st_n)
-        if type(st_n) == list:
-            for _ in st_n:
-                nx_ast_src.nodes[_]['status'] = 1
-        elif type(st_n) == int:
-            nx_ast_src.nodes[st_n]['status'] = 1
-        else:
-            raise
+    # for st_n in find_inserted_statement(
+    #         nx_ast_src, nx_ast_dst, rev_map_dict,
+    #         map_dict['inserted']):
+    #     # print(st_n)
+    #     if type(st_n) == list:
+    #         for _ in st_n:
+    #             nx_ast_src.nodes[_]['status'] = 1
+    #     elif type(st_n) == int:
+    #         nx_ast_src.nodes[st_n]['status'] = 1
+    #     else:
+    #         raise
 
     nx_ast_src = convert_from_arity_to_rel(nx_ast_src)
 
