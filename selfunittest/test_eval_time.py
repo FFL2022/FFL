@@ -51,6 +51,7 @@ def eval():
         device=device,
         num_ast_labels=len(nx_ast_types),
         num_classes_ast=2)
+    model.eval()
 
     time_list = []
 
@@ -109,6 +110,7 @@ def eval():
             for node in ast2id:
                 ast_tgts[ast2id[node]] = nx_g.nodes[node]['status']
             g.nodes['ast'].data['tgt'] = ast_tgts
+            g = g.to(device)
             model(g)
 
             time_list.append(time.time() - tic)
