@@ -15,6 +15,8 @@ import tqdm
 from model import GCN_A_L_T_1
 import time
 import numpy as np
+from codeflaws.dataloader_gumtree import CodeflawsGumtreeDGLStatementDataset
+from nbl.dataloader_gumtree import NBLGumtreeDGLStatementDataset
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -217,5 +219,63 @@ def eval_codeflaws():
     print('max:', np.max(time_list))
 
 
+def eval_codeflaws_2():
+    dataset = CodeflawsGumtreeDGLStatementDataset()
+    meta_graph = dataset.meta_graph
+
+    model = GCN_A_L_T_1(
+        128, meta_graph,
+        device=device,
+        num_ast_labels=len(dataset.nx_dataset.ast_types),
+        num_classes_ast=2)
+
+    model.eval()
+    dataset.eval()
+    bar = tqdm.trange(len(dataset))
+
+    time_list = []
+    for i in bar:
+        g, mask_stmt = dataset[i]
+        if g is None:
+            continue
+        g = g.to(device)
+        tic = time.time()
+        g = model(g)
+        time_list.append(time.time() - tic)
+    time_list = np.array(time_list)
+    print('codeflaws mean:', np.mean(time_list))
+    print('codeflaws std:', np.std(time_list))
+    print('codeflaws min:', np.min(time_list))
+    print('codeflaws max:', np.max(time_list))
+
+def eval_nbl_2():
+    dataset = NBLGumtreeDGLStatementDataset()
+    meta_graph = dataset.meta_graph
+
+    model = GCN_A_L_T_1(
+        128, meta_graph,
+        device=device,
+        num_ast_labels=len(dataset.nx_dataset.ast_types),
+        num_classes_ast=2)
+
+    model.eval()
+    dataset.eval()
+    bar = tqdm.trange(len(dataset))
+
+    time_list = []
+    for i in bar:
+        g, mask_stmt = dataset[i]
+        if g is None:
+            continue
+        g = g.to(device)
+        tic = time.time()
+        g = model(g)
+        time_list.append(time.time() - tic)
+    time_list = np.array(time_list)
+    print('nbl mean:', np.mean(time_list))
+    print('nbl std:', np.std(time_list))
+    print('nbl min:', np.min(time_list))
+    print('nbl max:', np.max(time_list))
+
 if __name__ == '__main__':
-    eval_codeflaws()
+    eval_codeflaws_2()
