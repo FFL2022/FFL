@@ -230,7 +230,7 @@ def eval_codeflaws_2():
         num_classes_ast=2)
 
     model.eval()
-    dataset.eval()
+    dataset.val()
     bar = tqdm.trange(len(dataset))
 
     time_list = []
@@ -259,7 +259,7 @@ def eval_nbl_2():
         num_classes_ast=2)
 
     model.eval()
-    dataset.eval()
+    dataset.val()
     bar = tqdm.trange(len(dataset))
 
     time_list = []
