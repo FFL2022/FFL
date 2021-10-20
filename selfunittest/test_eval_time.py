@@ -279,3 +279,4 @@ def eval_nbl_2():
 
 if __name__ == '__main__':
     eval_codeflaws_2()
+    eval_nbl_2()
