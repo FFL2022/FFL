@@ -1,0 +1,58 @@
+import os
+from datetime import date
+
+
+class ConfigClass(object):
+    pretrained_fastext = 'preprocess/c_pretrained.bin'
+
+    nbl_test_verdict_pickle = "data_nbl/test_verdict.pkl"
+    nbl_source_path = "data_nbl/data/sources"
+    nbl_test_path = "data_nbl/data/tests"
+    os.makedirs(nbl_source_path, exist_ok=True)
+
+    codeflaws_data_path = "data_codeflaws/data"
+
+    # raw dir
+    nbl_raw_dir = "data_nbl/"
+
+    # For training
+    train_cfgidx_map_json = "data_nbl/nbl_dataset/training_dat.json"
+    train_cfgidx_map_pkl = "data_nbl/nbl_dataset/training_data.pkl"
+    eval_cfgidx_map_pkl = "data_nbl/nbl_dataset/eval_data.pkl"
+
+    codeflaws_train_cfgidx_map_pkl = "data_codeflaws/training_data.pkl"
+    codeflaws_eval_cfgidx_map_pkl = "data_codeflaws/eval_data.pkl"
+    codeflaws_test_verdict_pickle = "data_codeflaws/test_verdict.pkl"
+    codeflaws_full_cfgidx_map_pkl = "data_codeflaws/full_data.pkl"
+    codeflaws_all_keys = "data_codeflaws/all_keys.pkl"
+
+    bug_lines_info_pkl = "data_nbl/nbl_dataset/bug_lines_info.pkl"
+
+    today = date.today().strftime("%b-%d-%Y")
+    preprocess_dir_codeflaws = "preprocessed/codeflaws"
+    preprocess_dir_nbl= "preprocessed/nbl"
+
+    trained_dir_codeflaws = 'trained/codeflaws/{}'.format(today)
+    result_dir_codeflaws = 'result/codeflaws/{}'.format(today)
+
+    trained_dir_nbl = 'trained/nbl/{}'.format(today)
+    result_dir_nbl = 'result/nbl/{}'.format(today)
+
+    trained_dir_nbl_a = 'trained/nbl/{}'.format(today)
+
+    os.makedirs(result_dir_nbl, exist_ok=True)
+    os.makedirs(trained_dir_nbl, exist_ok=True)
+    os.makedirs(result_dir_codeflaws, exist_ok=True)
+    os.makedirs(trained_dir_codeflaws, exist_ok=True)
+
+    os.makedirs(preprocess_dir_nbl, exist_ok=True)
+    os.makedirs(preprocess_dir_codeflaws, exist_ok=True)
+
+    n_epochs = 100
+    print_rate = 1
+    save_rate = 1
+
+    cfg_label_corpus = ["entry_node", "COMMON", "IF", "ELSE",
+                        "ELSE_IF", "END_IF", "FOR", "WHILE",
+                        "DO_WHILE", "PSEUDO", "CALL", "END"]
+
