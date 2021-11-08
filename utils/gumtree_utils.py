@@ -50,6 +50,22 @@ class GumtreeASTUtils:
             return neighbors_out(p, q, lambda _, x, k, e: x > u)
         return []
 
+    def build_nx_graph(ndicts):
+        nx_ast = nx.MultiDiGraph()
+        for ndict in sorted(ndicts, key=lambda x: x['id']):
+            nx_ast.add_node(ndict['id'], ntype=ndict['type'],
+                            token=ndict['label'], graph='ast',
+                            start_line=ndict['range']['begin']['line'],
+                            end_line=ndict['range']['end']['line'],
+                            status=0)
+
+            # Hypo 1: NX always keep the order of edges between one nodes and all
+            # others, so we can recover sibling from this
+            if ndict['parent_id'] != -1:
+                nx_ast.add_edge(
+                    ndict['parent_id'], ndict['id'], label='parent_child')
+        return nx_ast
+
 
 class GumtreeBasedAnnotation:
     '''Gumtree-based annotation between differencing ASTs'''
@@ -198,20 +214,6 @@ class GumtreeBasedAnnotation:
 
     def build_nx_graph_stmt_annt(map_dict, lang='java'):
         ''' Statement-level annotation'''
-        nx_ast_src = nx.MultiDiGraph()
-        for ndict in sorted(map_dict['srcNodes'], key=lambda x: x['id']):
-            nx_ast_src.add_node(ndict['id'], ntype=ndict['type'],
-                                token=ndict['label'], graph='ast',
-                                start_line=ndict['range']['begin']['line'],
-                                end_line=ndict['range']['end']['line'],
-                                status=0)
-
-            # Hypo 1: NX always keep the order of edges between one nodes and all
-            # others, so we can recover sibling from this
-            if ndict['parent_id'] != -1:
-                nx_ast_src.add_edge(
-                    ndict['parent_id'], ndict['id'], label='parent_child')
-
         # Insert a place holder node for each
         if lang == 'cpp':
             add_placeholder_func = GumtreeBasedAnnotation.add_placeholder_stmts_cpp
@@ -220,21 +222,10 @@ class GumtreeBasedAnnotation:
             add_placeholder_func = GumtreeBasedAnnotation.add_placeholder_stmts_java
             check_func = GumtreeASTUtils.check_is_stmt_java
 
-        nx_ast_dst = nx.MultiDiGraph()
+        nx_ast_src = GumtreeASTUtils.build_nx_graph(map_dict['srcNodes'])
+        nx_ast_dst = GumtreeASTUtils.build_nx_graph(map_dict['dstNodes'])
 
-        for ndict in sorted(map_dict['dstNodes'], key=lambda x: x['id']):
-            nx_ast_dst.add_node(
-                ndict['id'], ntype=ndict['type'], graph='ast',
-                token=ndict['label'],
-                start_line=ndict['range']['begin']['line'],
-                end_line=ndict['range']['begin']['line'],
-                status=0
-            )
-            if ndict['parent_id'] != -1:
-                nx_ast_dst.add_edge(
-                    ndict['parent_id'], ndict['id'], label='parent_child')
         nx_ast_src = add_placeholder_func(nx_ast_src)
-
         # Node post processing, recheck if token equal
         for n_s in nx_ast_src.nodes():
             if n_s in map_dict['mapping']:
@@ -244,8 +235,10 @@ class GumtreeBasedAnnotation:
                     map_dict['deleted'].append(n_s)
                     map_dict['inserted'].append(n_d)
 
-
         rev_map_dict = {v: k for k, v in map_dict['mapping'].items()}
+        linvalids = [n for n in nx_ast_dst.nodes()
+                     if n not in map_dict['inserted'] and n not in rev_map_dict]
+        map_dict['inserted'].extend(linvalids)
 
         # moved nodes: check parent
         for nsid, ndid in map_dict['mapping'].items():
@@ -273,20 +266,10 @@ class GumtreeBasedAnnotation:
 
         return nx_ast_src, nx_ast_dst
 
-    def build_nx_graph_node_annt(map_dict, lang='java'):
-        nx_ast_src = nx.MultiDiGraph()
-        for ndict in sorted(map_dict['srcNodes'], key=lambda x: x['id']):
-            nx_ast_src.add_node(ndict['id'], ntype=ndict['type'],
-                                token=ndict['label'], graph='ast',
-                                start_line=ndict['range']['begin']['line'],
-                                end_line=ndict['range']['end']['line'],
-                                status=0)
 
-            # Hypo 1: NX always keep the order of edges between one nodes and all
-            # others, so we can recover sibling from this
-            if ndict['parent_id'] != -1:
-                nx_ast_src.add_edge(
-                    ndict['parent_id'], ndict['id'], label='parent_child')
+    def build_nx_graph_node_annt(map_dict, lang='java'):
+        nx_ast_src = GumtreeASTUtils.build_nx_graph(map_dict['srcNodes'])
+        nx_ast_dst = GumtreeASTUtils.build_nx_graph(map_dict['dstNodes'])
 
         if lang == 'java':
             add_placeholder_func = GumtreeBasedAnnotation.add_placeholder_stmts_java
@@ -294,19 +277,6 @@ class GumtreeBasedAnnotation:
             add_placeholder_func = GumtreeBasedAnnotation.add_placeholder_stmts_cpp
 
         nx_ast_src = add_placeholder_func(nx_ast_src)
-        nx_ast_dst = nx.MultiDiGraph()
-
-        for ndict in sorted(map_dict['dstNodes'], key=lambda x: x['id']):
-            nx_ast_dst.add_node(
-                ndict['id'], ntype=ndict['type'], graph='ast',
-                token=ndict['label'],
-                start_line=ndict['range']['begin']['line'],
-                end_line=ndict['range']['begin']['line'],
-                status=0
-            )
-            if ndict['parent_id'] != -1:
-                nx_ast_dst.add_edge(
-                    ndict['parent_id'], ndict['id'], label='parent_child')
 
         # Node post processing, recheck if token equal
         for n_s in nx_ast_src.nodes():
@@ -316,7 +286,6 @@ class GumtreeBasedAnnotation:
                     del map_dict['mapping'][n_s]
                     map_dict['deleted'].append(n_s)
                     map_dict['inserted'].append(n_d)
-
 
         # get nx graph of two asts
         # deleted nodes
@@ -401,7 +370,7 @@ class GumtreeBasedAnnotation:
         for i, (cov_map, verdict) in enumerate(zip(cov_maps, verdicts)):
             test_node = max(nx_ast_g.nodes()) + 1
             nx_ast_g.add_node(test_node, name=f'test_{i}',
-                            ntype='test', graph='test')
+                              ntype='test', graph='test')
             link_type = 'fail' if not verdict else 'pass'
             for line in cov_map:
                 if cov_map[line] <= 0:
@@ -435,3 +404,18 @@ class GumtreeBasedAnnotation:
         nx_ast_cov = GumtreeBasedAnnotation.get_coverage_graph_ast(
             nx_ast_src, cov_maps, verdicts)
         return nx_ast_cov
+
+
+    def build_nx_ast_cov(src_b, cov_maps, verdicts, lang='cpp'):
+        map_dict = GumtreeWrapper.get_tree_diff(src_b, src_b)
+        nx_ast_src = GumtreeASTUtils.build_nx_graph(map_dict['srcNodes'])
+        if lang == 'java':
+            add_placeholder_func = GumtreeBasedAnnotation.add_placeholder_stmts_java
+        elif lang == 'cpp':
+            add_placeholder_func = GumtreeBasedAnnotation.add_placeholder_stmts_cpp
+        nx_ast_src = add_placeholder_func(nx_ast_src)
+        for node in nx_ast_src.nodes():
+            nx_ast_src.nodes[node]['status'] = 0
+        nx_ast_cov = GumtreeBasedAnnotation.get_coverage_graph_ast(
+            nx_ast_src, cov_maps, verdicts)
+        return nx_ast_src

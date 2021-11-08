@@ -115,9 +115,26 @@ def get_nx_ast_stmt_annt_gumtree(key):
         covfile = f"{ConfigClass.nbl_test_path}/{pid}/{test}-{vid}.gcov"
         cov_maps.append(get_coverage(covfile, 0))
         link_type = True if test_verdict[pid][vid][test] == 1 else False
+        verdicts.append(link_type)
 
 
     return GumtreeBasedAnnotation.build_nx_ast_cov_annt(
         src_b, src_f, cov_maps, verdicts,
         GumtreeBasedAnnotation.build_nx_graph_stmt_annt)
 
+
+def get_nx_ast_stmt_gumtree(key):
+    src_b = key['b_fp']
+    pid = key['problem_id']
+    vid = key['buggy']
+    tests_list = list(test_verdict[pid][vid].keys())
+    cov_maps = []
+    verdicts = []
+    for i, test in enumerate(tests_list):
+        covfile = f"{ConfigClass.nbl_test_path}/{pid}/{test}-{vid}.gcov"
+        cov_maps.append(get_coverage(covfile, 0))
+        link_type = True if test_verdict[pid][vid][test] == 1 else False
+        verdicts.append(link_type)
+
+    return GumtreeBasedAnnotation.build_nx_ast_cov(
+        src_b, cov_maps, verdicts)

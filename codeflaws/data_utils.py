@@ -261,9 +261,38 @@ def get_nx_ast_stmt_annt_gumtree(key):
         GumtreeBasedAnnotation.build_nx_graph_stmt_annt)
 
 
+def get_nx_ast_node_gumtree(key):
+    src_b = key2bugfile(key)
+    test_list = key2test_verdict(key)
+    cov_maps = []
+    verdicts = []
+    for i, test in enumerate(test_list):
+        covfile = get_gcov_file(key, test)
+        cov_maps.append(get_coverage(covfile, 0))
+        verdicts.append(test_list[test] > 0)
+
+    return GumtreeBasedAnnotation.build_nx_ast_cov(
+        src_b, cov_maps, verdicts)
+
+
+def get_nx_ast_stmt_gumtree(key):
+    src_b = key2bugfile(key)
+    test_list = key2test_verdict(key)
+    cov_maps = []
+    verdicts = []
+    for i, test in enumerate(test_list):
+        covfile = get_gcov_file(key, test)
+        cov_maps.append(get_coverage(covfile, 0))
+        verdicts.append(test_list[test] > 0)
+
+    return GumtreeBasedAnnotation.build_nx_ast_cov(
+        src_b, cov_maps,
+        verdicts)
+
+
 def cfl_check_is_stmt_cpp(node_dict):
-    return node_dict['ntype'] in ['Break', 'Return', 'Case', 'DoWhile', 'Decl', 'Default', 
-                     'If', 'FuncCall', 'Continue', 'Goto', 'EmptyStatement', 
+    return node_dict['ntype'] in ['Break', 'Return', 'Case', 'DoWhile', 'Decl', 'Default',
+                     'If', 'FuncCall', 'Continue', 'Goto', 'EmptyStatement',
                      'While', 'ExprList', 'Switch', 'For', 'FuncDef'] and \
                      node_dict['p_ntype'] in ['If', 'Else', 'For', 'Compound']
 
@@ -292,7 +321,7 @@ def cfl_add_placeholder_stmts_cpp(nx_ast):
                             n_order=0 if all(item==0 for item in n_orders) else max(n_orders)+1,
                             status=0
                             )
-            labels = list(set([e['label'] for u, v, k, e in nx_ast.edges(keys=True, data=True) 
+            labels = list(set([e['label'] for u, v, k, e in nx_ast.edges(keys=True, data=True)
                                                             if u==node]))
 
             nx_ast.add_edge(node, new_node, label='parent_child' if len(labels)>1 else labels[0])
