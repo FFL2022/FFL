@@ -11,6 +11,24 @@ import os
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
+
+class EdgeWeights(nn.Module):
+    def __init__(self, num_nodes, num_edges, etype):
+        super().__init__()
+
+        self.num_edges = num_edges
+        self.params = nn.Parameter(torch.FloatTensor(self.num_edges)).unsqueeze(-1)
+        self.sigmoid = nn.Sigmoid()
+
+        nn.init.normal_(self.params,
+            nn.init.calculate_gain("relu")*math.sqrt(2.0)/(num_nodes*2))
+
+        self.etype = etype
+
+    def forward(self, g):
+        g.edges[self.etype].data['weight'] = self.sigmoid(self.params)
+        return g
+
 class NodeWeights(nn.Module):
     def __init__(self, num_nodes, num_node_feats):
         super().__init__()
@@ -26,21 +44,31 @@ class NodeWeights(nn.Module):
         return g
 
 class WrapperModel(nn.Module):
-    def __init__(self, model, num_nodes, num_node_feats):
+    def __init__(self, model, num_nodes, num_edges_dict, num_node_feats):
         super().__init__()
         self.nweights = NodeWeights(num_nodes, num_node_feats)
+        self.eweights = {}
+        for etype in num_edges_dict:
+            self.eweights[etype] = EdgeWeights(num_nodes, num_edges_dict[etype], etype)
+
+        self.etypes = list(num_edges_dict.keys())
+
         self.model = model
 
     def forward_old(self, g):
         self.model.add_default_nweight = True
+        self.model.add_default_eweight = True
         self.model.eval()
         return self.model(g).nodes['ast'].data['logits']
 
     def forward(self, g):
         self.model.add_default_nweight = False
+        self.model.add_default_eweight = False
         self.model.eval()
 
         g = self.nweights(g)
+        for etype in self.etypes:
+            g = self.eweights[etype](g)
 
         return self.model(g).nodes['ast'].data['logits']
 
@@ -76,10 +104,19 @@ def explain(model, dataloader, iters=10):
         g = g.to(device)
         mask_stmt = mask_stmt.to(device)
 
+        num_edges_dict = {}
+        for etype in g.etypes:
+            if g.number_of_edges(etype) > 0:
+                num_edges_dict[etype] = g.number_of_edges(etype)
+        print(num_edges_dict)
+
         wrapper = WrapperModel(model, 
                                g.number_of_nodes(),
+                               num_edges_dict,
                                model.hidden_feats).to(device)
         wrapper.nweights.train()
+        # wrapper(g)
+        # exit()
         opt = torch.optim.Adam(wrapper.nweights.parameters(), lr)
 
         with torch.no_grad():
@@ -104,6 +141,8 @@ def explain(model, dataloader, iters=10):
                     wrapper.nweights.parameters(), 1.0)
                 opt.step()
 
+            exit()
+
 
 if __name__ == '__main__':
     dataset = NBLGumtreeDGLStatementDataset()
@@ -115,5 +154,5 @@ if __name__ == '__main__':
         num_ast_labels=len(dataset.nx_dataset.ast_types),
         num_classes_ast=2)
 
-    model.load_state_dict(torch.load('model_last.pth', map_location=device))
+    # model.load_state_dict(torch.load('model_last.pth', map_location=device))
     explain(model, dataset, iters=1000)
