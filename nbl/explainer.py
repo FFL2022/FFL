@@ -79,14 +79,25 @@ def entropy_loss(masking):
         (1 - torch.sigmoid(masking)) * torch.log(1 - torch.sigmoid(masking)))
 
 
-def entropy_loss_mask(g, coeff_n=0.2, coeff_e=0.5):
-    e_e_loss = 0.0
+def entropy_loss_mask(g, etypes, coeff_n=0.5, coeff_e=0.1):
+    e_e_loss = coeff_e * torch.tensor([entropy_loss(g.edges[_].data['weight']) 
+        for _ in etypes]).sum()
     n_e_loss = coeff_n * entropy_loss(g.nodes['ast'].data['weight'])
     return n_e_loss + e_e_loss
 
 def consistency_loss(preds, labels):
     loss = F.cross_entropy(preds, labels)
     return loss
+
+
+
+def size_loss(g, etypes, coeff_n=0.005, coeff_e=0.005):
+    feat_size_loss = coeff_n * torch.sum(g.nodes['ast'].data['weight'])
+    edge_size_loss = coeff_e * torch.tensor([g.edges[_].data['weight'].sum() 
+        for _ in etypes]).sum()
+    return feat_size_loss + edge_size_loss
+
+
 
 def explain(model, dataloader, iters=10):
 
@@ -109,6 +120,7 @@ def explain(model, dataloader, iters=10):
             if g.number_of_edges(etype) > 0:
                 num_edges_dict[etype] = g.number_of_edges(etype)
         print(num_edges_dict)
+        etypes = list(num_edges_dict.keys())
 
         wrapper = WrapperModel(model, 
                                g.number_of_nodes(),
@@ -131,17 +143,19 @@ def explain(model, dataloader, iters=10):
                 preds = wrapper(g)
                 preds = preds[mask_stmt].detach().cpu()
 
-                loss = entropy_loss_mask(g) \
-                     + consistency_loss(preds, ori_preds.squeeze(-1))
-                titers.set_postfix(loss=loss.item())
+                loss_e = entropy_loss_mask(g, etypes) 
+                loss_c = consistency_loss(preds, ori_preds.squeeze(-1)) 
+                loss_s = 0.01 * size_loss(g, etypes)
+
+                loss = loss_e + loss_c + loss_s
+
+                titers.set_postfix(loss_e=loss_e.item(), loss_c=loss_c.item(), loss_s=loss_s.item())
 
                 opt.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(
                     wrapper.nweights.parameters(), 1.0)
                 opt.step()
-
-            exit()
 
 
 if __name__ == '__main__':
