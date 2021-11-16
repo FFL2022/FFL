@@ -138,6 +138,14 @@ class GCN_1E(torch.nn.Module):
         msg = self.edge_transform(x_src)
         return {'msg': msg}
 
+
+    def compute_send_messages_w_eweight(self, edges):
+        # print(edges.data['weight'])
+        x_src = edges.src['h'] * edges.data['weight'] # N_n, hidden_dim
+        msg = self.edge_transform(x_src) 
+        return {'msg': msg}
+
+
     def activate_node(self, nodes, name_in, name_out):
         return {name_out: self.activation(nodes.data[name_in])}
 
@@ -220,24 +228,21 @@ class GCNLayer(torch.nn.Module):
             ctype_str = '><'.join((t_src, t_e, t_dst))
             per_type_linear[ctype_str] = GCN_1E(hidden_dim, out_dim)
             self.funcs[c_etype] = (
-                # per_type_linear[ctype_str].compute_send_messages,
-                self.add_eweight,
+                per_type_linear[ctype_str].compute_send_messages_w_eweight,
                 per_type_linear[ctype_str].aggregator('msg', 'h')
                 # self.add_act
             )
 
         self.per_type_linear = torch.nn.ModuleDict(per_type_linear)
 
-        self.edge_transform = nn.Linear(hidden_dim, out_dim, bias=False)
+        self.edge_transforms = {}
+        for c_etype in self.meta_graph:
+            self.edge_transforms[c_etype] = nn.Linear(hidden_dim, 
+                                                out_dim, bias=False)
+
 
     def add_act(self, nodes):
         return {'h': self.act(nodes.data['h'])}
-
-    def add_eweight(self, edges):
-        # print(edges.data['weight'])
-        x_src = edges.src['h'] * edges.data['weight'] # N_n, hidden_dim
-        msg = self.edge_transform(x_src) 
-        return {'msg': msg}
 
     def forward(self, h_g):
         # 4. Passing message through each of these sub graph onces each
