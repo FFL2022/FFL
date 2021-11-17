@@ -1,5 +1,7 @@
 from nbl.dataloader_gumtree import NBLGumtreeDGLStatementDataset
+from utils.explain_utils import map_explain_with_nx
 from model import GCN_A_L_T_1
+from utils.draw_utils import ast_to_agraph
 
 import torch.nn.functional as F
 import torch.nn as nn
@@ -80,7 +82,7 @@ def entropy_loss(masking):
 
 
 def entropy_loss_mask(g, etypes, coeff_n=0.5, coeff_e=0.1):
-    e_e_loss = coeff_e * torch.tensor([entropy_loss(g.edges[_].data['weight']) 
+    e_e_loss = coeff_e * torch.tensor([entropy_loss(g.edges[_].data['weight'])
         for _ in etypes]).sum()
     n_e_loss = coeff_n * entropy_loss(g.nodes['ast'].data['weight'])
     return n_e_loss + e_e_loss
@@ -93,7 +95,7 @@ def consistency_loss(preds, labels):
 
 def size_loss(g, etypes, coeff_n=0.005, coeff_e=0.005):
     feat_size_loss = coeff_n * torch.sum(g.nodes['ast'].data['weight'])
-    edge_size_loss = coeff_e * torch.tensor([g.edges[_].data['weight'].sum() 
+    edge_size_loss = coeff_e * torch.tensor([g.edges[_].data['weight'].sum()
         for _ in etypes]).sum()
     return feat_size_loss + edge_size_loss
 
@@ -106,10 +108,12 @@ def explain(model, dataloader, iters=10):
 
     # bar = tqdm.trange(len(dataloader))
     bar = range(len(dataloader))
+    os.makedirs('visualized_ast_explained/nbl', exist_ok=True)
     for i in bar:
         print('Graph', i)
 
         g, mask_stmt = dataloader[i]
+        nx_g = dataloader.nx_dataset.active_idxs[i]
         if g is None:
             continue
         g = g.to(device)
@@ -122,7 +126,7 @@ def explain(model, dataloader, iters=10):
         print(num_edges_dict)
         etypes = list(num_edges_dict.keys())
 
-        wrapper = WrapperModel(model, 
+        wrapper = WrapperModel(model,
                                g.number_of_nodes(),
                                num_edges_dict,
                                model.hidden_feats).to(device)
@@ -134,6 +138,7 @@ def explain(model, dataloader, iters=10):
         with torch.no_grad():
             ori_logits = wrapper.forward_old(g)
             _, ori_preds = torch.max(ori_logits[mask_stmt].detach().cpu(), dim=1)
+        os.makedirs(f'visualize_ast_explained/nbl/{i}', exist_ok=True)
 
         for j, nidx in enumerate(mask_stmt):
             titers = tqdm.tqdm(range(iters))
@@ -143,8 +148,8 @@ def explain(model, dataloader, iters=10):
                 preds = wrapper(g)
                 preds = preds[mask_stmt].detach().cpu()
 
-                loss_e = entropy_loss_mask(g, etypes) 
-                loss_c = consistency_loss(preds, ori_preds.squeeze(-1)) 
+                loss_e = entropy_loss_mask(g, etypes)
+                loss_c = consistency_loss(preds, ori_preds.squeeze(-1))
                 loss_s = 0.01 * size_loss(g, etypes)
 
                 loss = loss_e + loss_c + loss_s
@@ -156,6 +161,13 @@ def explain(model, dataloader, iters=10):
                 torch.nn.utils.clip_grad_norm_(
                     wrapper.nweights.parameters(), 1.0)
                 opt.step()
+            visualized_nx_g = map_explain_with_nx(g, nx_g)
+            # Visualizing only ast:
+            n_asts = [n for n in visualized_nx_g if
+                      visualized_nx_g.nodes[n]['graph'] == 'ast']
+            visualized_ast = nx_g.subgraph(n_asts)
+            ast_to_agraph(visualized_ast,
+                          f'visualize_ast_explained/nbl/{i}/{j}.png')
 
 
 if __name__ == '__main__':
