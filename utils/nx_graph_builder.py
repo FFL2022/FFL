@@ -110,7 +110,20 @@ def augment_with_reverse_edge(nx_g, ast_etypes, cfg_etypes):
     return nx_g
 
 
-def augment_with_reverse_edge_cat(nx_g, ast_etypes, cfg_etypes):
+def augment_with_reverse_edge_cat(nx_g, ast_etypes=None, cfg_etypes=None):
+    if ast_etypes is None:
+        ast_etypes = set()
+        for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
+            if nx_g.nodes[u]['graph'] == 'ast' and\
+                    nx_g.nodes[v]['graph'] == 'ast':
+                ast_etypes.add(e['label'])
+    if cfg_etypes is None:
+        cfg_etypes = set()
+        for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
+            if nx_g.nodes[u]['graph'] == 'cfg' and\
+                    nx_g.nodes[v]['graph'] == 'cfg':
+                cfg_etypes.add(e['label'])
+
     for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
         if e['label'] in ast_etypes:
             nx_g.add_edge(v, u, label=e['label'] + '_reverse')
