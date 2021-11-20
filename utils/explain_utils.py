@@ -10,20 +10,24 @@ def map_explain_with_nx(dgl_g, nx_g):
     n_alls = {'ast': n_as, 'cfg': n_cs,
               'test': n_ts}
 
-    # Augment with reverse edge so that the two met
-    ast_etypes = []
-    ast_etypes = set()
-    for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-        if nx_g.nodes[u]['graph'] == 'ast' and\
-                nx_g.nodes[v]['graph'] == 'ast':
-            ast_etypes.add(e['label'])
-    cfg_etypes = set()
-    for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-        if nx_g.nodes[u]['graph'] == 'cfg' and\
-                nx_g.nodes[v]['graph'] == 'cfg':
-            cfg_etypes.add(e['label'])
+    # print(len(n_alls['ast']))
+    # print(dgl_g.nodes(ntype='ast').shape)
+    # exit()
 
-    nx_g = augment_with_reverse_edge(nx_g, ast_etypes, cfg_etypes)
+    # Augment with reverse edge so that the two met
+    # ast_etypes = set()
+    # for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
+    #     if nx_g.nodes[u]['graph'] == 'ast' and\
+    #             nx_g.nodes[v]['graph'] == 'ast':
+    #         ast_etypes.add(e['label'])
+    # cfg_etypes = set()
+    # for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
+    #     if nx_g.nodes[u]['graph'] == 'cfg' and\
+    #             nx_g.nodes[v]['graph'] == 'cfg':
+    #         cfg_etypes.add(e['label'])
+
+    # nx_g = augment_with_reverse_edge(nx_g, ast_etypes, cfg_etypes)
+    
     all_etypes = set()
     for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
         all_etypes.add((nx_g.nodes[u]['graph'],
@@ -35,8 +39,10 @@ def map_explain_with_nx(dgl_g, nx_g):
         # Get edge in from dgl
         # print(etype, type(etype))
         # exit()
+        # if dgl_g.number_of_edges(etype) == 0:
+        #     continue
         es = dgl_g.edges(etype=etype)
-        data = dgl_g.edges[etype]['weight']
+        data = dgl_g.edges[etype].data['weight']
         # print(es)
         # if 'weight' not in es.data:
         #     continue
@@ -45,6 +51,7 @@ def map_explain_with_nx(dgl_g, nx_g):
         for i in range(us.shape[0]):
             u = n_alls[etype[0]][us[i].item()]
             v = n_alls[etype[2]][vs[i].item()]
+            # print(f'u={u}, v={v}, vs[{i}]={vs[i]}')
             for k in nx_g[u][v]:
                 nx_g[u][v][k]['weight'] = data[i].item()
     return  nx_g
