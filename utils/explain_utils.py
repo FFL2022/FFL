@@ -35,14 +35,15 @@ def map_explain_with_nx(dgl_g, nx_g):
         # Get edge in from dgl
         # print(etype, type(etype))
         # exit()
-        es = dgl_g.edges[etype[1]]
-        if 'weight' not in es.data:
-            continue
+        es = dgl_g.edges(etype=etype)
+        # print(es)
+        # if 'weight' not in es.data:
+        #     continue
         us = es[0]
         vs = es[1]
         for i in range(us.shape[0]):
             u = n_alls[etype[0]][us[i].item()]
             v = n_alls[etype[2]][vs[i].item()]
             for k in nx_g[u][v]:
-                nx_g[u][v][k]['weight'] = es.data['weight'][i].item()
+                nx_g[u][v][k]['weight'] = es[i].item()
     return  nx_g
