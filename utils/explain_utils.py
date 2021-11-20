@@ -26,9 +26,9 @@ def map_explain_with_nx(dgl_g, nx_g):
     nx_g = augment_with_reverse_edge(nx_g, ast_etypes, cfg_etypes)
     all_etypes = set()
     for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-        all_etypes.add((nx_g.nodes[u]['ntype'],
+        all_etypes.add((nx_g.nodes[u]['graph'],
                         e['label'],
-                        nx_g.nodes[v]['ntype']))
+                        nx_g.nodes[v]['graph']))
 
     # Loop through each type of edges
     for etype in all_etypes:
