@@ -116,7 +116,7 @@ class NBLGumtreeNxStatementDataset(object):
 
 
 class NBLGumtreeDGLStatementDataset(DGLDataset):
-    def __iniiit__(self, raw_dir=ConfigClass.nbl_raw_dir,
+    def __init__(self, raw_dir=ConfigClass.nbl_raw_dir,
                  save_dir=ConfigClass.preprocess_dir_nbl):
         self.graph_save_path = os.path.join(
             save_dir, 'dgl_nbl_gumtree_stmt.bin')

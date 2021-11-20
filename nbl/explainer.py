@@ -32,6 +32,7 @@ class EdgeWeights(nn.Module):
         return g
 
 class NodeWeights(nn.Module):
+
     def __init__(self, num_nodes, num_node_feats):
         super().__init__()
         self.num_nodes = num_nodes
@@ -45,8 +46,9 @@ class NodeWeights(nn.Module):
         g.nodes['ast'].data['weight'] = self.sigmoid(self.params)
         return g
 
-class WrapperModel(nn.Module):
-    def __init__(self, model, num_nodes, num_edges_dict, num_node_feats):
+class HeteroGraphWeights(nn.Module):
+
+    def __init__(self, num_nodes, num_edges_dict, num_node_feats):
         super().__init__()
         self.nweights = NodeWeights(num_nodes, num_node_feats)
         self.eweights = {}
@@ -55,6 +57,17 @@ class WrapperModel(nn.Module):
 
         self.etypes = list(num_edges_dict.keys())
 
+    def forward(self, g):
+        g = self.nweights(g)
+        for etype in self.etypes:
+            g = self.eweights[etype](g)
+        return g
+
+
+class WrapperModel(nn.Module):
+    def __init__(self, model, num_nodes, num_edges_dict, num_node_feats):
+        super().__init__()
+        self.hgraph_weights = HeteroGraphWeights(num_nodes, num_edges_dict, num_node_feats)
         self.model = model
 
     def forward_old(self, g):
@@ -68,9 +81,7 @@ class WrapperModel(nn.Module):
         self.model.add_default_eweight = False
         self.model.eval()
 
-        g = self.nweights(g)
-        for etype in self.etypes:
-            g = self.eweights[etype](g)
+        g = self.hgraph_weights(g)
 
         return self.model(g).nodes['ast'].data['logits']
 
@@ -113,7 +124,8 @@ def explain(model, dataloader, iters=10):
         print('Graph', i)
 
         g, mask_stmt = dataloader[i]
-        nx_g = dataloader.nx_dataset.active_idxs[i]
+        nx_g_id = dataloader.nx_dataset.active_idxs[i]
+        nx_g = dataloader.nx_dataset[nx_g_id][0]
         if g is None:
             continue
         g = g.to(device)
@@ -123,17 +135,17 @@ def explain(model, dataloader, iters=10):
         for etype in g.etypes:
             if g.number_of_edges(etype) > 0:
                 num_edges_dict[etype] = g.number_of_edges(etype)
-        print(num_edges_dict)
+        print(num_edges_dict, g.etypes)
         etypes = list(num_edges_dict.keys())
 
         wrapper = WrapperModel(model,
                                g.number_of_nodes(),
                                num_edges_dict,
                                model.hidden_feats).to(device)
-        wrapper.nweights.train()
+        wrapper.hgraph_weights.train()
         # wrapper(g)
         # exit()
-        opt = torch.optim.Adam(wrapper.nweights.parameters(), lr)
+        opt = torch.optim.Adam(wrapper.hgraph_weights.parameters(), lr)
 
         with torch.no_grad():
             ori_logits = wrapper.forward_old(g)
@@ -159,9 +171,12 @@ def explain(model, dataloader, iters=10):
                 opt.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(
-                    wrapper.nweights.parameters(), 1.0)
+                    wrapper.hgraph_weights.parameters(), 1.0)
                 opt.step()
             visualized_nx_g = map_explain_with_nx(g, nx_g)
+            for n in visualized_nx_g:
+                print(n)
+            exit()
             # Visualizing only ast:
             n_asts = [n for n in visualized_nx_g if
                       visualized_nx_g.nodes[n]['graph'] == 'ast']
@@ -181,4 +196,4 @@ if __name__ == '__main__':
         num_classes_ast=2)
 
     # model.load_state_dict(torch.load('model_last.pth', map_location=device))
-    explain(model, dataset, iters=1000)
+    explain(model, dataset, iters=1)

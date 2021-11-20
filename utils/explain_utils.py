@@ -33,7 +33,9 @@ def map_explain_with_nx(dgl_g, nx_g):
     # Loop through each type of edges
     for etype in all_etypes:
         # Get edge in from dgl
-        es = dgl_g.edges[etype]
+        # print(etype, type(etype))
+        # exit()
+        es = dgl_g.edges[etype[1]]
         if 'weight' not in es.data:
             continue
         us = es[0]
