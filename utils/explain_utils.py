@@ -44,7 +44,7 @@ def map_explain_with_nx(dgl_g, nx_g):
         data = dgl_g.edges[etype].data['weight'] 
 
         # magic
-        # data = data * data.max()
+        data = data * 7
 
         print(data)
         # print(es)
@@ -57,5 +57,5 @@ def map_explain_with_nx(dgl_g, nx_g):
             v = n_alls[etype[2]][vs[i].item()]
             # print(f'u={u}, v={v}, vs[{i}]={vs[i]}')
             for k in nx_g[u][v]:
-                nx_g[u][v][k]['weight'] = data[i].item()
+                nx_g[u][v][k]['penwidth'] = data[i].item()
     return  nx_g
