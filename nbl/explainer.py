@@ -92,9 +92,9 @@ def entropy_loss(masking):
         (1 - torch.sigmoid(masking)) * torch.log(1 - torch.sigmoid(masking)))
 
 
-def entropy_loss_mask(g, etypes, coeff_n=0.5, coeff_e=0.1):
+def entropy_loss_mask(g, etypes, coeff_n=0.2, coeff_e=0.5):
     e_e_loss = coeff_e * torch.tensor([entropy_loss(g.edges[_].data['weight'])
-        for _ in etypes]).sum()
+        for _ in etypes]).mean()
     n_e_loss = coeff_n * entropy_loss(g.nodes['ast'].data['weight'])
     return n_e_loss + e_e_loss
 
@@ -160,7 +160,7 @@ def explain(model, dataloader, iters=10):
 
                 loss_e = entropy_loss_mask(g, etypes)
                 loss_c = consistency_loss(preds, ori_preds.squeeze(-1))
-                loss_s = 0.01 * size_loss(g, etypes)
+                loss_s = 0.01 * size_loss(g, etypes) * 0
 
                 loss = loss_e + loss_c + loss_s
 
@@ -195,4 +195,4 @@ if __name__ == '__main__':
         num_classes_ast=2)
 
     model.load_state_dict(torch.load('model_last.pth', map_location=device))
-    explain(model, dataset, iters=1000)
+    explain(model, dataset, iters=50)

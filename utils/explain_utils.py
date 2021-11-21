@@ -7,8 +7,7 @@ def map_explain_with_nx(dgl_g, nx_g):
     n_cs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
     n_ts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
 
-    n_alls = {'ast': n_as, 'cfg': n_cs,
-              'test': n_ts}
+    n_alls = {'ast': n_as, 'cfg': n_cs, 'test': n_ts}
 
     # print(len(n_alls['ast']))
     # print(dgl_g.nodes(ntype='ast').shape)
@@ -42,7 +41,12 @@ def map_explain_with_nx(dgl_g, nx_g):
         # if dgl_g.number_of_edges(etype) == 0:
         #     continue
         es = dgl_g.edges(etype=etype)
-        data = dgl_g.edges[etype].data['weight']
+        data = dgl_g.edges[etype].data['weight'] 
+
+        # magic
+        # data = data * data.max()
+
+        print(data)
         # print(es)
         # if 'weight' not in es.data:
         #     continue
