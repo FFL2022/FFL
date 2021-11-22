@@ -531,7 +531,7 @@ class GCN_A_L_T_1(torch.nn.Module):
         if self.add_default_eweight:
             for etype in h_g.etypes:
                 h_g.edges[etype].data['weight'] = torch.Tensor([1] * \
-                    h_g.number_of_edges(etype)).unsqueeze(-1)
+                    h_g.number_of_edges(etype)).unsqueeze(-1).to(h_g.device)
 
         # print(h_g.etypes)
         if h_g.number_of_nodes('test') > 0:

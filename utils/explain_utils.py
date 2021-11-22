@@ -46,7 +46,6 @@ def map_explain_with_nx(dgl_g, nx_g):
         # magic
         data = data * 7
 
-        print(data)
         # print(es)
         # if 'weight' not in es.data:
         #     continue

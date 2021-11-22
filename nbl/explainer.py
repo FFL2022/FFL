@@ -149,37 +149,35 @@ def explain(model, dataloader, iters=10):
             ori_logits = wrapper.forward_old(g)
             _, ori_preds = torch.max(ori_logits[mask_stmt].detach().cpu(), dim=1)
 
-        titers = tqdm.tqdm(range(iters))
-        titers.set_description(f'Graph {i}')
-        # titers = range(iters)
-        for it in titers:
-            preds = wrapper(g)
-            preds = preds[mask_stmt].detach().cpu()
+        for j, nidx in enumerate(mask_stmt):
+            titers = tqdm.tqdm(range(iters))
+            titers.set_description(f'Graph {i}, Node {j}')
+            for _ in titers:
+                preds = wrapper(g).detach().cpu()
+                # preds1 = preds[mask_stmt].detach().cpu()
+                # print(preds1)
 
-            loss_e = entropy_loss_mask(g, etypes)
-            loss_c = consistency_loss(preds, ori_preds.squeeze(-1))
-            loss_s = size_loss(g, etypes) * 5e-3
+                loss_e = entropy_loss_mask(g, etypes)
+                loss_c = consistency_loss(preds[nidx].unsqueeze(0), ori_preds[j].unsqueeze(0))
+                loss_s = size_loss(g, etypes) * 5e-2
 
-            loss = loss_e + loss_c + loss_s
+                loss = loss_e + loss_c + loss_s
 
-            titers.set_postfix(loss_e=loss_e.item(), loss_c=loss_c.item(), loss_s=loss_s.item())
+                titers.set_postfix(loss_e=loss_e.item(), loss_c=loss_c.item(), loss_s=loss_s.item())
 
-            opt.zero_grad()
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(
-                wrapper.hgraph_weights.parameters(), 1.0)
-            opt.step()
-        visualized_nx_g = map_explain_with_nx(g, nx_g)
-        # for n in visualized_nx_g:
-        #     print(n)
-        # exit()
-        # Visualizing only ast:
-        n_asts = [n for n in visualized_nx_g if
-                  visualized_nx_g.nodes[n]['graph'] == 'ast']
-        visualized_ast = nx_g.subgraph(n_asts)
-        os.makedirs(f'visualize_ast_explained/nbl', exist_ok=True)
-        ast_to_agraph(visualized_ast,
-                      f'visualize_ast_explained/nbl/graph_{i}.png')
+                opt.zero_grad()
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(
+                    wrapper.hgraph_weights.parameters(), 1.0)
+                opt.step()
+
+            visualized_nx_g = map_explain_with_nx(g, nx_g)
+            n_asts = [n for n in visualized_nx_g if
+                      visualized_nx_g.nodes[n]['graph'] == 'ast']
+            visualized_ast = nx_g.subgraph(n_asts)
+            os.makedirs(f'visualize_ast_explained/nbl/{i}', exist_ok=True)
+            ast_to_agraph(visualized_ast,
+                          f'visualize_ast_explained/nbl/{i}/{j}.png')
 
 
 if __name__ == '__main__':
@@ -193,4 +191,4 @@ if __name__ == '__main__':
         num_classes_ast=2)
 
     model.load_state_dict(torch.load('model_last.pth', map_location=device))
-    explain(model, dataset, iters=5000)
+    explain(model, dataset, iters=10000)
