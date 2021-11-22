@@ -175,6 +175,10 @@ def explain(model, dataloader, iters=10):
             n_asts = [n for n in visualized_nx_g if
                       visualized_nx_g.nodes[n]['graph'] == 'ast']
             visualized_ast = nx_g.subgraph(n_asts)
+
+            # color = red
+            visualized_ast.nodes[n_asts[nidx]]['status'] = 1
+
             os.makedirs(f'visualize_ast_explained/nbl/{i}', exist_ok=True)
             ast_to_agraph(visualized_ast,
                           f'visualize_ast_explained/nbl/{i}/{j}.png')
