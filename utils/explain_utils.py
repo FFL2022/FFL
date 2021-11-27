@@ -33,8 +33,16 @@ def map_explain_with_nx(dgl_g, nx_g):
                         e['label'],
                         nx_g.nodes[v]['graph']))
 
+    existed_etypes = []
+    for etype in dgl_g.etypes:
+        if dgl_g.number_of_edges(etype) > 0:
+            existed_etypes.append(etype)
+    existed_etypes = list(set(existed_etypes))
+
     # Loop through each type of edges
     for etype in all_etypes:
+        if etype not in existed_etypes:
+            continue
         # Get edge in from dgl
         # print(etype, type(etype))
         # exit()

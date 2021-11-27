@@ -1,4 +1,4 @@
-from nbl.dataloader_gumtree import NBLGumtreeDGLStatementDataset
+from codeflaws.dataloader_cfl import CodeflawsCFLDGLStatementDataset
 from utils.explain_utils import map_explain_with_nx
 from model import GCN_A_L_T_1
 from utils.draw_utils import ast_to_agraph
@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch
 import tqdm
 import math
+import copy
 import os
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -35,9 +36,8 @@ class NodeWeights(nn.Module):
 
     def __init__(self, num_nodes, num_node_feats):
         super().__init__()
-        self.num_nodes = num_nodes
         self.params = nn.Parameter(
-            torch.FloatTensor(self.num_nodes, num_node_feats))
+            torch.FloatTensor(num_nodes, num_node_feats))
         nn.init.normal_(self.params, nn.init.calculate_gain(
             "relu")*math.sqrt(2.0)/(num_nodes*2))
         self.sigmoid = nn.Sigmoid()
@@ -114,52 +114,56 @@ def size_loss(g, etypes, coeff_n=0.005, coeff_e=0.005):
 
 def explain(model, dataloader, iters=10):
 
-    lr = 3e-3
-    os.makedirs('explain_log', exist_ok=True)
-
-    # bar = tqdm.trange(len(dataloader))
+    lr = 1e-2
     bar = range(len(dataloader))
     for i in bar:
 
-        g, mask_stmt = dataloader[i]
+        g = dataloader[i]
         nx_g_id = dataloader.active_idxs[i]
         nx_g = dataloader.nx_dataset[nx_g_id][0]
+
         if g is None:
             continue
         g = g.to(device)
-        mask_stmt = mask_stmt.to(device)
+
+        nidxs = g.nodes(ntype='ast')
 
         num_edges_dict = {}
         for etype in g.etypes:
             if g.number_of_edges(etype) > 0:
                 num_edges_dict[etype] = g.number_of_edges(etype)
-        print(num_edges_dict, g.etypes)
+        print(num_edges_dict)
         etypes = list(num_edges_dict.keys())
 
         wrapper = WrapperModel(model,
-                               g.number_of_nodes(),
+                               len(nidxs),
                                num_edges_dict,
                                model.hidden_feats).to(device)
         wrapper.hgraph_weights.train()
         # wrapper(g)
-        # exit()
+        # # exit()
         opt = torch.optim.Adam(wrapper.hgraph_weights.parameters(), lr)
 
         with torch.no_grad():
             ori_logits = wrapper.forward_old(g)
-            _, ori_preds = torch.max(ori_logits[mask_stmt].detach().cpu(), dim=1)
+            _, ori_preds = torch.max(ori_logits.detach().cpu(), dim=1)
 
-        for j, nidx in enumerate(mask_stmt):
+        for nidx in nidxs:
+            # if ori_preds[j] == 0:
+            #     continue
+
+            gi = copy.deepcopy(g)
+            nx_gi = copy.deepcopy(nx_g)
+
             titers = tqdm.tqdm(range(iters))
-            titers.set_description(f'Graph {i}, Node {j}')
+            titers.set_description(f'Graph {i}, Node {nidx}')
             for _ in titers:
-                preds = wrapper(g).detach().cpu()
+                preds = wrapper(gi).detach().cpu()
                 # preds1 = preds[mask_stmt].detach().cpu()
-                # print(preds1)
 
-                loss_e = entropy_loss_mask(g, etypes)
-                loss_c = consistency_loss(preds[nidx].unsqueeze(0), ori_preds[j].unsqueeze(0))
-                loss_s = size_loss(g, etypes) * 5e-2
+                loss_e = entropy_loss_mask(gi, etypes)
+                loss_c = consistency_loss(preds[nidx].unsqueeze(0), ori_preds[nidx].unsqueeze(0))
+                loss_s = size_loss(gi, etypes) * 5e-2
 
                 loss = loss_e + loss_c + loss_s
 
@@ -171,21 +175,21 @@ def explain(model, dataloader, iters=10):
                     wrapper.hgraph_weights.parameters(), 1.0)
                 opt.step()
 
-            visualized_nx_g = map_explain_with_nx(g, nx_g)
+            visualized_nx_g = map_explain_with_nx(gi, nx_gi)
             n_asts = [n for n in visualized_nx_g if
                       visualized_nx_g.nodes[n]['graph'] == 'ast']
-            visualized_ast = nx_g.subgraph(n_asts)
+            visualized_ast = nx_gi.subgraph(n_asts)
 
             # color = red
-            visualized_ast.nodes[n_asts[nidx]]['status'] = 1
+            visualized_ast.nodes[n_asts[nidx]]['status'] = 4
 
-            os.makedirs(f'visualize_ast_explained/nbl/{i}', exist_ok=True)
+            os.makedirs(f'visualize_ast_explained/codeflaws/node_level/{i}', exist_ok=True)
             ast_to_agraph(visualized_ast,
-                          f'visualize_ast_explained/nbl/{i}/{j}.png')
+                          f'visualize_ast_explained/codeflaws/node_level/{i}/{nidx}.png')
 
 
 if __name__ == '__main__':
-    dataset = NBLGumtreeDGLStatementDataset()
+    dataset = CodeflawsCFLDGLStatementDataset()
     meta_graph = dataset.meta_graph
 
     model = GCN_A_L_T_1(
@@ -194,5 +198,5 @@ if __name__ == '__main__':
         num_ast_labels=len(dataset.nx_dataset.ast_types),
         num_classes_ast=2)
 
-    model.load_state_dict(torch.load('model_last.pth', map_location=device))
-    explain(model, dataset, iters=10000)
+    # model.load_state_dict(torch.load('model_last.pth', map_location=device))
+    explain(model, dataset, iters=10)
