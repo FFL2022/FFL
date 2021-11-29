@@ -66,7 +66,7 @@ class HeteroGraphWeights(nn.Module):
 
 class WrapperModel(nn.Module):
     def __init__(self, model, num_nodes, num_edges_dict, num_node_feats):
-        super().__init__()
+        super(WrapperModel, self).__init__()
         self.hgraph_weights = HeteroGraphWeights(num_nodes, num_edges_dict, num_node_feats)
         self.model = model
 

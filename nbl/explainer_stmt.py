@@ -17,7 +17,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class EdgeWeights(nn.Module):
     def __init__(self, num_nodes, num_edges, etype):
-        super().__init__()
+        super(EdgeWeights, self).__init__()
 
         self.num_edges = num_edges
         self.params = nn.Parameter(torch.FloatTensor(self.num_edges)).unsqueeze(-1)
@@ -35,7 +35,7 @@ class EdgeWeights(nn.Module):
 class NodeWeights(nn.Module):
 
     def __init__(self, num_nodes, num_node_feats):
-        super().__init__()
+        super(NodeWeights, self).__init__()
         self.num_nodes = num_nodes
         self.params = nn.Parameter(
             torch.FloatTensor(self.num_nodes, num_node_feats))
@@ -50,7 +50,7 @@ class NodeWeights(nn.Module):
 class HeteroGraphWeights(nn.Module):
 
     def __init__(self, num_nodes, num_edges_dict, num_node_feats):
-        super().__init__()
+        super(HeteroGraphWeights, self).__init__()
         self.nweights = NodeWeights(num_nodes, num_node_feats)
         self.eweights = {}
         for etype in num_edges_dict:
@@ -67,7 +67,7 @@ class HeteroGraphWeights(nn.Module):
 
 class WrapperModel(nn.Module):
     def __init__(self, model, num_nodes, num_edges_dict, num_node_feats):
-        super().__init__()
+        super(WrapperModel, self).__init__()
         self.hgraph_weights = HeteroGraphWeights(num_nodes, num_edges_dict, num_node_feats)
         self.model = model
 
