@@ -1,5 +1,9 @@
 from nbl.dataloader_gumtree import NBLGumtreeDGLStatementDataset
+
+from utils.explain_utils import entropy_loss_mask, consistency_loss, size_loss
 from utils.explain_utils import map_explain_with_nx
+from utils.explain_utils import WrapperModel
+
 from model import GCN_A_L_T_1
 from utils.draw_utils import ast_to_agraph
 
@@ -14,108 +18,12 @@ import os
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-
-class EdgeWeights(nn.Module):
-    def __init__(self, num_nodes, num_edges, etype):
-        super(EdgeWeights, self).__init__()
-
-        self.num_edges = num_edges
-        self.params = nn.Parameter(torch.FloatTensor(self.num_edges).unsqueeze(-1).to(device))
-        self.sigmoid = nn.Sigmoid()
-
-        nn.init.normal_(self.params,
-            nn.init.calculate_gain("relu")*math.sqrt(2.0)/(num_nodes*2))
-
-        self.etype = etype
-
-    def forward(self, g):
-        g.edges[self.etype].data['weight'] = self.sigmoid(self.params)
-        return g
-
-class NodeWeights(nn.Module):
-
-    def __init__(self, num_nodes, num_node_feats):
-        super(NodeWeights, self).__init__()
-        self.num_nodes = num_nodes
-        self.params = nn.Parameter(
-            torch.FloatTensor(self.num_nodes, num_node_feats).to(device))
-        nn.init.normal_(self.params, nn.init.calculate_gain(
-            "relu")*math.sqrt(2.0)/(num_nodes*2))
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, g):
-        g.nodes['ast'].data['weight'] = self.sigmoid(self.params)
-        return g
-
-class HeteroGraphWeights(nn.Module):
-
-    def __init__(self, num_nodes, num_edges_dict, num_node_feats):
-        super(HeteroGraphWeights, self).__init__()
-        self.nweights = NodeWeights(num_nodes, num_node_feats)
-        self.eweights = {}
-        for etype in num_edges_dict:
-            self.eweights[etype] = EdgeWeights(num_nodes, num_edges_dict[etype], etype)
-
-        self.etypes = list(num_edges_dict.keys())
-
-    def forward(self, g):
-        g = self.nweights(g)
-        for etype in self.etypes:
-            g = self.eweights[etype](g)
-        return g
-
-
-class WrapperModel(nn.Module):
-    def __init__(self, model, num_nodes, num_edges_dict, num_node_feats):
-        super(WrapperModel, self).__init__()
-        self.hgraph_weights = HeteroGraphWeights(num_nodes, num_edges_dict, num_node_feats)
-        self.model = model
-
-    def forward_old(self, g):
-        self.model.add_default_nweight = True
-        self.model.add_default_eweight = True
-        self.model.eval()
-        return self.model(g).nodes['ast'].data['logits']
-
-    def forward(self, g):
-        self.model.add_default_nweight = False
-        self.model.add_default_eweight = False
-        self.model.eval()
-
-        g = self.hgraph_weights(g)
-
-        return self.model(g).nodes['ast'].data['logits']
-
-
-def entropy_loss(masking):
-    return torch.mean(
-        -torch.sigmoid(masking) * torch.log(torch.sigmoid(masking)) -
-        (1 - torch.sigmoid(masking)) * torch.log(1 - torch.sigmoid(masking)))
-
-
-def entropy_loss_mask(g, etypes, coeff_n=0.2, coeff_e=0.5):
-    e_e_loss = coeff_e * torch.tensor([entropy_loss(g.edges[_].data['weight'])
-        for _ in etypes]).mean()
-    n_e_loss = coeff_n * entropy_loss(g.nodes['ast'].data['weight'])
-    return n_e_loss + e_e_loss
-
-def consistency_loss(preds, labels):
-    loss = F.cross_entropy(preds, labels)
-    return loss
-
-
-
-def size_loss(g, etypes, coeff_n=0.005, coeff_e=0.005):
-    feat_size_loss = coeff_n * torch.sum(g.nodes['ast'].data['weight'])
-    edge_size_loss = coeff_e * torch.tensor([g.edges[_].data['weight'].sum()
-        for _ in etypes]).sum()
-    return feat_size_loss + edge_size_loss
-
-
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 def explain(model, dataloader, iters=10):
 
-    lr = 1e-2
+    lr = 1e-3
     os.makedirs('explain_log', exist_ok=True)
 
     # bar = tqdm.trange(len(dataloader))
@@ -140,8 +48,19 @@ def explain(model, dataloader, iters=10):
                                g.number_of_nodes(),
                                num_edges_dict,
                                model.hidden_feats).to(device)
-        wrapper.hgraph_weights.train()
+
+        wrapper.model.eval()
+
+        wrapper.hgraph_weights.nweights.train()
+        for _ in etypes:
+            wrapper.hgraph_weights.eweights[_].train()
+
         # wrapper(g)
+        # print([wrapper.hgraph_weights.nweights.parameters()] + [wrapper.hgraph_weights.eweights[_].parameters() for _ in etypes])
+        # print('wrapper', count_parameters(wrapper))
+        # print('hgraph_weights', count_parameters(wrapper.hgraph_weights))
+        # print('nweights', count_parameters(wrapper.hgraph_weights.nweights))
+        # print('eweights', [count_parameters(wrapper.hgraph_weights.eweights[_]) for _ in etypes])
         # exit()
         opt = torch.optim.Adam(wrapper.hgraph_weights.parameters(), lr)
 

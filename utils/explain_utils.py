@@ -122,6 +122,7 @@ class HeteroGraphWeights(nn.Module):
         self.eweights = {}
         for etype in num_edges_dict:
             self.eweights[etype] = EdgeWeights(num_nodes, num_edges_dict[etype], etype)
+        self.eweights = nn.ModuleDict(self.eweights)
 
         self.etypes = list(num_edges_dict.keys())
 
