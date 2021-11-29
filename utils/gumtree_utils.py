@@ -419,3 +419,58 @@ class GumtreeBasedAnnotation:
         nx_ast_cov = GumtreeBasedAnnotation.get_coverage_graph_ast(
             nx_ast_src, cov_maps, verdicts)
         return nx_ast_src
+
+    def build_mapping_stmt(map_dict, lang='java'):
+        ''' Statement-level annotation'''
+        # Insert a place holder node for each
+        if lang == 'cpp':
+            add_placeholder_func = GumtreeBasedAnnotation.add_placeholder_stmts_cpp
+            check_func = GumtreeASTUtils.check_is_stmt_cpp
+        elif lang == 'java':
+            add_placeholder_func = GumtreeBasedAnnotation.add_placeholder_stmts_java
+            check_func = GumtreeASTUtils.check_is_stmt_java
+
+        nx_ast_src = GumtreeASTUtils.build_nx_graph(map_dict['srcNodes'])
+        nx_ast_dst = GumtreeASTUtils.build_nx_graph(map_dict['dstNodes'])
+
+        # nx_ast_src = add_placeholder_func(nx_ast_src)
+        # Node post processing, recheck if token equal
+        for n_s in nx_ast_src.nodes():
+            if n_s in map_dict['mapping']:
+                n_d = map_dict['mapping'][n_s]
+                if nx_ast_src.nodes[n_s]['token'] != nx_ast_dst.nodes[n_d]['token']:
+                    del map_dict['mapping'][n_s]
+                    map_dict['deleted'].append(n_s)
+                    map_dict['inserted'].append(n_d)
+
+        rev_map_dict = {v: k for k, v in map_dict['mapping'].items()}
+        linvalids = [n for n in nx_ast_dst.nodes()
+                     if n not in map_dict['inserted'] and n not in rev_map_dict]
+        map_dict['inserted'].extend(linvalids)
+
+        # moved nodes: check parent
+        for nsid, ndid in map_dict['mapping'].items():
+            psids = neighbors_in(nsid, nx_ast_src)
+            pdids = neighbors_in(ndid, nx_ast_dst)
+            if len(psids) > 0 and len(pdids) > 0:
+                psid = psids[0]
+                pdid = pdids[0]
+                if psid in map_dict['mapping'] and pdid in rev_map_dict:
+                    if map_dict['mapping'][psid] != pdid:   # Moved
+                        map_dict['deleted'].append(nsid)
+                        map_dict['inserted'].append(ndid)
+
+        for st_n in GumtreeBasedAnnotation.find_modified_statement(
+                nx_ast_src, map_dict['deleted'],
+                check_func=check_func):
+            nx_ast_src.nodes[st_n]['status'] = 1
+
+        # inserted nodes: check sibling
+        for st_n in GumtreeBasedAnnotation.find_inserted_statement(
+                nx_ast_src, nx_ast_dst, rev_map_dict,
+                map_dict['inserted'],
+                check_func=check_func):
+            nx_ast_src.nodes[st_n]['status'] = 1
+
+        return nx_ast_src, nx_ast_dst
+
