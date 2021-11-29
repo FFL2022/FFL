@@ -185,9 +185,9 @@ def explain(model, dataloader, iters=10):
             # color = red
             visualized_ast.nodes[n_asts[nidx]]['status'] = 2
 
-            os.makedirs(f'visualize_ast_explained/nbl/stmt_level/{i}', exist_ok=True)
+            os.makedirs(f'visualize_ast_explained/nbl/stmt_level', exist_ok=True)
             ast_to_agraph(visualized_ast,
-                          f'visualize_ast_explained/nbl/stmt_level/{i}/{j}.png')
+                          f'visualize_ast_explained/nbl/stmt_level/Graph{i}_Node{j}.png')
 
 
 if __name__ == '__main__':
