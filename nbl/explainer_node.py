@@ -55,8 +55,12 @@ def explain(model, dataloader, iters=10):
             # exit()
 
         for nidx in nidxs:
+            if nidx == 0:
+                continue
+                
             if ori_preds[nidx] == 0:
                 continue
+
                 
             print(num_edges_dict)
 
