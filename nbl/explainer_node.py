@@ -18,7 +18,7 @@ import os
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-def explain(model, dataloader, iters=10):
+def explain(model, dataloader, iters=10, epsilon=5e-1):
 
     lr = 1e-3
     bar = range(len(dataloader))
@@ -57,7 +57,7 @@ def explain(model, dataloader, iters=10):
         for nidx in nidxs:
             if nidx == 0:
                 continue
-                
+
             if ori_preds[nidx] == 0:
                 continue
 
@@ -75,7 +75,7 @@ def explain(model, dataloader, iters=10):
 
                 loss_e = entropy_loss_mask(gi, etypes)
                 loss_c = consistency_loss(preds[nidx].unsqueeze(0), ori_preds[nidx].unsqueeze(0))
-                loss_s = size_loss(gi, etypes) * 5e-2
+                loss_s = size_loss(gi, etypes) * epsilon
 
                 loss = loss_e + loss_c + loss_s
 
@@ -97,7 +97,7 @@ def explain(model, dataloader, iters=10):
 
             os.makedirs(f'visualize_ast_explained/nbl/node_level', exist_ok=True)
             ast_to_agraph(visualized_ast,
-                          f'visualize_ast_explained/nbl/node_level/Graph{i}_Node{nidx}.png')
+                          f'visualize_ast_explained/nbl/node_level/Graph{i}_Node{nidx}_{epsilon}.png')
 
 
 if __name__ == '__main__':
@@ -111,4 +111,4 @@ if __name__ == '__main__':
         num_classes_ast=3)
 
     model.load_state_dict(torch.load('trained/nbl/Nov-29-2021/model_3_bestf1.pth', map_location=device))
-    explain(model, dataset, iters=5000)
+    explain(model, dataset, iters=5000, epsilon=0.5)
