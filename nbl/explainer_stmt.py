@@ -134,7 +134,6 @@ def explain(model, dataloader, iters=10):
         for etype in g.etypes:
             if g.number_of_edges(etype) > 0:
                 num_edges_dict[etype] = g.number_of_edges(etype)
-        print(num_edges_dict)
         etypes = list(num_edges_dict.keys())
 
         wrapper = WrapperModel(model,
@@ -153,6 +152,7 @@ def explain(model, dataloader, iters=10):
         for j, nidx in enumerate(mask_stmt):
             if ori_preds[j] == 0:
                 continue
+            print(num_edges_dict)
 
             gi = copy.deepcopy(g)
 
