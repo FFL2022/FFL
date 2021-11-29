@@ -118,7 +118,7 @@ def explain(model, dataloader, iters=10):
     bar = range(len(dataloader))
     for i in bar:
 
-        g = dataloader[i]
+        g, mask_stmt = dataloader[i]
         nx_g_id = dataloader.active_idxs[i]
         nx_g = dataloader.nx_dataset[nx_g_id][0]
 
@@ -148,7 +148,7 @@ def explain(model, dataloader, iters=10):
             ori_logits = wrapper.forward_old(g)
             _, ori_preds = torch.max(ori_logits.detach().cpu(), dim=1)
 
-        for nidx in nidxs:
+        for nidx in mask_stmt:
             # if ori_preds[j] == 0:
             #     continue
 
@@ -183,9 +183,9 @@ def explain(model, dataloader, iters=10):
             # color = red
             visualized_ast.nodes[n_asts[nidx]]['status'] = 4
 
-            os.makedirs(f'visualize_ast_explained/codeflaws/node_level/{i}', exist_ok=True)
+            os.makedirs(f'visualize_ast_explained/codeflaws/cfl/{i}', exist_ok=True)
             ast_to_agraph(visualized_ast,
-                          f'visualize_ast_explained/codeflaws/node_level/{i}/{nidx}.png')
+                          f'visualize_ast_explained/codeflaws/cfl/{i}/{nidx}.png')
 
 
 if __name__ == '__main__':
