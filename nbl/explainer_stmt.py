@@ -20,7 +20,7 @@ class EdgeWeights(nn.Module):
         super(EdgeWeights, self).__init__()
 
         self.num_edges = num_edges
-        self.params = nn.Parameter(torch.FloatTensor(self.num_edges)).unsqueeze(-1)
+        self.params = nn.Parameter(torch.FloatTensor(self.num_edges).unsqueeze(-1).to(device))
         self.sigmoid = nn.Sigmoid()
 
         nn.init.normal_(self.params,
@@ -38,7 +38,7 @@ class NodeWeights(nn.Module):
         super(NodeWeights, self).__init__()
         self.num_nodes = num_nodes
         self.params = nn.Parameter(
-            torch.FloatTensor(self.num_nodes, num_node_feats))
+            torch.FloatTensor(self.num_nodes, num_node_feats).to(device))
         nn.init.normal_(self.params, nn.init.calculate_gain(
             "relu")*math.sqrt(2.0)/(num_nodes*2))
         self.sigmoid = nn.Sigmoid()
