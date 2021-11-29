@@ -200,5 +200,5 @@ if __name__ == '__main__':
         num_ast_labels=len(dataset.nx_dataset.ast_types),
         num_classes_ast=2)
 
-    model.load_state_dict(torch.load('model_last.pth', map_location=device))
+    model.load_state_dict(torch.load('trained/nbl/Nov-29-2021/model_79_best_top3_gumtree_stmt.pth', map_location=device))
     explain(model, dataset, iters=1000)
