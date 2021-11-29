@@ -201,4 +201,4 @@ if __name__ == '__main__':
         num_classes_ast=2)
 
     model.load_state_dict(torch.load('trained/nbl/Nov-29-2021/model_79_best_top3_gumtree_stmt.pth', map_location=device))
-    explain(model, dataset, iters=1000)
+    explain(model, dataset, iters=5000)
