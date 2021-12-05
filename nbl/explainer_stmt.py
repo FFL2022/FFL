@@ -69,7 +69,7 @@ def explain(model, dataloader, iters=10):
 
         with torch.no_grad():
             ori_logits = wrapper.forward_old(g)
-            _, ori_preds = torch.max(ori_logits.detach().cpu(), dim=1)
+            _, ori_preds = torch.max(ori_logits, dim=1)
 
         for nidx in mask_stmt:
             if ori_preds[nidx] == 0:
