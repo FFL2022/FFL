@@ -51,11 +51,14 @@ def explain(model, dataloader, iters=10):
 
         wrapper.model.eval()
 
-        wrapper.hgraph_weights.nweights.train()
-        for _ in etypes:
-            wrapper.hgraph_weights.eweights[_].train()
-
+        wrapper.hgraph_weights.train()
         # wrapper(g)
+
+        # for name, param in wrapper.hgraph_weights.named_parameters():
+        #     if param.requires_grad:
+        #         print(name, param.shape)
+
+
         # print([wrapper.hgraph_weights.nweights.parameters()] + [wrapper.hgraph_weights.eweights[_].parameters() for _ in etypes])
         # print('wrapper', count_parameters(wrapper))
         # print('hgraph_weights', count_parameters(wrapper.hgraph_weights))
@@ -66,35 +69,41 @@ def explain(model, dataloader, iters=10):
 
         with torch.no_grad():
             ori_logits = wrapper.forward_old(g)
-            _, ori_preds = torch.max(ori_logits[mask_stmt].detach().cpu(), dim=1)
+            _, ori_preds = torch.max(ori_logits.detach().cpu(), dim=1)
 
-        for j, nidx in enumerate(mask_stmt):
-            if ori_preds[j] == 0:
+        for nidx in mask_stmt:
+            if ori_preds[nidx] == 0:
                 continue
             print(num_edges_dict)
 
             gi = copy.deepcopy(g)
 
             titers = tqdm.tqdm(range(iters))
-            titers.set_description(f'Graph {i}, Node {j}')
+            titers.set_description(f'Graph {i}, Node {nidx}')
             for _ in titers:
-                preds = wrapper(gi).detach().cpu()
+                preds = wrapper(gi)
                 # preds1 = preds[mask_stmt].detach().cpu()
-                # print(preds1)
 
-                loss_e = entropy_loss_mask(gi, etypes)
-                loss_c = consistency_loss(preds[nidx].unsqueeze(0), ori_preds[j].unsqueeze(0))
-                loss_s = size_loss(gi, etypes) * 5e-2
+                loss_e = 3 * entropy_loss_mask(gi, etypes)
+                loss_c = consistency_loss(preds[nidx].unsqueeze(0), ori_preds[nidx].unsqueeze(0))
+                loss_s = 5e-1 * size_loss(gi, etypes) 
 
                 loss = loss_e + loss_c + loss_s
 
-                titers.set_postfix(loss_e=loss_e.item(), loss_c=loss_c.item(), loss_s=loss_s.item())
+                # print(loss_c, preds[nidx], ori_preds[nidx])
+                # titers.set_postfix(loss_e=loss_e.item(), pred=preds[nidx])
+                titers.set_postfix(loss_e=loss_e.item(), loss_c=loss_c.item(), loss_s=loss_s.item(), pred=preds[nidx].data)
+
+                # a = list(wrapper.hgraph_weights.parameters())[3].clone()
 
                 opt.zero_grad()
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(
-                    wrapper.hgraph_weights.parameters(), 1.0)
+                torch.nn.utils.clip_grad_norm_(wrapper.hgraph_weights.parameters(), 1.0)
                 opt.step()
+                # b = list(wrapper.hgraph_weights.parameters())[3].clone()
+                # print(a.shape, torch.equal(a.data, b.data))
+                # exit()
+
 
             visualized_nx_g = map_explain_with_nx(gi, nx_g)
             n_asts = [n for n in visualized_nx_g if
@@ -106,7 +115,7 @@ def explain(model, dataloader, iters=10):
 
             os.makedirs(f'visualize_ast_explained/nbl/stmt_level', exist_ok=True)
             ast_to_agraph(visualized_ast,
-                          f'visualize_ast_explained/nbl/stmt_level/Graph{i}_Node{j}.png')
+                          f'visualize_ast_explained/nbl/stmt_level/Graph{i}_Node{nidx}.png')
 
 
 if __name__ == '__main__':
@@ -120,4 +129,5 @@ if __name__ == '__main__':
         num_classes_ast=2)
 
     model.load_state_dict(torch.load('trained/nbl/Nov-29-2021/model_79_best_top3_gumtree_stmt.pth', map_location=device))
-    explain(model, dataset, iters=5000)
+    model.eval()
+    explain(model, dataset, iters=10000)

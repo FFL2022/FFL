@@ -84,19 +84,22 @@ def map_explain_with_nx(dgl_g, nx_g):
 
 
 class EdgeWeights(nn.Module):
-    def __init__(self, num_nodes, num_edges, etype):
+    def __init__(self, num_edges, etype):
         super(EdgeWeights, self).__init__()
 
-        self.num_edges = num_edges
-        self.params = nn.Parameter(torch.FloatTensor(self.num_edges).unsqueeze(-1).to(device))
         self.sigmoid = nn.Sigmoid()
 
-        nn.init.normal_(self.params,
-            nn.init.calculate_gain("relu")*math.sqrt(2.0)/(num_nodes*2))
+        self.params = nn.Parameter(torch.FloatTensor(num_edges).unsqueeze(-1).to(device))
+        nn.init.normal_(self.params, nn.init.calculate_gain("relu")*math.sqrt(2.0)/(num_edges*2))
 
         self.etype = etype
 
+        # self.temp = self.params.clone()
+
     def forward(self, g):
+        # if not torch.all(self.temp == self.params):
+        #     print('[+] Edge', self.etype, torch.all(self.temp == self.params))
+        # self.temp = self.params.clone()
         g.edges[self.etype].data['weight'] = self.sigmoid(self.params)
         return g
 
@@ -109,8 +112,13 @@ class NodeWeights(nn.Module):
         nn.init.normal_(self.params, nn.init.calculate_gain(
             "relu")*math.sqrt(2.0)/(num_nodes*2))
         self.sigmoid = nn.Sigmoid()
+        # self.temp = self.params.clone()
 
     def forward(self, g):
+        # if not torch.all(self.temp == self.params):
+        #     print('[+] Node', torch.all(self.temp == self.params))
+        # self.temp = self.params.clone()
+        # print(self.params[0][0])
         g.nodes['ast'].data['weight'] = self.sigmoid(self.params)
         return g
 
@@ -119,15 +127,14 @@ class HeteroGraphWeights(nn.Module):
     def __init__(self, num_nodes, num_edges_dict, num_node_feats):
         super(HeteroGraphWeights, self).__init__()
         self.nweights = NodeWeights(num_nodes, num_node_feats)
-        self.eweights = {}
+        self.eweights = nn.ModuleDict()
         for etype in num_edges_dict:
             if etype == 'type':
-                self.eweights['_type'] = EdgeWeights(num_nodes, num_edges_dict[etype], etype)
+                self.eweights['_type'] = EdgeWeights(num_edges_dict[etype], etype)
             else:
-                self.eweights[etype] = EdgeWeights(num_nodes, num_edges_dict[etype], etype)
+                self.eweights[etype] = EdgeWeights(num_edges_dict[etype], etype)
 
-        self.eweights = nn.ModuleDict(self.eweights)
-
+        # self.eweights = EdgeWeights(num_edges_dict['parent_child'], 'parent_child')
         self.etypes = list(num_edges_dict.keys())
 
     def forward(self, g):
@@ -136,6 +143,7 @@ class HeteroGraphWeights(nn.Module):
             if etype == 'type':
                 etype = '_type'
             g = self.eweights[etype](g)
+        # g = self.eweights(g)
         return g
 
 
@@ -146,18 +154,17 @@ class WrapperModel(nn.Module):
         self.model = model
 
     def forward_old(self, g):
+        self.model.eval()
         self.model.add_default_nweight = True
         self.model.add_default_eweight = True
-        self.model.eval()
         return self.model(g).nodes['ast'].data['logits']
 
     def forward(self, g):
+        self.model.eval()
         self.model.add_default_nweight = False
         self.model.add_default_eweight = False
-        self.model.eval()
 
         g = self.hgraph_weights(g)
-
         return self.model(g).nodes['ast'].data['logits']
 
 
@@ -168,8 +175,10 @@ def entropy_loss(masking):
 
 
 def entropy_loss_mask(g, etypes, coeff_n=0.2, coeff_e=0.5):
-    e_e_loss = coeff_e * torch.tensor([entropy_loss(g.edges[_].data['weight'])
-        for _ in etypes]).mean()
+    e_e_loss = 0
+    for etype in etypes:
+        e_e_loss += entropy_loss(g.edges[etype].data['weight'])
+    e_e_loss = coeff_e * e_e_loss
     n_e_loss = coeff_n * entropy_loss(g.nodes['ast'].data['weight'])
     return n_e_loss + e_e_loss
 
@@ -179,8 +188,10 @@ def consistency_loss(preds, labels):
 
 
 
-def size_loss(g, etypes, coeff_n=0.005, coeff_e=0.005):
+def size_loss(g, etypes, coeff_n=0.001, coeff_e=0.005):
     feat_size_loss = coeff_n * torch.sum(g.nodes['ast'].data['weight'])
-    edge_size_loss = coeff_e * torch.tensor([g.edges[_].data['weight'].sum()
-        for _ in etypes]).sum()
+    edge_size_loss = 0
+    for etype in etypes:
+        edge_size_loss += g.edges[etype].data['weight'].sum()
+    edge_size_loss = coeff_e * edge_size_loss
     return feat_size_loss + edge_size_loss

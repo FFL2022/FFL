@@ -115,7 +115,7 @@ class WeightedGCNSingleEtype(torch.nn.Module):
 
 
 class GCN_1E(torch.nn.Module):
-    def __init__(self, hidden_dim, out_dim, activation=nn.ReLU()):
+    def __init__(self, hidden_dim, out_dim, name='', activation=nn.ReLU()):
         super(GCN_1E, self).__init__()
         self.hidden_dim = hidden_dim
         self.activation = activation
@@ -129,6 +129,7 @@ class GCN_1E(torch.nn.Module):
         nn.init.xavier_normal_(self.self_loop.weight)
         # TODO: add self loop to: each type of edge, add linear, etc
         # TODO: sigmoid weight
+        self.name = name
 
     def compute_send_messages(self, edges):
         src, dst, _ = edges.edges()
@@ -140,7 +141,7 @@ class GCN_1E(torch.nn.Module):
 
 
     def compute_send_messages_w_eweight(self, edges):
-        # print(edges.data['weight'])
+        # print(self.name, edges.data['weight'].shape)
         x_src = edges.src['h'] * edges.data['weight'] # N_n, hidden_dim
         msg = self.edge_transform(x_src) 
         return {'msg': msg}
@@ -215,18 +216,18 @@ class GCNLayer(torch.nn.Module):
     ''' Propagate infor through each type of edge'''
 
     def __init__(self, meta_graph, hidden_dim, out_dim, device=device):
-        super().__init__()
+        super(GCNLayer, self).__init__()
         # 1. Get all edges via meta graph
         self.meta_graph = meta_graph
         per_type_linear = {}
         self.funcs = {}
         self.act = nn.ReLU()
         for c_etype in self.meta_graph:
-            # etype is a tuple of node type, etype, dst type
+            # etype is a tuple of src type, etype, dst type
             t_src, t_e, t_dst = c_etype
             # 2. for each meta graph, create a mpnn block
             ctype_str = '><'.join((t_src, t_e, t_dst))
-            per_type_linear[ctype_str] = GCN_1E(hidden_dim, out_dim)
+            per_type_linear[ctype_str] = GCN_1E(hidden_dim, out_dim, name=t_e)
             self.funcs[c_etype] = (
                 per_type_linear[ctype_str].compute_send_messages_w_eweight,
                 per_type_linear[ctype_str].aggregator('msg', 'h')
