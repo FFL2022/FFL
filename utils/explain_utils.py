@@ -37,7 +37,7 @@ def map_explain_with_nx(dgl_g, nx_g):
     #         cfg_etypes.add(e['label'])
 
     # nx_g = augment_with_reverse_edge(nx_g, ast_etypes, cfg_etypes)
-    
+
     all_etypes = set()
     for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
         all_etypes.add((nx_g.nodes[u]['graph'],
@@ -52,6 +52,7 @@ def map_explain_with_nx(dgl_g, nx_g):
     print(all_etypes)
     print(existed_etypes)
 
+
     # Loop through each type of edges
     for etype in all_etypes:
         if etype[1] not in existed_etypes:
@@ -62,7 +63,7 @@ def map_explain_with_nx(dgl_g, nx_g):
         # if dgl_g.number_of_edges(etype) == 0:
         #     continue
         es = dgl_g.edges(etype=etype)
-        data = dgl_g.edges[etype].data['weight'] 
+        data = dgl_g.edges[etype].data['weight']
         print(data.min(), data.max(), data.mean())
 
         # magic
@@ -79,6 +80,20 @@ def map_explain_with_nx(dgl_g, nx_g):
             # print(f'u={u}, v={v}, vs[{i}]={vs[i]}')
             for k in nx_g[u][v]:
                 nx_g[u][v][k]['penwidth'] = data[i].item()
+    # Loop through each type of node
+    all_ntypes = set([et[0] for et in all_etypes]).union(
+        set([et[1] for et in all_etypes]))
+    existed_ntypes = set([ntype for ntype in dgl_g.ntypes
+                      if dgl_g.number_of_nodes(ntype) > 0]).intersection(all_ntypes)
+    for ntype in existed_ntypes:
+        ns = dgl_g.nodes(ntype)
+        n_w = dgl_g.edges[etype].data['weight']
+
+        # magic
+        n_w = n_w* 7
+        for i in range(ns.shape[0]):
+            nx_g.nodes[n_alls[ntype][i]]['penwidth'] = n_w[i].item()
+
     return  nx_g
 
 
