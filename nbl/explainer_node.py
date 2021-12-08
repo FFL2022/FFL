@@ -73,9 +73,9 @@ def explain(model, dataloader, iters=10, epsilon=5e-1):
                 preds = wrapper(gi)
                 # preds1 = preds[mask_stmt].detach().cpu()
 
-                loss_e = 3 * entropy_loss_mask(gi, etypes)
-                loss_c = consistency_loss(preds[nidx].unsqueeze(0), ori_preds[nidx].unsqueeze(0))
-                loss_s = size_loss(gi, etypes) * epsilon
+                loss_e = entropy_loss_mask(gi, etypes)
+                loss_c = 3 * consistency_loss(preds[nidx].unsqueeze(0), ori_preds[nidx].unsqueeze(0))
+                loss_s = 7 * size_loss(gi, etypes) * epsilon
 
                 loss = loss_e + loss_c + loss_s
 
