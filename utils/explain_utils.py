@@ -49,8 +49,8 @@ def map_explain_with_nx(dgl_g, nx_g):
         if dgl_g.number_of_edges(etype) > 0:
             existed_etypes.append(etype)
     existed_etypes = list(set(existed_etypes))
-    print(all_etypes)
-    print(existed_etypes)
+    # print(all_etypes)
+    # print(existed_etypes)
 
 
     # Loop through each type of edges
@@ -64,7 +64,7 @@ def map_explain_with_nx(dgl_g, nx_g):
         #     continue
         es = dgl_g.edges(etype=etype)
         data = dgl_g.edges[etype].data['weight']
-        print(data.min(), data.max(), data.mean())
+        # print(data.min(), data.max(), data.mean())
 
         # magic
         data = data * 7
@@ -87,10 +87,11 @@ def map_explain_with_nx(dgl_g, nx_g):
                       if dgl_g.number_of_nodes(ntype) > 0]).intersection(all_ntypes)
     for ntype in existed_ntypes:
         ns = dgl_g.nodes(ntype)
-        n_w = dgl_g.edges[etype].data['weight']
-
+        n_w = dgl_g.nodes[ntype].data['weight']
+        # print(ns.shape, n_w.shape)
+        # exit()
         # magic
-        n_w = n_w* 7
+        n_w = n_w * 7
         for i in range(ns.shape[0]):
             nx_g.nodes[n_alls[ntype][i]]['penwidth'] = n_w[i].item()
 
@@ -123,7 +124,7 @@ class NodeWeights(nn.Module):
     def __init__(self, num_nodes, num_node_feats):
         super(NodeWeights, self).__init__()
         self.params = nn.Parameter(
-            torch.FloatTensor(num_nodes, num_node_feats).to(device))
+            torch.FloatTensor(num_nodes, 1).to(device))
         nn.init.normal_(self.params, nn.init.calculate_gain(
             "relu")*math.sqrt(2.0)/(num_nodes*2))
         self.sigmoid = nn.Sigmoid()
@@ -189,7 +190,7 @@ def entropy_loss(masking):
         (1 - torch.sigmoid(masking)) * torch.log(1 - torch.sigmoid(masking)))
 
 
-def entropy_loss_mask(g, etypes, coeff_n=0.2, coeff_e=0.5):
+def entropy_loss_mask(g, etypes, coeff_n=0.1, coeff_e=0.3):
     e_e_loss = 0
     for etype in etypes:
         e_e_loss += entropy_loss(g.edges[etype].data['weight'])
@@ -203,7 +204,7 @@ def consistency_loss(preds, labels):
 
 
 
-def size_loss(g, etypes, coeff_n=0.001, coeff_e=0.005):
+def size_loss(g, etypes, coeff_n=0.002, coeff_e=0.005):
     feat_size_loss = coeff_n * torch.sum(g.nodes['ast'].data['weight'])
     edge_size_loss = 0
     for etype in etypes:

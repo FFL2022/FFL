@@ -116,6 +116,7 @@ def explain(model, dataloader, iters=10):
             os.makedirs(f'visualize_ast_explained/nbl/stmt_level', exist_ok=True)
             ast_to_agraph(visualized_ast,
                           f'visualize_ast_explained/nbl/stmt_level/Graph{i}_Node{nidx}.png')
+            # exit()
 
 
 if __name__ == '__main__':
