@@ -50,7 +50,7 @@ def explain(model, dataloader, iters=10, epsilon=5e-1):
 
         with torch.no_grad():
             ori_logits = wrapper.forward_old(g)
-            _, ori_preds = torch.max(ori_logits.detach().cpu(), dim=1)
+            _, ori_preds = torch.max(ori_logits, dim=1)
             # print(len([n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']))
             # exit()
 
