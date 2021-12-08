@@ -20,7 +20,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def explain(model, dataloader, iters=10, epsilon=5e-1):
 
-    lr = 1e-3
+    lr = 5e-3
     bar = range(len(dataloader))
     for i in bar:
 
