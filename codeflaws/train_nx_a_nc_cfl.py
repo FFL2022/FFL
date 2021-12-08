@@ -136,7 +136,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             best_f1_train = max(best_f1_train, f1_meter.get()['aux_f1'])
 
         with open(ConfigClass.trained_dir_codeflaws +
-                    f'/training_dict_gumtree_e{epoch}.json', 'w') as f:
+                    f'/training_dict_gumtree_e{epoch}_cfl.json', 'w') as f:
             json.dump(out_dict, f, indent=2)
         print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
                 f"top 10 acc: {top_10_meter.avg}, " +
@@ -271,7 +271,7 @@ def eval(model, dataloader, epoch):
 
     out_dict['f1'] = f1
     with open(ConfigClass.result_dir_codeflaws +
-              '/eval_dict_e{}.json'.format(epoch), 'w') as f:
+              '/eval_dict_e{}_cfl.json'.format(epoch), 'w') as f:
         json.dump(out_dict, f, indent=2)
     print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
           f"top 10 acc: {top_1_meter.avg}, " +

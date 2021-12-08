@@ -77,6 +77,7 @@ def explain(model, dataloader, iters=10):
             print(num_edges_dict)
 
             gi = copy.deepcopy(g)
+            nx_gi = copy.deepcopy(nx_g)
 
             titers = tqdm.tqdm(range(iters))
             titers.set_description(f'Graph {i}, Node {nidx}')
@@ -105,10 +106,10 @@ def explain(model, dataloader, iters=10):
                 # exit()
 
 
-            visualized_nx_g = map_explain_with_nx(gi, nx_g)
+            visualized_nx_g = map_explain_with_nx(gi, nx_gi)
             n_asts = [n for n in visualized_nx_g if
                       visualized_nx_g.nodes[n]['graph'] == 'ast']
-            visualized_ast = nx_g.subgraph(n_asts)
+            visualized_ast = nx_gi.subgraph(n_asts)
 
             # color = red
             visualized_ast.nodes[n_asts[nidx]]['status'] = 2

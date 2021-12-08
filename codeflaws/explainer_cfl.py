@@ -1,5 +1,9 @@
 from codeflaws.dataloader_cfl import CodeflawsCFLDGLStatementDataset
+
+from utils.explain_utils import entropy_loss_mask, consistency_loss, size_loss
 from utils.explain_utils import map_explain_with_nx
+from utils.explain_utils import WrapperModel
+
 from model import GCN_A_L_T_1
 from utils.draw_utils import ast_to_agraph
 
@@ -12,104 +16,6 @@ import copy
 import os
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-
-
-class EdgeWeights(nn.Module):
-    def __init__(self, num_nodes, num_edges, etype):
-        super().__init__()
-
-        self.num_edges = num_edges
-        self.params = nn.Parameter(torch.FloatTensor(self.num_edges)).unsqueeze(-1)
-        self.sigmoid = nn.Sigmoid()
-
-        nn.init.normal_(self.params,
-            nn.init.calculate_gain("relu")*math.sqrt(2.0)/(num_nodes*2))
-
-        self.etype = etype
-
-    def forward(self, g):
-        g.edges[self.etype].data['weight'] = self.sigmoid(self.params)
-        return g
-
-class NodeWeights(nn.Module):
-
-    def __init__(self, num_nodes, num_node_feats):
-        super().__init__()
-        self.params = nn.Parameter(
-            torch.FloatTensor(num_nodes, num_node_feats))
-        nn.init.normal_(self.params, nn.init.calculate_gain(
-            "relu")*math.sqrt(2.0)/(num_nodes*2))
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, g):
-        g.nodes['ast'].data['weight'] = self.sigmoid(self.params)
-        return g
-
-class HeteroGraphWeights(nn.Module):
-
-    def __init__(self, num_nodes, num_edges_dict, num_node_feats):
-        super().__init__()
-        self.nweights = NodeWeights(num_nodes, num_node_feats)
-        self.eweights = {}
-        for etype in num_edges_dict:
-            self.eweights[etype] = EdgeWeights(num_nodes, num_edges_dict[etype], etype)
-
-        self.etypes = list(num_edges_dict.keys())
-
-    def forward(self, g):
-        g = self.nweights(g)
-        for etype in self.etypes:
-            g = self.eweights[etype](g)
-        return g
-
-
-class WrapperModel(nn.Module):
-    def __init__(self, model, num_nodes, num_edges_dict, num_node_feats):
-        super(WrapperModel, self).__init__()
-        self.hgraph_weights = HeteroGraphWeights(num_nodes, num_edges_dict, num_node_feats)
-        self.model = model
-
-    def forward_old(self, g):
-        self.model.add_default_nweight = True
-        self.model.add_default_eweight = True
-        self.model.eval()
-        return self.model(g).nodes['ast'].data['logits']
-
-    def forward(self, g):
-        self.model.add_default_nweight = False
-        self.model.add_default_eweight = False
-        self.model.eval()
-
-        g = self.hgraph_weights(g)
-
-        return self.model(g).nodes['ast'].data['logits']
-
-
-def entropy_loss(masking):
-    return torch.mean(
-        -torch.sigmoid(masking) * torch.log(torch.sigmoid(masking)) -
-        (1 - torch.sigmoid(masking)) * torch.log(1 - torch.sigmoid(masking)))
-
-
-def entropy_loss_mask(g, etypes, coeff_n=0.2, coeff_e=0.5):
-    e_e_loss = coeff_e * torch.tensor([entropy_loss(g.edges[_].data['weight'])
-        for _ in etypes]).mean()
-    n_e_loss = coeff_n * entropy_loss(g.nodes['ast'].data['weight'])
-    return n_e_loss + e_e_loss
-
-def consistency_loss(preds, labels):
-    loss = F.cross_entropy(preds, labels)
-    return loss
-
-
-
-def size_loss(g, etypes, coeff_n=0.005, coeff_e=0.005):
-    feat_size_loss = coeff_n * torch.sum(g.nodes['ast'].data['weight'])
-    edge_size_loss = coeff_e * torch.tensor([g.edges[_].data['weight'].sum()
-        for _ in etypes]).sum()
-    return feat_size_loss + edge_size_loss
-
 
 
 def explain(model, dataloader, iters=10):
@@ -132,7 +38,6 @@ def explain(model, dataloader, iters=10):
         for etype in g.etypes:
             if g.number_of_edges(etype) > 0:
                 num_edges_dict[etype] = g.number_of_edges(etype)
-        print(num_edges_dict)
         etypes = list(num_edges_dict.keys())
 
         wrapper = WrapperModel(model,
@@ -149,8 +54,9 @@ def explain(model, dataloader, iters=10):
             _, ori_preds = torch.max(ori_logits.detach().cpu(), dim=1)
 
         for nidx in mask_stmt:
-            # if ori_preds[j] == 0:
-            #     continue
+            if ori_preds[nidx] == 0:
+                continue
+            print(num_edges_dict)
 
             gi = copy.deepcopy(g)
             nx_gi = copy.deepcopy(nx_g)
@@ -161,13 +67,13 @@ def explain(model, dataloader, iters=10):
                 preds = wrapper(gi).detach().cpu()
                 # preds1 = preds[mask_stmt].detach().cpu()
 
-                loss_e = entropy_loss_mask(gi, etypes)
+                loss_e = 3 * entropy_loss_mask(gi, etypes)
                 loss_c = consistency_loss(preds[nidx].unsqueeze(0), ori_preds[nidx].unsqueeze(0))
-                loss_s = size_loss(gi, etypes) * 5e-2
+                loss_s = 5e-1 * size_loss(gi, etypes) 
 
                 loss = loss_e + loss_c + loss_s
 
-                titers.set_postfix(loss_e=loss_e.item(), loss_c=loss_c.item(), loss_s=loss_s.item())
+                titers.set_postfix(loss_e=loss_e.item(), loss_c=loss_c.item(), loss_s=loss_s.item(), pred=preds[nidx].data)
 
                 opt.zero_grad()
                 loss.backward()
@@ -185,7 +91,7 @@ def explain(model, dataloader, iters=10):
 
             os.makedirs(f'visualize_ast_explained/codeflaws/cfl/{i}', exist_ok=True)
             ast_to_agraph(visualized_ast,
-                          f'visualize_ast_explained/codeflaws/cfl/{i}/{nidx}.png')
+                          f'visualize_ast_explained/codeflaws/cfl/Graph{i}_Node{nidx}.png')
 
 
 if __name__ == '__main__':
