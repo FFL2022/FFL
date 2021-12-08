@@ -46,7 +46,7 @@ def explain(model, dataloader, iters=10, epsilon=5e-1):
         wrapper.hgraph_weights.train()
         # wrapper(g)
         # # exit()
-        opt = torch.optim.Adam(wrapper.hgraph_weights.parameters(), lr)
+        opt = torch.optim.AdamW(wrapper.hgraph_weights.parameters(), lr)
 
         with torch.no_grad():
             ori_logits = wrapper.forward_old(g)
@@ -70,10 +70,10 @@ def explain(model, dataloader, iters=10, epsilon=5e-1):
             titers = tqdm.tqdm(range(iters))
             titers.set_description(f'Graph {i}, Node {nidx}')
             for _ in titers:
-                preds = wrapper(gi).detach().cpu()
+                preds = wrapper(gi)
                 # preds1 = preds[mask_stmt].detach().cpu()
 
-                loss_e = entropy_loss_mask(gi, etypes)
+                loss_e = 3 * entropy_loss_mask(gi, etypes)
                 loss_c = consistency_loss(preds[nidx].unsqueeze(0), ori_preds[nidx].unsqueeze(0))
                 loss_s = size_loss(gi, etypes) * epsilon
 

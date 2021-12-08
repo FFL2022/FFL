@@ -65,7 +65,7 @@ def explain(model, dataloader, iters=10):
         # print('nweights', count_parameters(wrapper.hgraph_weights.nweights))
         # print('eweights', [count_parameters(wrapper.hgraph_weights.eweights[_]) for _ in etypes])
         # exit()
-        opt = torch.optim.Adam(wrapper.hgraph_weights.parameters(), lr)
+        opt = torch.optim.AdamW(wrapper.hgraph_weights.parameters(), lr)
 
         with torch.no_grad():
             ori_logits = wrapper.forward_old(g)
@@ -132,4 +132,4 @@ if __name__ == '__main__':
 
     model.load_state_dict(torch.load('trained/nbl/Nov-29-2021/model_79_best_top3_gumtree_stmt.pth', map_location=device))
     model.eval()
-    explain(model, dataset, iters=10000)
+    explain(model, dataset, iters=5000)
