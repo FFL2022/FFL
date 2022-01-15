@@ -262,7 +262,21 @@ class GumtreeBasedAnnotation:
                         map_dict['inserted'].append(ndid)
 
 
-        # label stmt for visualization
+        # modified nodes
+        for st_n in GumtreeBasedAnnotation.find_modified_statement(
+                nx_ast_src, map_dict['deleted'],
+                check_func=check_func):
+            nx_ast_src.nodes[st_n]['status'] = 1
+
+        # inserted nodes: check sibling
+        for st_n in GumtreeBasedAnnotation.find_inserted_statement(
+                nx_ast_src, nx_ast_dst, rev_map_dict,
+                map_dict['inserted'],
+                check_func=check_func):
+            nx_ast_src.nodes[st_n]['status'] = 1
+
+
+        # remove nodes
         remove_subgraphs = []
         for st_n in nx_ast_src.nodes():
             if check_func(nx_ast_src.nodes[st_n]['ntype']):
@@ -278,21 +292,6 @@ class GumtreeBasedAnnotation:
 
         for rs in remove_subgraphs:
             nx_ast_src.remove_nodes_from(rs)
-
-
-        # modified nodes
-        for st_n in GumtreeBasedAnnotation.find_modified_statement(
-                nx_ast_src, map_dict['deleted'],
-                check_func=check_func):
-            nx_ast_src.nodes[st_n]['status'] = 1
-
-        # inserted nodes: check sibling
-        for st_n in GumtreeBasedAnnotation.find_inserted_statement(
-                nx_ast_src, nx_ast_dst, rev_map_dict,
-                map_dict['inserted'],
-                check_func=check_func):
-            nx_ast_src.nodes[st_n]['status'] = 1
-
 
         return nx_ast_src, nx_ast_dst
 
