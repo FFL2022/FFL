@@ -1,6 +1,6 @@
-from codeflaws.data_utils import all_codeflaws_keys, get_cfg_ast_cov, \
-    get_nx_ast_stmt_annt_gumtree, get_nx_ast_stmt_annt_cfl, \
-    get_nx_ast_node_annt_gumtree
+# from codeflaws.data_utils import all_codeflaws_keys, get_cfg_ast_cov, \
+#     get_nx_ast_stmt_annt_gumtree, get_nx_ast_stmt_annt_cfl, \
+#     get_nx_ast_node_annt_gumtree
 from utils import draw_utils
 import tqdm
 import os
@@ -49,7 +49,8 @@ def test3():
     bar = tqdm.tqdm(all_keys)
     for key in bar:
         try:
-            filename = "visualize_nx_graphs/nbl/{}.png".format(os.path.basename(key['b_fp']))
+            filename = "visualize_nx_graphs_new/nbl/{}.png".format(os.path.basename(key['b_fp']))
+            print(filename)
             nx_g = get_nx_ast_stmt_annt_gumtree(key)
             os.makedirs(os.path.dirname(filename), exist_ok=True)
             draw_utils.ast_to_agraph(nx_g.subgraph([n for n in nx_g.nodes() 

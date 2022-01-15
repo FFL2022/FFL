@@ -66,6 +66,13 @@ class GumtreeASTUtils:
                     ndict['parent_id'], ndict['id'], label='parent_child')
         return nx_ast
 
+    def has_stmt_child(u, q, check_func):
+        for n in nx.descendants(q, u):
+            if check_func(q.nodes[n]['ntype']):
+                return True
+        return False
+
+
 
 class GumtreeBasedAnnotation:
     '''Gumtree-based annotation between differencing ASTs'''
@@ -173,6 +180,8 @@ class GumtreeBasedAnnotation:
                   n, nx_ast_src, ldels, check_func)]
         return ns
 
+
+
     def find_inserted_statement(nx_ast_src, nx_ast_dst, rev_map_dict, lisrts,
                                 check_func=GumtreeASTUtils.check_is_stmt_java):
         ns = [n for n in nx_ast_dst.nodes()
@@ -252,6 +261,26 @@ class GumtreeBasedAnnotation:
                         map_dict['deleted'].append(nsid)
                         map_dict['inserted'].append(ndid)
 
+
+        # label stmt for visualization
+        remove_subgraphs = []
+        for st_n in nx_ast_src.nodes():
+            if check_func(nx_ast_src.nodes[st_n]['ntype']):
+                # nx_ast_src.nodes[st_n]['status'] = 4
+                continue
+
+            if GumtreeASTUtils.has_stmt_child(st_n, nx_ast_src, check_func):
+                # print(st_n)
+                continue
+            rs = nx.descendants(nx_ast_src, st_n) | {st_n}
+            if len(list(rs)):
+                remove_subgraphs.append(rs)
+
+        for rs in remove_subgraphs:
+            nx_ast_src.remove_nodes_from(rs)
+
+
+        # modified nodes
         for st_n in GumtreeBasedAnnotation.find_modified_statement(
                 nx_ast_src, map_dict['deleted'],
                 check_func=check_func):
@@ -263,6 +292,7 @@ class GumtreeBasedAnnotation:
                 map_dict['inserted'],
                 check_func=check_func):
             nx_ast_src.nodes[st_n]['status'] = 1
+
 
         return nx_ast_src, nx_ast_dst
 
