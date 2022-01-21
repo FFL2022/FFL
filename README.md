@@ -1,4 +1,4 @@
-# ssFL
+# FFL
 ## Dataset Downloads
 - Download dataset **Codeflaws** here: https://codeflaws.github.io
 - Download dataset **Prutor** here: https://bitbucket.org/iiscseal/nbl/src/master/
