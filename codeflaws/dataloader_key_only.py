@@ -37,7 +37,7 @@ class CodeflawsNxDataset(object):
     def __getitem__(self, i):
         idx = self.active_idxs[i]
         try:
-            nx_g = pkl.load(open(f'{self.save_dir}/nx_{idx}', 'rb'))
+            nx_g = pkl.load(open(f'{self.save_dir}/nx_keyonly_{idx}', 'rb'))
         except pkl.UnpicklingError:
             _, _, _, _, _, nx_g = get_cfg_ast_cov(all_codeflaws_keys[idx])
             ast_lb_d = []
@@ -57,7 +57,7 @@ class CodeflawsNxDataset(object):
                 del nx_g.nodes[n]['status']
             pkl.dump(nx_g,
                      open(
-                         os.path.join(self.save_dir, f'nx_{idx}'),
+                         os.path.join(self.save_dir, f'nx_keyonly_{idx}'),
                          'wb'))
         return nx_g,\
             self.ast_lbs_d[i], \
@@ -78,8 +78,9 @@ class CodeflawsNxDataset(object):
         err_count = 0
         for i, key in bar:
             try:
-                if os.path.exists(f'{self.save_dir}/nx_{i}'):
-                    nx_g = pkl.load(open(f'{self.save_dir}/nx_{i}', 'rb'))
+                if os.path.exists(f'{self.save_dir}/nx_keyonly_{i}'):
+                    nx_g = pkl.load(open(f'{self.save_dir}/nx_keyonly_{i}',
+                                         'rb'))
                 else:
                     _, _, _, _, _, nx_g = get_cfg_ast_cov(key)
                 ast_lb_d = []
@@ -99,7 +100,7 @@ class CodeflawsNxDataset(object):
                     del nx_g.nodes[n]['status']
                 pkl.dump(nx_g,
                          open(
-                             os.path.join(self.save_dir, f'nx_{i}'),
+                             os.path.join(self.save_dir, f'nx_keyonly_{i}'),
                              'wb'))
             except ParseError:
                 err_count += 1
