@@ -525,13 +525,13 @@ class GCN_A_L_T_1(torch.nn.Module):
 
         h_g.nodes['ast'].data['h'] = self.ast_label_encoder(
             h_g.nodes['ast'].data['label'])
-        
+
         h_g = self.node_weight_multiply(h_g)
 
         if self.add_default_eweight:
             for etype in h_g.etypes:
-                h_g.edges[etype].data['weight'] = torch.Tensor([1] * \
-                    h_g.number_of_edges(etype)).unsqueeze(-1)
+                h_g.edges[etype].data['weight'] = (torch.Tensor([1] * \
+                    h_g.number_of_edges(etype)).unsqueeze(-1)).to(device)
 
         # print(h_g.etypes)
         if h_g.number_of_nodes('test') > 0:
