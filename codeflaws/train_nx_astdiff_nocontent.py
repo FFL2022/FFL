@@ -405,7 +405,7 @@ if __name__ == '__main__':
         256, meta_graph,
         device=device, num_ast_labels=len(dataset.nx_dataset.ast_types),
         num_classes_ast=3)
-    # train(model, dataset, ConfigClass.n_epochs)
+    train(model, dataset, ConfigClass.n_epochs)
     list_models_paths = list(
         glob.glob(f"{ConfigClass.trained_dir_codeflaws}/model*best.pth"))
     print(list_models_paths)

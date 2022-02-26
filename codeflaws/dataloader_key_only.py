@@ -38,7 +38,7 @@ class CodeflawsNxDataset(object):
         idx = self.active_idxs[i]
         try:
             nx_g = pkl.load(open(f'{self.save_dir}/nx_keyonly_{idx}', 'rb'))
-        except pkl.UnpicklingError:
+        except:
             _, _, _, _, _, nx_g = get_cfg_ast_cov(all_codeflaws_keys[idx])
             ast_lb_d = []
             ast_lb_i = []
