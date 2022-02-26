@@ -2,7 +2,8 @@ from __future__ import print_function, unicode_literals
 import torch
 import os
 import torch.nn.functional as F
-from nbl.dataloader_key_only import NBLFullDGLDataset
+from codeflaws.dataloader_key_only import CodeflawsFullDGLDataset
+from codeflaws.dataloader_gumtree_node import CodeflawsGumtreeDGLNodeDataset
 from model import GCN_A_L_T_1
 from utils.utils import ConfigClass
 from utils.draw_utils import ast_to_agraph
@@ -25,16 +26,12 @@ def train(model, dataloader, n_epochs, start_epoch=0):
     mean_ast_acc = AverageMeter()
 
     top_1_meter = AverageMeter()
-    top_2_meter = AverageMeter()
+    top_3_meter = AverageMeter()
     top_5_meter = AverageMeter()
     top_10_meter = AverageMeter()
 
     f1_meter = KFullMeter(3)
     best_f1 = 0.0
-    best_top1 = -1.0
-    best_top2 = -1.0
-    best_top5 = -1.0
-    best_top10 = -1.0
     # model.load_state_dict(torch.load("trained/model_27.pth"))
     # eval(model, dataloader)
     for epoch in range(n_epochs):
@@ -46,15 +43,13 @@ def train(model, dataloader, n_epochs, start_epoch=0):
         f1_meter.reset()
         top_10_meter.reset()
         top_5_meter.reset()
-        top_2_meter.reset()
+        top_3_meter.reset()
         top_1_meter.reset()
 
         model.train()
         bar = tqdm.trange(len(dataloader))
-        #bar = tqdm.trange(5)
         bar.set_description(f'Epoch {epoch}')
         for i in bar:
-
             g = dataloader[i]
             if g is None:
                 continue
@@ -109,10 +104,10 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             top_5_meter.update(
                 int(any([idx in ast_lbidxs for idx in top_5_val])), 1)
 
-            k = min(g.number_of_nodes('ast'), 2)
-            top_2_val = indices[:k].tolist()
-            top_2_meter.update(
-                int(any([idx in ast_lbidxs for idx in top_2_val])), 1)
+            k = min(g.number_of_nodes('ast'), 3)
+            top_3_val = indices[:k].tolist()
+            top_3_meter.update(
+                int(any([idx in ast_lbidxs for idx in top_3_val])), 1)
 
             k = min(g.number_of_nodes('ast'), 1)
             top_1_val = indices[:k].tolist()
@@ -139,7 +134,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
         if epoch % ConfigClass.print_rate == 0:
             out_dict = {}
             out_dict['top_1'] = top_1_meter.avg
-            out_dict['top_2'] = top_2_meter.avg
+            out_dict['top_3'] = top_3_meter.avg
             out_dict['top_5'] = top_5_meter.avg
             out_dict['top_10'] = top_10_meter.avg
             out_dict['mean_acc'] = mean_ast_acc.avg
@@ -147,40 +142,29 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             out_dict['mean_ast_acc'] = mean_ast_acc.avg
             out_dict['mean_ast_loss'] = mean_ast_loss.avg
             out_dict['f1'] = f1_meter.get()
-            with open(ConfigClass.result_dir_nbl +
+            with open(ConfigClass.result_dir_codeflaws +
                       '/training_dict_e{}.json'.format(epoch), 'w') as f:
                 json.dump(out_dict, f, indent=2)
             print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
                   f"top 10 acc: {top_10_meter.avg}, " +
                   f"top 5 acc: {top_5_meter.avg}, " +
-                  f"top 2 acc {top_2_meter.avg}" +
+                  f"top 3 acc {top_3_meter.avg}" +
                   f"top 1 acc {top_1_meter.avg}")
             print(f1_meter.get())
         if epoch % ConfigClass.save_rate == 0:
-            eval_dict  = eval_by_line(model, dataloader, epoch)
-            if eval_dict['f1']['aux_f1'] != "unk":
-                if eval_dict['f1']['aux_f1'] > best_f1:
-                    best_f1 = eval_dict['f1']['aux_f1']
+            l_eval, acc_eval, f1_eval = eval(model, dataloader, epoch)
+            if f1_eval != "unk":
+                if f1_eval > best_f1:
+                    best_f1 = f1_eval
                     torch.save(model.state_dict(), os.path.join(
-                        ConfigClass.trained_dir_nbl, f'model_{epoch}_bestf1.pth'))
-            if eval_dict['top_1'] > best_top1:
-                    best_top1 = eval_dict['top_1']
-                    torch.save(model.state_dict(), os.path.join(ConfigClass.trained_dir_nbl, f'model_{epoch}_besttop1.pth'))
-            if eval_dict['top_2'] > best_top2:
-                best_top2 = eval_dict['top_2']
-                torch.save(model.state_dict(), os.path.join(ConfigClass.trained_dir_nbl, f'model_{epoch}_besttop2.pth'))
-            if eval_dict['top_5'] > best_top5:
-                best_top5 = eval_dict['top_5']
-                torch.save(model.state_dict(), os.path.join(ConfigClass.trained_dir_nbl, f'model_{epoch}_besttop5.pth'))
-            if eval_dict['top_10'] > best_top10:
-                best_top10 = eval_dict['top_10']
-                torch.save(model.state_dict(), os.path.join(ConfigClass.trained_dir_nbl, f'model_{epoch}_besttop10.pth'))
-        print("Best_result: Top 1:{}, Top 2: {}, Top 5: {}, Top 10: {}, F1: {}".format(best_top1, best_top2, best_top5, best_top10, best_f1))
-        torch.save(model.state_dict(), os.path.join(ConfigClass.trained_dir_nbl, f'model_last.pth'))
+                        ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_gumtree_node.pth'))
+        torch.save(model.state_dict(), os.path.join(
+                   ConfigClass.trained_dir_codeflaws, f'model_last_gumtree_node.pth'))
 
 
 def get_line_mapping(dataloader, real_idx):
-    nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
+    # nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
+    nx_g = dataloader.nx_dataset[real_idx]
     n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
     line = torch.tensor([nx_g.nodes[n]['start_line'] for n in n_asts],
                         dtype=torch.long)
@@ -188,7 +172,8 @@ def get_line_mapping(dataloader, real_idx):
 
 
 def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts):
-    nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
+    # nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
+    nx_g = dataloader.nx_dataset[real_idx]
     n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
     for i, n in enumerate(n_asts):
         nx_g.nodes[n]['status'] = 0
@@ -209,34 +194,35 @@ def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts):
     return nx_g.subgraph(n_asts)
 
 
-def eval_by_line(model, dataloader, epoch, mode='val', draw = False):
+def eval_by_line(model, dataloader, epoch, mode='val'):
     # Map from these indices to line
     # Calculate mean scores for these lines
     # Get these unique lines
     # Perform Top K and F1
     if mode == 'val':
         dataloader.val()
+    elif mode == 'test':
+        dataloader.test()
 
-    os.makedirs(f'images_nbl_{epoch}', exist_ok=True)
+    os.makedirs(f'images_{epoch}', exist_ok=True)
     f1_meter = BinFullMeter()
     top_1_meter = AverageMeter()
-    top_2_meter = AverageMeter()
+    top_3_meter = AverageMeter()
     top_5_meter = AverageMeter()
     top_10_meter = AverageMeter()
     model.eval()
     out_dict = {}
     line_mapping = {}
-    if os.path.exists('preprocessed/nbl/line_mapping.pkl'):
-        line_mapping = pkl.load(open('preprocessed/nbl/line_mapping.pkl', 'rb'))
+    if os.path.exists('preprocessed/line_mapping_gtnode.pkl'):
+        line_mapping = pkl.load(open('preprocessed/line_mapping_gtnode.pkl', 'rb'))
     # Line mapping: index -> ast['line']
     f1_meter.reset()
     top_1_meter.reset()
-    top_2_meter.reset()
+    top_3_meter.reset()
     top_5_meter.reset()
     top_10_meter.reset()
     line_mapping_changed = False
     for i in tqdm.trange(len(dataloader)):
-    #for i in tqdm.trange(1):
         real_idx = dataloader.active_idxs[i]
         g = dataloader[i]
         g = g.to(device)
@@ -261,10 +247,10 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw = False):
             g.nodes['ast'].data['tgt'].detach().cpu().numpy()
         )
 
-        if nx_g.number_of_nodes() > 1000 and not draw:
+        if nx_g.number_of_nodes() > 1000:
             continue
         try:
-            ast_to_agraph(nx_g, f'images_nbl_{epoch}/{real_idx}.png',
+            ast_to_agraph(nx_g, f'images_{epoch}/{real_idx}.png',
                           take_content=False)
         except:
             continue
@@ -303,8 +289,8 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw = False):
         top_5_meter.update(int(any([idx in lbidxs for idx in top_5_val])), 1)
 
         k = min(len(all_lines), 2)
-        top_2_val = indices[:k].tolist()
-        top_2_meter.update(int(any([idx in lbidxs for idx in top_2_val])), 1)
+        top_3_val = indices[:k].tolist()
+        top_3_meter.update(int(any([idx in lbidxs for idx in top_3_val])), 1)
 
         k = min(len(all_lines), 1)
         top_1_val = indices[:k].tolist()
@@ -312,30 +298,32 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw = False):
         f1_meter.update(line_pred_tensor, line_tgt_tensor)
 
     out_dict['top_1'] = top_1_meter.avg
-    out_dict['top_2'] = top_2_meter.avg
+    out_dict['top_3'] = top_3_meter.avg
     out_dict['top_5'] = top_5_meter.avg
     out_dict['top_10'] = top_10_meter.avg
     out_dict['f1'] = f1_meter.get()
     print(out_dict)
-    with open(ConfigClass.result_dir_nbl +
+    with open(ConfigClass.result_dir_codeflaws +
               '/eval_dict_by_line_e{}.json'.format(epoch), 'w') as f:
         json.dump(out_dict, f, indent=2)
 
     if line_mapping_changed:
-        pkl.dump(line_mapping, open('preprocessed/nbl/line_mapping.pkl', 'wb'))
+        pkl.dump(line_mapping, open('preprocessed/line_mapping_gtnode.pkl', 'wb'))
     return out_dict
 
 
 def eval(model, dataloader, epoch, mode='val'):
     if mode == 'val':
         dataloader.val()
+    elif mode == 'test':
+        dataloader.test()
     # mean_loss = AverageMeter()
     # mean_acc = AverageMeter()
     mean_ast_loss = AverageMeter()
     mean_ast_acc = AverageMeter()
     f1_meter = KFullMeter(3)
     top_1_meter = AverageMeter()
-    top_2_meter = AverageMeter()
+    top_3_meter = AverageMeter()
     top_5_meter = AverageMeter()
     top_10_meter = AverageMeter()
     model.eval()
@@ -372,10 +360,10 @@ def eval(model, dataloader, epoch, mode='val'):
         top_5_meter.update(
             int(any([idx in ast_lbidxs for idx in top_5_val])), 1)
 
-        k = min(g.number_of_nodes('ast'), 2)
-        top_2_val = indices[:k].tolist()
-        top_2_meter.update(
-            int(any([idx in ast_lbidxs for idx in top_2_val])), 1)
+        k = min(g.number_of_nodes('ast'), 3)
+        top_3_val = indices[:k].tolist()
+        top_3_meter.update(
+            int(any([idx in ast_lbidxs for idx in top_3_val])), 1)
 
         k = min(g.number_of_nodes('ast'), 1)
         top_1_val = indices[:k].tolist()
@@ -392,13 +380,13 @@ def eval(model, dataloader, epoch, mode='val'):
             g.number_of_nodes('ast'))
         f1_meter.update(ast_cal, ast_lb)
     out_dict['top_1'] = top_1_meter.avg
-    out_dict['top_2'] = top_2_meter.avg
+    out_dict['top_3'] = top_3_meter.avg
     out_dict['top_5'] = top_5_meter.avg
     out_dict['top_10'] = top_10_meter.avg
     out_dict['mean_acc'] = mean_ast_acc.avg
     out_dict['mean_loss'] = mean_ast_loss.avg
     out_dict['f1'] = f1_meter.get()
-    with open(ConfigClass.result_dir_nbl + f'/eval_dict_e{epoch}.json', 'w') as f:
+    with open(ConfigClass.result_dir_codeflaws + f'/eval_dict_e{epoch}.json', 'w') as f:
         json.dump(out_dict, f, indent=2)
     print(out_dict)
     return mean_ast_loss.avg, mean_ast_acc.avg, f1_meter.get()['aux_f1']
@@ -406,30 +394,31 @@ def eval(model, dataloader, epoch, mode='val'):
 
 if __name__ == '__main__':
     # config
-    dataset_opt = 'nbl'  # nbl, codeflaws
+    dataset_opt = 'codeflaws'  # nbl, codeflaws
     graph_opt = 2  # 1, 2
     # loaddataset
-    dataset = NBLFullDGLDataset()
+    dataset = CodeflawsGumtreeDGLNodeDataset()
     meta_graph = dataset.meta_graph
     model = GCN_A_L_T_1(
-        128, meta_graph,
+        256, meta_graph,
         device=device, num_ast_labels=len(dataset.nx_dataset.ast_types),
         num_classes_ast=3)
     train(model, dataset, ConfigClass.n_epochs)
     list_models_paths = list(
-        glob.glob(f"{ConfigClass.trained_dir_nbl}/model*best.pth"))
+        glob.glob(f"{ConfigClass.trained_dir_codeflaws}/model*best_gumtree_node.pth"))
     for model_path in list_models_paths:
         epoch = int(model_path.split("_")[1])
         print(f"Evaluating {model_path}:")
         model.load_state_dict(torch.load(model_path))
         print("Val: ")
         eval_by_line(model, dataset, epoch, 'val')
-    print(ConfigClass.trained_dir_nbl)
+        print('Test: ')
+        eval_by_line(model, dataset, epoch, 'test')
+    print(ConfigClass.trained_dir_codeflaws)
     best_latest = max(int(model_path.split("_")[1])
                       for model_path in list_models_paths)
-    model_path = f"{ConfigClass.trained_dir_nbl}/model_{best_latest}_best.pth"
+    model_path = f"{ConfigClass.trained_dir_codeflaws}/model_{best_latest}_best_gumtree_node.pth"
     model.load_state_dict(torch.load(model_path))
     print(f"Evaluation: {model_path}")
-    dataset.val()
-    eval_by_line(model, dataset, best_latest)
-
+    dataset.test()
+    eval(model, dataset, best_latest)

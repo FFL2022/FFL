@@ -9,7 +9,7 @@ import tqdm
 import torch
 import torch.nn.functional as F
 import numpy as np
-from codeflaws.dataloader_gumtree import CodeflawsGumtreeDGLStatementDataset
+from codeflaws.dataloader_cfl import CodeflawsCFLDGLStatementDataset
 
 from model import GCN_A_L_T_1
 import pandas as pd
@@ -24,19 +24,19 @@ def train(model, dataloader, n_epochs, start_epoch=0):
     mean_ast_acc = AverageMeter()
 
     top_1_meter = AverageMeter()
-    top_3_meter = AverageMeter()
+    top_2_meter = AverageMeter()
     top_5_meter = AverageMeter()
     top_10_meter = AverageMeter()
 
     f1_meter = BinFullMeter()
     best_f1 = 0.0
     best_top1 = 0.0
-    best_top3 = 0.0
+    best_top2 = 0.0
     best_top5 = 0.0
     best_top10 = 0.0
 
     best_top1_train = 0.0
-    best_top3_train = 0.0
+    best_top2_train = 0.0
     best_top5_train = 0.0
     best_top10_train = 0.0
     best_f1_train = 0.0
@@ -50,7 +50,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
         f1_meter.reset()
         top_10_meter.reset()
         top_5_meter.reset()
-        top_3_meter.reset()
+        top_2_meter.reset()
         top_1_meter.reset()
 
         bar = tqdm.trange(len(dataloader))
@@ -64,7 +64,6 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             mask_stmt = mask_stmt.to(device)
 
             ast_lb = g.nodes['ast'].data['tgt'][mask_stmt]
-            # print(ast_lb)
             non_zeros_ast_lbs = torch.nonzero(ast_lb).detach()
             ast_lbidxs = torch.flatten(
                 non_zeros_ast_lbs).detach().cpu().tolist()
@@ -101,10 +100,10 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             top_5_meter.update(
                 int(any([idx in ast_lbidxs for idx in top_5_val])), 1)
 
-            k = min(mask_stmt.shape[0], 3)
-            top_3_val = indices[:k].tolist()
-            top_3_meter.update(
-                int(any([idx in ast_lbidxs for idx in top_3_val])), 1)
+            k = min(mask_stmt.shape[0], 2)
+            top_2_val = indices[:k].tolist()
+            top_2_meter.update(
+                int(any([idx in ast_lbidxs for idx in top_2_val])), 1)
 
             k = min(mask_stmt.shape[0], 1)
             top_1_val = indices[:k].tolist()
@@ -120,7 +119,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
 
         out_dict = {}
         out_dict['top_1'] = top_1_meter.avg
-        out_dict['top_3'] = top_3_meter.avg
+        out_dict['top_2'] = top_2_meter.avg
         out_dict['top_5'] = top_5_meter.avg
         out_dict['top_10'] = top_10_meter.avg
         out_dict['mean_acc'] = mean_ast_acc.avg
@@ -130,7 +129,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
         out_dict['f1'] = f1_meter.get()
 
         best_top1_train = max(top_1_meter.avg, best_top1_train)
-        best_top3_train = max(top_3_meter.avg, best_top3_train)
+        best_top2_train = max(top_2_meter.avg, best_top2_train)
         best_top5_train = max(top_5_meter.avg, best_top5_train)
         best_top10_train = max(top_10_meter.avg, best_top10_train)
         if f1_meter.get()['aux_f1'] != 'unk':
@@ -142,7 +141,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
         print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
                 f"top 10 acc: {top_10_meter.avg}, " +
                 f"top 5 acc: {top_5_meter.avg}, " +
-                f"top 2 acc {top_3_meter.avg}, " +
+                f"top 2 acc {top_2_meter.avg}, " +
                 f"top 1 acc {top_1_meter.avg}, ")
         print(f1_meter.get())
 
@@ -157,10 +156,10 @@ def train(model, dataloader, n_epochs, start_epoch=0):
                 torch.save(model.state_dict(), os.path.join(
                     ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_top1_gumtree.pth'))
                 best_top1 = eval_dict['top_1']
-            if eval_dict['top_3'] > best_top3:
+            if eval_dict['top_2'] > best_top2:
                 torch.save(model.state_dict(), os.path.join(
-                    ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_top3_gumtree.pth'))
-                best_top3 = eval_dict['top_3']
+                    ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_top2_gumtree.pth'))
+                best_top2 = eval_dict['top_2']
             if eval_dict['top_5'] > best_top5:
                 torch.save(model.state_dict(), os.path.join(
                     ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_top5_gumtree.pth'))
@@ -171,8 +170,8 @@ def train(model, dataloader, n_epochs, start_epoch=0):
                 best_top10 = eval_dict['top_10']
     return {'top1_train': best_top1_train,
             'top1_val': best_top1,
-            'top3_train': best_top3_train,
-            'top3_val': best_top3,
+            'top2_train': best_top2_train,
+            'top2_val': best_top2,
             'top5_train': best_top5_train,
             'top5_val': best_top5,
             'top10_train': best_top10_train,
@@ -198,7 +197,7 @@ def eval(model, dataloader, epoch):
     mean_ast_acc = AverageMeter()
 
     top_1_meter = AverageMeter()
-    top_3_meter = AverageMeter()
+    top_2_meter = AverageMeter()
     top_5_meter = AverageMeter()
     top_10_meter = AverageMeter()
 
@@ -241,10 +240,10 @@ def eval(model, dataloader, epoch):
         top_5_meter.update(
             int(any([idx in ast_lbidxs for idx in top_5_val])), 1)
 
-        k = min(mask_stmt.shape[0], 3)
-        top_3_val = indices[:k].tolist()
-        top_3_meter.update(
-            int(any([idx in ast_lbidxs for idx in top_3_val])), 1)
+        k = min(mask_stmt.shape[0], 2)
+        top_2_val = indices[:k].tolist()
+        top_2_meter.update(
+            int(any([idx in ast_lbidxs for idx in top_2_val])), 1)
 
         k = min(mask_stmt.shape[0], 1)
         top_1_val = indices[:k].tolist()
@@ -261,7 +260,7 @@ def eval(model, dataloader, epoch):
 
     out_dict = {}
     out_dict['top_1'] = top_1_meter.avg
-    out_dict['top_3'] = top_3_meter.avg
+    out_dict['top_2'] = top_2_meter.avg
     out_dict['top_5'] = top_5_meter.avg
     out_dict['top_10'] = top_10_meter.avg
     out_dict['mean_acc'] = mean_ast_acc.avg
@@ -275,9 +274,9 @@ def eval(model, dataloader, epoch):
               '/eval_dict_e{}.json'.format(epoch), 'w') as f:
         json.dump(out_dict, f, indent=2)
     print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
-          f"top 10 acc: {top_10_meter.avg}, " +
-          f"top 5 acc: {top_5_meter.avg}, " +
-          f"top 3 acc: {top_3_meter.avg}, " +
+          f"top 10 acc: {top_1_meter.avg}, " +
+          f"top 5 acc: {top_1_meter.avg}, " +
+          f"top 2 acc: {top_1_meter.avg}, " +
           f"top 1 acc: {top_1_meter.avg}, " +
           f'f1: {f1}'
           )
@@ -286,7 +285,7 @@ def eval(model, dataloader, epoch):
 
 
 if __name__ == '__main__':
-    dataset = CodeflawsGumtreeDGLStatementDataset()
+    dataset = CodeflawsCFLDGLStatementDataset()
     meta_graph = dataset.meta_graph
 
     model = GCN_A_L_T_1(
@@ -299,7 +298,7 @@ if __name__ == '__main__':
 
     df = pd.DataFrame(
         columns=[
-            'top1_train', 'top1_val', 'top3_train', 'top3_val',
+            'top1_train', 'top1_val', 'top2_train', 'top2_val',
             'top5_train', 'top5_val',
             'top10_train', 'top10_val',
             'f1_train', 'f1_val'

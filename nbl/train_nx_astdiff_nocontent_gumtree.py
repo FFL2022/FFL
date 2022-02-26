@@ -9,7 +9,7 @@ import tqdm
 import torch
 import torch.nn.functional as F
 import numpy as np
-from codeflaws.dataloader_gumtree import CodeflawsGumtreeDGLStatementDataset
+from nbl.dataloader_gumtree import NBLGumtreeDGLStatementDataset
 
 from model import GCN_A_L_T_1
 import pandas as pd
@@ -136,7 +136,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
         if f1_meter.get()['aux_f1'] != 'unk':
             best_f1_train = max(best_f1_train, f1_meter.get()['aux_f1'])
 
-        with open(ConfigClass.trained_dir_codeflaws +
+        with open(ConfigClass.trained_dir_nbl +
                     f'/training_dict_gumtree_e{epoch}.json', 'w') as f:
             json.dump(out_dict, f, indent=2)
         print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
@@ -152,22 +152,22 @@ def train(model, dataloader, n_epochs, start_epoch=0):
                 if eval_dict['f1'] > best_f1:
                     best_f1 = eval_dict['f1']
                     torch.save(model.state_dict(), os.path.join(
-                        ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_f1_gumtree.pth'))
+                        ConfigClass.trained_dir_nbl, f'model_{epoch}_best_f1_gumtree.pth'))
             if eval_dict['top_1'] > best_top1:
                 torch.save(model.state_dict(), os.path.join(
-                    ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_top1_gumtree.pth'))
+                    ConfigClass.trained_dir_nbl, f'model_{epoch}_best_top1_gumtree.pth'))
                 best_top1 = eval_dict['top_1']
             if eval_dict['top_3'] > best_top3:
                 torch.save(model.state_dict(), os.path.join(
-                    ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_top3_gumtree.pth'))
+                    ConfigClass.trained_dir_nbl, f'model_{epoch}_best_top3_gumtree.pth'))
                 best_top3 = eval_dict['top_3']
             if eval_dict['top_5'] > best_top5:
                 torch.save(model.state_dict(), os.path.join(
-                    ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_top5_gumtree.pth'))
+                    ConfigClass.trained_dir_nbl, f'model_{epoch}_best_top5_gumtree.pth'))
                 best_top5 = eval_dict['top_5']
             if eval_dict['top_10'] > best_top10:
                 torch.save(model.state_dict(), os.path.join(
-                    ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_top10_gumtree.pth'))
+                    ConfigClass.trained_dir_nbl, f'model_{epoch}_best_top10_gumtree.pth'))
                 best_top10 = eval_dict['top_10']
     return {'top1_train': best_top1_train,
             'top1_val': best_top1,
@@ -286,7 +286,7 @@ def eval(model, dataloader, epoch):
 
 
 if __name__ == '__main__':
-    dataset = CodeflawsGumtreeDGLStatementDataset()
+    dataset = NBLGumtreeDGLStatementDataset()
     meta_graph = dataset.meta_graph
 
     model = GCN_A_L_T_1(

@@ -5,6 +5,9 @@ import numpy as np
 from utils.utils import ConfigClass
 import sqlite3
 import pickle
+from nbl.data_format import test_verdict
+from utils.preprocess_helpers import get_coverage, remove_lib
+from utils.gumtree_utils import GumtreeBasedAnnotation, GumtreeASTUtils
 
 eval_set = pickle.load(open('data_nbl/eval_data.pkl', 'rb'))
 eval_dict = np.load('data_nbl/data/eval_set.npy', allow_pickle=True).item()
@@ -58,11 +61,12 @@ def all_buggy_and_fixed(root=ConfigClass.nbl_raw_dir):
 
     for _id in mapping_eval:
         problem_id, next_id = mapping_eval[_id]
-        yield {'buggy': _id, 'fixed': next_id,
-               'b_fp': root + f'sources/{_id}.c',
-               'f_fp': root + f'sources/{next_id}.c',
-               'problem_id': problem_id, 'uid': uid
-               }
+        yield {
+            'buggy': _id, 'fixed': next_id,
+            'b_fp': root + f'sources/{_id}.c',
+            'f_fp': root + f'sources/{next_id}.c',
+            'problem_id': problem_id, 'uid': uid
+        }
 
     for problem_id in all_data:
         for uid in all_data[problem_id]:
@@ -97,3 +101,40 @@ if not os.path.exists(cache_fp):
     pickle.dump(all_keys, open(cache_fp, 'wb'))
 else:
     all_keys = pickle.load(open(cache_fp, 'rb'))
+
+
+def get_nx_ast_stmt_annt_gumtree(key):
+    src_b = key['b_fp']
+    src_f = key['f_fp']
+    pid = key['problem_id']
+    vid = key['buggy']
+    tests_list = list(test_verdict[pid][vid].keys())
+    cov_maps = []
+    verdicts = []
+    for i, test in enumerate(tests_list):
+        covfile = f"{ConfigClass.nbl_test_path}/{pid}/{test}-{vid}.gcov"
+        cov_maps.append(get_coverage(covfile, 0))
+        link_type = True if test_verdict[pid][vid][test] == 1 else False
+        verdicts.append(link_type)
+
+
+    return GumtreeBasedAnnotation.build_nx_ast_cov_annt(
+        src_b, src_f, cov_maps, verdicts,
+        GumtreeBasedAnnotation.build_nx_graph_stmt_annt)
+
+
+def get_nx_ast_stmt_gumtree(key):
+    src_b = key['b_fp']
+    pid = key['problem_id']
+    vid = key['buggy']
+    tests_list = list(test_verdict[pid][vid].keys())
+    cov_maps = []
+    verdicts = []
+    for i, test in enumerate(tests_list):
+        covfile = f"{ConfigClass.nbl_test_path}/{pid}/{test}-{vid}.gcov"
+        cov_maps.append(get_coverage(covfile, 0))
+        link_type = True if test_verdict[pid][vid][test] == 1 else False
+        verdicts.append(link_type)
+
+    return GumtreeBasedAnnotation.build_nx_ast_cov(
+        src_b, cov_maps, verdicts)

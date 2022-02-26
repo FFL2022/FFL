@@ -462,7 +462,9 @@ class HeteroMPNNPredictor1TestNodeTypeArity(torch.nn.Module):
 
 class GCN_A_L_T_1(torch.nn.Module):
     def __init__(self, hidden_feats, meta_graph,
-                 device=device, num_ast_labels=None, num_classes_ast=3):
+                 device=device, num_ast_labels=None, num_classes_ast=3,
+                 add_default_eweight=True,
+                 add_default_nweight=True):
         super().__init__()
         # Passing test overlapp
         # Failing test: often only one, so more important!
@@ -498,6 +500,20 @@ class GCN_A_L_T_1(torch.nn.Module):
         self.device = device
         self.to(device)
 
+        # explainer
+        self.add_default_nweight = add_default_nweight
+        self.add_default_eweight = add_default_eweight
+        self.hidden_feats = hidden_feats
+
+    def node_weight_multiply(self, h_g):
+        if self.add_default_nweight:
+            h_g.nodes['ast'].data['weight'] = torch.ones_like(
+                h_g.nodes['ast'].data['h'], dtype=torch.float32).to(h_g.device)
+        h_g.nodes['ast'].data['h'] = h_g.nodes['ast'].data['h'] * \
+            h_g.nodes['ast'].data['weight']
+
+        return h_g
+
     def ast_decode_node_func(self, nodes):
         feats = self.ast_decoder(nodes.data['h'])
         return {
@@ -506,9 +522,18 @@ class GCN_A_L_T_1(torch.nn.Module):
         }
 
     def forward(self, h_g):
+
         h_g.nodes['ast'].data['h'] = self.ast_label_encoder(
             h_g.nodes['ast'].data['label'])
-        #print(h_g.nodes['ast'].data['h'])
+        
+        h_g = self.node_weight_multiply(h_g)
+
+        if self.add_default_eweight:
+            for etype in h_g.etypes:
+                h_g.edges[etype].data['weight'] = torch.Tensor([1] * \
+                    h_g.number_of_edges(etype)).unsqueeze(-1)
+
+        # print(h_g.etypes)
         if h_g.number_of_nodes('test') > 0:
             h_g.nodes['test'].data['h'] = torch.cat(
                 h_g.number_of_nodes('test') *

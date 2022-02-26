@@ -21,7 +21,7 @@ import re
 def set_label_ast(ast, node, take_content=True):
 
     if take_content:
-        ast.nodes[node]['label'] = ast.nodes[node]['ntype'] + \
+        ast.nodes[node]['label'] = str(node) + ' ' +ast.nodes[node]['ntype'] + \
             ' ' + re.sub(r'[^\x00-\x7F]+', '', ast.nodes[node]['token'])
     else:
         ast.nodes[node]['label'] = ast.nodes[node]['ntype']

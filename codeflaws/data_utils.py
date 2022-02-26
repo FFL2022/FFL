@@ -3,11 +3,13 @@ from utils.utils import ConfigClass
 from cfg import cfg
 from codeflaws.data_format import key2bug, key2bugfile,\
     key2fixfile, key2test_verdict, get_gcov_file, test_verdict
-from graph_algos.nx_shortcuts import neighbors_out
+from graph_algos.nx_shortcuts import neighbors_out, neighbors_in
 from utils.get_bug_localization import get_bug_localization
 from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.nx_graph_builder import build_nx_graph_cfg_ast
-from utils.gumtree_utils import GumtreeBasedAnnotation
+from utils.gumtree_utils import GumtreeBasedAnnotation, GumtreeASTUtils
+from utils.get_bug_localization import get_asts_mapping
+from utils.traverse_utils import convert_from_arity_to_rel
 import pickle as pkl
 
 root = ConfigClass.codeflaws_data_path
@@ -257,3 +259,208 @@ def get_nx_ast_stmt_annt_gumtree(key):
         src_b, src_f, cov_maps,
         verdicts,
         GumtreeBasedAnnotation.build_nx_graph_stmt_annt)
+
+
+def get_nx_ast_node_gumtree(key):
+    src_b = key2bugfile(key)
+    test_list = key2test_verdict(key)
+    cov_maps = []
+    verdicts = []
+    for i, test in enumerate(test_list):
+        covfile = get_gcov_file(key, test)
+        cov_maps.append(get_coverage(covfile, 0))
+        verdicts.append(test_list[test] > 0)
+
+    return GumtreeBasedAnnotation.build_nx_ast_cov(
+        src_b, cov_maps, verdicts)
+
+
+def get_nx_ast_stmt_gumtree(key):
+    src_b = key2bugfile(key)
+    test_list = key2test_verdict(key)
+    cov_maps = []
+    verdicts = []
+    for i, test in enumerate(test_list):
+        covfile = get_gcov_file(key, test)
+        cov_maps.append(get_coverage(covfile, 0))
+        verdicts.append(test_list[test] > 0)
+
+    return GumtreeBasedAnnotation.build_nx_ast_cov(
+        src_b, cov_maps,
+        verdicts)
+
+
+def cfl_check_is_stmt_cpp(node_dict):
+    return node_dict['ntype'] in ['Break', 'Return', 'Case', 'DoWhile', 'Decl', 'Default',
+                     'If', 'FuncCall', 'Continue', 'Goto', 'EmptyStatement',
+                     'While', 'ExprList', 'Switch', 'For', 'FuncDef'] and \
+                     node_dict['p_ntype'] in ['If', 'Else', 'For', 'Compound']
+
+def cfl_add_placeholder_stmts_cpp(nx_ast):
+    ''' add PlaceholderStatement for each block '''
+    queue = [0]
+    while (len(queue) > 0):
+        node = queue.pop(0)
+        child_stmts = neighbors_out(
+            node, nx_ast, lambda u, v, k, e: cfl_check_is_stmt_cpp(nx_ast.nodes[v]))
+        if len(child_stmts) > 0: # or nx_ast.nodes[node]['ntype'] in ['block_content',  'case']:
+            new_node = max(nx_ast.nodes()) + 1
+            if len(child_stmts) > 0:
+                end_line = max([nx_ast.nodes[c]['start_line']
+                                for c in child_stmts])
+            else:
+                end_line = nx_ast.nodes[node]['start_line']
+            n_orders = [nx_ast.nodes[n]['n_order'] for n in child_stmts]
+            nx_ast.add_node(new_node,
+                            ntype='placeholder_stmt',
+                            p_ntype=nx_ast.nodes[node]['ntype'],
+                            token='',
+                            graph='ast',
+                            start_line=end_line,
+                            end_line=end_line,
+                            n_order=0 if all(item==0 for item in n_orders) else max(n_orders)+1,
+                            status=0
+                            )
+            labels = list(set([e['label'] for u, v, k, e in nx_ast.edges(keys=True, data=True)
+                                                            if u==node]))
+
+            nx_ast.add_edge(node, new_node, label='parent_child' if len(labels)>1 else labels[0])
+            child_stmts = child_stmts + [len(nx_ast.nodes())-1]
+        queue.extend(neighbors_out(node, nx_ast))
+    return nx_ast
+
+def check_statement_elem_removed(
+        n, nx_ast, ldels):
+    queue = [n]
+    started = False
+    while len(queue) > 0:
+        n = queue.pop(0)
+        if cfl_check_is_stmt_cpp(nx_ast.nodes[n]) and started:
+            continue
+        if n in ldels:
+            return True
+        queue.extend(neighbors_out(n, nx_ast))
+        started = True
+    return False
+
+def check_statement_elem_inserted(
+        n, nx_ast, lisrts):
+    queue = [n]
+    started = False
+    while len(queue) > 0:
+        n = queue.pop(0)
+        if cfl_check_is_stmt_cpp(nx_ast.nodes[n]) and started:
+            continue
+        if n in lisrts:
+            return True
+        queue.extend(neighbors_out(n, nx_ast))
+        started = True
+    return False
+
+def get_non_inserted_ancestor(rev_map_dict, dst_n, nx_ast_dst):
+    parents = neighbors_in(dst_n, nx_ast_dst)
+    while(len(parents) > 0):
+        parent = parents[0]
+        if parent not in rev_map_dict:
+            parents = neighbors_in(parent, nx_ast_dst)
+        else:
+            return parent
+
+def find_modified_statement(nx_ast_src, ldels):
+    ns = [n for n in nx_ast_src.nodes() if cfl_check_is_stmt_cpp(nx_ast_src.nodes[n])]
+    ns = [n for n in ns if check_statement_elem_removed(n, nx_ast_src, ldels)]
+    return ns
+
+def find_inserted_statement(nx_ast_src, nx_ast_dst, rev_map_dict, lisrts):
+    ns = [n for n in nx_ast_dst.nodes() if cfl_check_is_stmt_cpp(nx_ast_dst.nodes[n])]
+    inserted_stmts = []
+    # First, check if the statement itself is inserted
+    ns_i = [n for n in ns if n in lisrts]
+    for s_i in ns_i:
+        if neighbors_in(s_i, nx_ast_dst)[0] in lisrts:
+            continue
+        dst_p = neighbors_in(s_i, nx_ast_dst)[0]
+        dst_prev_sibs = GumtreeASTUtils.get_prev_sibs(s_i, nx_ast_dst)
+        dst_prev_sibs = [n for n in dst_prev_sibs if n not in lisrts]
+        # src_p = rev_map_dict[dst_p]
+        # for n in neighbors_out(src_p, nx_ast_src):
+        #    print(nx_ast_src.nodes[n])
+        if len(dst_prev_sibs) > 0:
+            src_prev_sib = rev_map_dict[max(dst_prev_sibs)]
+            src_prev_sib = src_prev_sib if type(src_prev_sib)==int else src_prev_sib[0]
+            try:
+                print(src_prev_sib, GumtreeASTUtils.get_next_sibs(src_prev_sib, nx_ast_src))
+                src_next_sib = min(GumtreeASTUtils.get_next_sibs(src_prev_sib, nx_ast_src))
+            except:
+                raise
+                print(nx_ast_dst.nodes[dst_p]['ntype'])
+        else:
+            # get the first child in the block
+            src_prev_sib = rev_map_dict[dst_p]
+            src_prev_sib = src_prev_sib if type(src_prev_sib)==int else src_prev_sib[0]
+            src_next_sib = min(neighbors_out(src_prev_sib, nx_ast_src))
+        inserted_stmts.append(src_next_sib)
+
+    ns_ni = [n for n in ns if n not in lisrts]
+    for s_n in ns_ni:
+        if check_statement_elem_inserted(s_n, nx_ast_dst, lisrts):
+            inserted_stmts.append(rev_map_dict[s_n])
+    return inserted_stmts
+
+def get_nx_ast_stmt_annt_cfl(key):
+    src_b = key2bugfile(key)
+    src_f = key2fixfile(key)
+    test_list = key2test_verdict(key)
+    cov_maps = []
+    verdicts = []
+    for i, test in enumerate(test_list):
+        covfile = get_gcov_file(key, test)
+        cov_maps.append(get_coverage(covfile, 0))
+        verdicts.append(test_list[test] > 0)
+
+    map_dict, nx_ast_src, nx_ast_dst = get_asts_mapping(src_b, src_f)
+
+    nx_ast_src.nodes[0]['p_ntype'] = ''
+    for n in nx_ast_src.nodes():
+        p_ntype = nx_ast_src.nodes[n]['ntype']
+        for cn in neighbors_out(n, nx_ast_src):
+            nx_ast_src.nodes[cn]['p_ntype'] = p_ntype
+
+        nx_ast_src.nodes[n]['status'] = 0
+        if n in map_dict['deleted']:
+            nx_ast_src.nodes[n]['status'] = 1
+        if n in map_dict['inserted']:
+            nx_ast_src.nodes[n]['status'] = 1
+
+
+    nx_ast_dst.nodes[0]['p_ntype'] = ''
+    for n in nx_ast_dst.nodes():
+        p_ntype = nx_ast_dst.nodes[n]['ntype']
+        for cn in neighbors_out(n, nx_ast_dst):
+            nx_ast_dst.nodes[cn]['p_ntype'] = p_ntype
+        nx_ast_dst.nodes[n]['status'] = 0
+
+    nx_ast_src = cfl_add_placeholder_stmts_cpp(nx_ast_src)
+
+    rev_map_dict = map_dict['rev_map_dict']
+
+    for st_n in find_modified_statement(
+            nx_ast_src, map_dict['deleted']):
+        nx_ast_src.nodes[st_n]['status'] = 1
+
+    # inserted nodes: check sibling
+    # for st_n in find_inserted_statement(
+    #         nx_ast_src, nx_ast_dst, rev_map_dict,
+    #         map_dict['inserted']):
+    #     # print(st_n)
+    #     if type(st_n) == list:
+    #         for _ in st_n:
+    #             nx_ast_src.nodes[_]['status'] = 1
+    #     elif type(st_n) == int:
+    #         nx_ast_src.nodes[st_n]['status'] = 1
+    #     else:
+    #         raise
+
+    nx_ast_src = convert_from_arity_to_rel(nx_ast_src)
+
+    return nx_ast_src

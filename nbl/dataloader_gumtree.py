@@ -1,10 +1,10 @@
 from dgl.data import DGLDataset
 from dgl import save_graphs, load_graphs
 import dgl
+    
+from nbl.utils import all_keys, get_nx_ast_stmt_annt_gumtree
+
 from utils.utils import ConfigClass
-from codeflaws.data_utils import all_codeflaws_keys,\
-    get_nx_ast_node_annt_gumtree,\
-    get_nx_ast_stmt_annt_gumtree
 from utils.gumtree_utils import GumtreeASTUtils
 from utils.nx_graph_builder import augment_with_reverse_edge_cat
 import os
@@ -17,12 +17,12 @@ import tqdm
 from json import JSONDecodeError
 
 
-class CodeflawsGumtreeNxStatementDataset(object):
-    def __init__(self, raw_dataset_dir=ConfigClass.codeflaws_data_path,
-                 save_dir=ConfigClass.preprocess_dir_codeflaws):
+class NBLGumtreeNxStatementDataset(object):
+    def __init__(self, raw_dataset_dir=ConfigClass.nbl_raw_dir,
+                 save_dir=ConfigClass.preprocess_dir_nbl):
         self.save_dir = save_dir
         self.info_path = os.path.join(
-            save_dir, 'nx_new_gumtree_stmt_dataset_info.pkl')
+            save_dir, 'nx_nbl_gumtree_stmt_dataset_info.pkl')
         if self.has_cache():
             self.load()
         else:
@@ -36,12 +36,12 @@ class CodeflawsGumtreeNxStatementDataset(object):
     def __getitem__(self, i):
         try:
             nx_g = pkl.load(open(
-                f'{self.save_dir}/nx_new_gumtree_stmt_{self.active_idxs[i]}.pkl', 'rb'))
+                f'{self.save_dir}/nx_nbl_gumtree_stmt_{self.active_idxs[i]}.pkl', 'rb'))
         except UnicodeDecodeError:
-            nx_g = get_nx_ast_stmt_annt_gumtree(all_codeflaws_keys[self.active_idxs[i]])
+            nx_g = get_nx_ast_stmt_annt_gumtree(all_keys[self.active_idxs[i]])
             pkl.dump(nx_g,
                      open(
-                         f'{self.save_dir}/nx_new_gumtree_stmt_{self.active_idxs[i]}.pkl', 'wb')
+                         f'{self.save_dir}/nx_nbl_gumtree_stmt_{self.active_idxs[i]}.pkl', 'wb')
                     )
         return nx_g, self.stmt_nodes[i]
 
@@ -53,19 +53,19 @@ class CodeflawsGumtreeNxStatementDataset(object):
         self.err_idxs = []
         self.active_idxs = []
 
-        bar = tqdm.tqdm(list(all_codeflaws_keys))
+        bar = tqdm.tqdm(list(all_keys))
         bar.set_description('Loading Nx Data with gumtree')
         for i, key in enumerate(bar):
 
             try:
-                if not os.path.exists(f'{self.save_dir}/nx_new_gumtree_stmt_{i}.pkl'):
+                if not os.path.exists(f'{self.save_dir}/nx_nbl_gumtree_stmt_{i}.pkl'):
                     nx_g = get_nx_ast_stmt_annt_gumtree(key)
                     pkl.dump(nx_g, open(
-                        f'{self.save_dir}/nx_new_gumtree_stmt_{i}.pkl', 'wb')
+                        f'{self.save_dir}/nx_nbl_gumtree_stmt_{i}.pkl', 'wb')
                     )
                 else:
                     nx_g = pkl.load(open(
-                        f'{self.save_dir}/nx_new_gumtree_stmt_{i}.pkl', 'rb')
+                        f'{self.save_dir}/nx_nbl_gumtree_stmt_{i}.pkl', 'rb')
                     )
             except JSONDecodeError:
                 self.err_idxs.append(i)
@@ -115,98 +115,19 @@ class CodeflawsGumtreeNxStatementDataset(object):
         return os.path.exists(self.info_path)
 
 
-class CodeflawsGumtreeNxNodeDataset(object):
-    def __init__(self, raw_dataset_dir=ConfigClass.codeflaws_data_path,
-                 save_dir=ConfigClass.preprocess_dir_codeflaws):
-        self.save_dir = save_dir
-        self.info_path = os.path.join(
-            save_dir, 'nx_gumtree_node_dataset_info.pkl')
-        if self.has_cache():
-            self.load()
-        else:
-            self.process()
-            self.save()
-
-        self.active_idxs = list(range(len(self.ast_lbs)))
-
-    def __len__(self):
-        return len(self.active_idxs)
-
-    def __getitem__(self, i):
-        return pkl.load(open(
-            f'{self.save_dir}/nx_gumtree_node_{self.active_idxs[i]}', 'rb')),\
-            self.stmt_nodes[self.active_idxs[i]]
-
-    def process(self):
-        self.ast_types = []
-        self.ast_etypes = []
-        self.stmt_nodes = []
-        self.keys = []
-        self.err_idxs = []
-        bar = tqdm.tqdm(list(enumerate(all_codeflaws_keys)))
-        bar.set_description('Loading Nx Data Node level with gumtree')
-        for i, key in bar:
-            try:
-                nx_g = get_nx_ast_stmt_annt_gumtree(key)
-                pkl.dump(nx_g, open(
-                    f'{self.save_dir}/nx_gumtree_node_{i}.pkl', 'wb')
-                )
-            except JSONDecodeError:
-                self.err_idxs.append(i)
-                count = len(self.err_idxs)
-                print(f"Total syntax error files: {count}")
-                continue
-            self.keys.append(key)
-            self.ast_types.extend(
-                [nx_g.nodes[node]['ntype'] for node in nx_g.nodes()
-                 if nx_g.nodes[node]['graph'] == 'ast'])
-            self.ast_etypes.extend(
-                [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
-                 if nx_g.nodes[u]['graph'] == 'ast' and
-                 nx_g.nodes[v]['graph'] == 'ast'])
-            self.stmt_nodes.append(list(
-                [n for n in nx_g.nodes() if
-                 nx_g.nodes[n]['graph'] == 'ast'
-                 and GumtreeASTUtils.check_is_stmt_cpp(nx_g.nodes[n]['ntype'])]
-            ))
-
-        self.ast_types = list(set(self.ast_types))
-        self.ast_etypes = list(set(self.ast_etypes))
-
-    def save(self):
-        os.makedirs(self.save_dir, exist_ok=True)
-        # gs is saved somewhere else
-        pkl.dump(
-            {
-                'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes,
-                'keys': self.keys, 'err_idxs': self.err_idxs
-            },
-            open(self.info_path, 'wb'))
-
-    def load(self):
-        info_dict = pkl.load(open(self.info_dict, 'rb'))
-        self.ast_types = info_dict['ast_types']
-        self.ast_etypes = info_dict['ast_etypes']
-        self.keys = info_dict['keys']
-        self.err_idxs = info_dict['err_idxs']
-
-    def has_cache(self):
-        return os.path.exists(self.info_path)
-
-
-class CodeflawsGumtreeDGLStatementDataset(DGLDataset):
-    def __init__(self, raw_dir=ConfigClass.codeflaws_data_path,
-                 save_dir=ConfigClass.preprocess_dir_codeflaws):
+class NBLGumtreeDGLStatementDataset(DGLDataset):
+    def __init__(self, raw_dir=ConfigClass.nbl_raw_dir,
+                 save_dir=ConfigClass.preprocess_dir_nbl):
         self.graph_save_path = os.path.join(
-            save_dir, 'dgl_nx_new_gumtree_stmt.bin')
+            save_dir, 'dgl_nbl_gumtree_stmt.bin')
         self.info_path = os.path.join(
-            save_dir, 'dgl_nx_new_gumtree_stmt_info.pkl')
-        self.nx_dataset = CodeflawsGumtreeNxStatementDataset(raw_dir, save_dir)
+            save_dir, 'dgl_nbl_gumtree_stmt_info.pkl')
+        self.nx_dataset = NBLGumtreeNxStatementDataset(raw_dir, save_dir)
         self.vocab_dict = dict(tuple(line.split()) for line in open(
-            'preprocess/codeflaws_vocab.txt', 'r'))
+            'preprocess/nbl_vocab.txt', 'r'))
 
-        super(CodeflawsGumtreeDGLStatementDataset, self).__init__(
-            name='codeflaws_dgl',
+        super(NBLGumtreeDGLStatementDataset, self).__init__(
+            name='nbl_dgl',
             url=None,
             raw_dir=raw_dir,
             save_dir=save_dir,
