@@ -2,7 +2,8 @@ from __future__ import print_function, unicode_literals
 import torch
 import os
 import torch.nn.functional as F
-from codeflaws.dataloader_key_only import CodeflawsFullDGLDataset
+from codeflaws.dataloader_key_only import (
+    CodeflawsFullDGLDataset, non_err_keys)
 from model import GCN_A_L_T_1
 from utils.utils import ConfigClass
 from utils.draw_utils import ast_to_agraph
@@ -210,8 +211,8 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     model.eval()
     out_dict = {}
     line_mapping = {}
-    if os.path.exists('preprocessed/line_mapping.pkl'):
-        line_mapping = pkl.load(open('preprocessed/line_mapping.pkl', 'rb'))
+    if os.path.exists('preprocessed/codeflaws_line_mapping.pkl'):
+        line_mapping = pkl.load(open('preprocessed/codeflaws_line_mapping.pkl', 'rb'))
     # Line mapping: index -> ast['line']
     f1_meter.reset()
     top_1_meter.reset()
@@ -222,6 +223,8 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     for i in tqdm.trange(len(dataloader)):
         real_idx = dataloader.active_idxs[i]
         g = dataloader[i]
+        if g.number_of_nodes('ast') > 3000 or i == 181:
+            continue
         g = g.to(device)
         g = model(g)
 
@@ -305,7 +308,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         json.dump(out_dict, f, indent=2)
 
     if line_mapping_changed:
-        pkl.dump(line_mapping, open('preprocessed/line_mapping.pkl', 'wb'))
+        pkl.dump(line_mapping, open('preprocessed/codeflaws_line_mapping.pkl', 'wb'))
     return out_dict
 
 
@@ -403,6 +406,7 @@ if __name__ == '__main__':
     train(model, dataset, ConfigClass.n_epochs)
     list_models_paths = list(
         glob.glob(f"{ConfigClass.trained_dir_codeflaws}/model*best.pth"))
+    print(list_models_paths)
     for model_path in list_models_paths:
         epoch = int(model_path.split("_")[1])
         print(f"Evaluating {model_path}:")
