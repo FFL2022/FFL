@@ -158,9 +158,9 @@ def train(model, dataloader, n_epochs, start_epoch=0):
                 if f1_eval > best_f1:
                     best_f1 = f1_eval
                     torch.save(model.state_dict(), os.path.join(
-                        ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best.pth'))
+                        ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_gumtree.pth'))
         torch.save(model.state_dict(), os.path.join(
-                   ConfigClass.trained_dir_codeflaws, f'model_last.pth'))
+                   ConfigClass.trained_dir_codeflaws, f'model_last_gumtree.pth'))
 
 
 def get_line_mapping(dataloader, real_idx):
@@ -214,8 +214,8 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     model.eval()
     out_dict = {}
     line_mapping = {}
-    if os.path.exists('preprocessed/codeflaws_line_mapping.pkl'):
-        line_mapping = pkl.load(open('preprocessed/codeflaws_line_mapping.pkl', 'rb'))
+    if os.path.exists('preprocessed/codeflaws_line_mapping_gumtree.pkl'):
+        line_mapping = pkl.load(open('preprocessed/codeflaws_line_mapping_gumtree.pkl', 'rb'))
     # Line mapping: index -> ast['line']
     f1_meter.reset()
     top_1_meter.reset()
@@ -406,14 +406,17 @@ if __name__ == '__main__':
         256, meta_graph,
         device=device, num_ast_labels=len(dataset.nx_dataset.ast_types),
         num_classes_ast=3)
-    train(model, dataset, ConfigClass.n_epochs)
+    # train(model, dataset, ConfigClass.n_epochs)
     list_models_paths = list(
-        glob.glob(f"{ConfigClass.trained_dir_codeflaws}/model*best.pth"))
+        glob.glob(f"{ConfigClass.trained_dir_codeflaws}/model*best_gumtree.pth"))
     print(list_models_paths)
     for model_path in list_models_paths:
         epoch = int(model_path.split("_")[1])
         print(f"Evaluating {model_path}:")
-        model.load_state_dict(torch.load(model_path))
+        try:
+            model.load_state_dict(torch.load(model_path))
+        except:
+            continue
         print("Val: ")
         eval_by_line(model, dataset, epoch, 'val')
         print('Test: ')
@@ -421,7 +424,7 @@ if __name__ == '__main__':
     print(ConfigClass.trained_dir_codeflaws)
     best_latest = max(int(model_path.split("_")[1])
                       for model_path in list_models_paths)
-    model_path = f"{ConfigClass.trained_dir_codeflaws}/model_{best_latest}_best.pth"
+    model_path = f"{ConfigClass.trained_dir_codeflaws}/model_{best_latest}_best_gumtree.pth"
     model.load_state_dict(torch.load(model_path))
     print(f"Evaluation: {model_path}")
     dataset.test()

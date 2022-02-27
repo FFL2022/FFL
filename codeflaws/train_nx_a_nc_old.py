@@ -192,7 +192,7 @@ def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts):
     return nx_g.subgraph(n_asts)
 
 
-def eval_by_line(model, dataloader, epoch, mode='val'):
+def eval_by_line(model, dataloader, epoch, mode='val', draw=False):
     # Map from these indices to line
     # Calculate mean scores for these lines
     # Get these unique lines
@@ -249,11 +249,12 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
 
         if nx_g.number_of_nodes() > 1000:
             continue
-        try:
-            ast_to_agraph(nx_g, f'images_{epoch}/{real_idx}.png',
-                          take_content=False)
-        except:
-            continue
+        if draw:
+            try:
+                ast_to_agraph(nx_g, f'images_{epoch}/{real_idx}.png',
+                            take_content=False)
+            except:
+                continue
 
         g.nodes['ast'].data['new_pred'][
             g.nodes['ast'].data['new_pred'] != 0] = 1.0
