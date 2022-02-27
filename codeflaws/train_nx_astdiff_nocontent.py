@@ -195,7 +195,7 @@ def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts):
     return nx_g.subgraph(n_asts)
 
 
-def eval_by_line(model, dataloader, epoch, mode='val'):
+def eval_by_line(model, dataloader, epoch, mode='val', draw=False):
     # Map from these indices to line
     # Calculate mean scores for these lines
     # Get these unique lines
@@ -205,7 +205,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     elif mode == 'test':
         dataloader.test()
 
-    os.makedirs(f'images_{epoch}', exist_ok=True)
+    os.makedirs(f'images_{epoch}_gumtree', exist_ok=True)
     f1_meter = BinFullMeter()
     top_1_meter = AverageMeter()
     top_3_meter = AverageMeter()
@@ -253,7 +253,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         if nx_g.number_of_nodes() > 1000:
             continue
         try:
-            ast_to_agraph(nx_g, f'images_{epoch}/{real_idx}.png',
+            ast_to_agraph(nx_g, f'images_{epoch}_gumtree/{real_idx}.png',
                           take_content=False)
         except:
             continue
@@ -307,11 +307,11 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     out_dict['f1'] = f1_meter.get()
     print(out_dict)
     with open(ConfigClass.result_dir_codeflaws +
-              '/eval_dict_by_line_e{}.json'.format(epoch), 'w') as f:
+              '/eval_dict_by_line_e{}_gumtree.json'.format(epoch), 'w') as f:
         json.dump(out_dict, f, indent=2)
 
     if line_mapping_changed:
-        pkl.dump(line_mapping, open('preprocessed/codeflaws_line_mapping.pkl', 'wb'))
+        pkl.dump(line_mapping, open('preprocessed/codeflaws_line_mapping_gumtree.pkl', 'wb'))
     return out_dict
 
 
@@ -389,7 +389,7 @@ def eval(model, dataloader, epoch, mode='val'):
     out_dict['mean_acc'] = mean_ast_acc.avg
     out_dict['mean_loss'] = mean_ast_loss.avg
     out_dict['f1'] = f1_meter.get()
-    with open(ConfigClass.result_dir_codeflaws + f'/eval_dict_e{epoch}.json', 'w') as f:
+    with open(ConfigClass.result_dir_codeflaws + f'/eval_dict_e{epoch}_gumtree.json', 'w') as f:
         json.dump(out_dict, f, indent=2)
     print(out_dict)
     return mean_ast_loss.avg, mean_ast_acc.avg, f1_meter.get()['aux_f1']
