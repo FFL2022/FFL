@@ -12,7 +12,7 @@ import fasttext
 from utils.utils import ConfigClass
 from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.nx_graph_builder import augment_with_reverse_edge
-from nbl.utils import all_keys, eval_set, mapping_eval
+from nbl.utils import all_keys, eval_set, mapping_eval, most_failed_val_set
 from utils.get_bug_localization import get_bug_localization
 from graph_algos.nx_shortcuts import combine_multi, neighbors_out
 
@@ -211,7 +211,11 @@ class NBLFullDGLDataset(DGLDataset):
         self.ast_content_dim = info_dict['ast_content_dim']
         self.master_idxs = info_dict['master_idxs']
         self.train_idxs = info_dict['train_idxs']
-        self.val_idxs = info_dict['val_idxs']
+        self.val_idxs = [] # info_dict['val_idxs']
+        for i in info_dict['val_idxs']:
+            key = all_keys[i]
+            if int(key['buggy']) in most_failed_val_set:
+                self.val_idxs.append(i)
         self.train()
 
     def save(self):
