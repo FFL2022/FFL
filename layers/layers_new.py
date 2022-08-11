@@ -115,7 +115,7 @@ class WeightedGCNSingleEtype(torch.nn.Module):
 
 
 class GCN_1E(torch.nn.Module):
-    def __init__(self, hidden_dim, out_dim, name='', activation=nn.ReLU()):
+    def __init__(self, hidden_dim, out_dim, activation=nn.ReLU()):
         super(GCN_1E, self).__init__()
         self.hidden_dim = hidden_dim
         self.activation = activation
@@ -129,19 +129,20 @@ class GCN_1E(torch.nn.Module):
         nn.init.xavier_normal_(self.self_loop.weight)
         # TODO: add self loop to: each type of edge, add linear, etc
         # TODO: sigmoid weight
-        self.name = name
 
     def compute_send_messages(self, edges):
         src, dst, _ = edges.edges()
         x_src = edges.src['h']  # N_n, hidden_dim
+        # print(edges.data)
         # print(x_src.shape)
         msg = self.edge_transform(x_src)
         return {'msg': msg}
 
+
     def compute_send_messages_w_eweight(self, edges):
-        # print(self.name, edges.data['weight'].shape)
+        # print(edges.data['weight'])
         x_src = edges.src['h'] * edges.data['weight'] # N_n, hidden_dim
-        msg = self.edge_transform(x_src)
+        msg = self.edge_transform(x_src) 
         return {'msg': msg}
 
 
@@ -214,25 +215,31 @@ class GCNLayer(torch.nn.Module):
     ''' Propagate infor through each type of edge'''
 
     def __init__(self, meta_graph, hidden_dim, out_dim, device=device):
-        super(GCNLayer, self).__init__()
+        super().__init__()
         # 1. Get all edges via meta graph
         self.meta_graph = meta_graph
         per_type_linear = {}
         self.funcs = {}
         self.act = nn.ReLU()
         for c_etype in self.meta_graph:
-            # etype is a tuple of src type, etype, dst type
+            # etype is a tuple of node type, etype, dst type
             t_src, t_e, t_dst = c_etype
             # 2. for each meta graph, create a mpnn block
             ctype_str = '><'.join((t_src, t_e, t_dst))
-            per_type_linear[ctype_str] = GCN_1E(hidden_dim, out_dim, name=t_e)
+            per_type_linear[ctype_str] = GCN_1E(hidden_dim, out_dim)
             self.funcs[c_etype] = (
-                per_type_linear[ctype_str].compute_send_messages,
+                per_type_linear[ctype_str].compute_send_messages_w_eweight,
                 per_type_linear[ctype_str].aggregator('msg', 'h')
                 # self.add_act
             )
 
         self.per_type_linear = torch.nn.ModuleDict(per_type_linear)
+
+        self.edge_transforms = {}
+        for c_etype in self.meta_graph:
+            self.edge_transforms[c_etype] = nn.Linear(hidden_dim, 
+                                                out_dim, bias=False)
+
 
     def add_act(self, nodes):
         return {'h': self.act(nodes.data['h'])}
@@ -245,6 +252,11 @@ class GCNLayer(torch.nn.Module):
             # Preventing some randome error that makes way too many edges
             if 6000 > h_g.number_of_edges(c_etype) > 0:
                 tmp_funcs[c_etype] = self.funcs[c_etype]
+
+        # for etype in h_g.etypes:
+        #     if h_g.number_of_edges(etype) > 0:
+        #         h_g.apply_edges(self.add_eweight, etype=etype)
+
         h_g.multi_update_all(tmp_funcs, 'sum')
 
         for ntype in h_g.ntypes:

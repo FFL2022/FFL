@@ -2,7 +2,8 @@ from __future__ import print_function, unicode_literals
 import torch
 import os
 import torch.nn.functional as F
-from codeflaws.dataloader_key_only import CodeflawsFullDGLDataset
+from codeflaws.dataloader_key_only import (
+    CodeflawsFullDGLDataset, non_err_keys)
 from codeflaws.dataloader_gumtree_node import CodeflawsGumtreeDGLNodeDataset
 from model import GCN_A_L_T_1
 from utils.utils import ConfigClass
@@ -157,9 +158,9 @@ def train(model, dataloader, n_epochs, start_epoch=0):
                 if f1_eval > best_f1:
                     best_f1 = f1_eval
                     torch.save(model.state_dict(), os.path.join(
-                        ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best.pth'))
+                        ConfigClass.trained_dir_codeflaws, f'model_{epoch}_best_gumtree.pth'))
         torch.save(model.state_dict(), os.path.join(
-                   ConfigClass.trained_dir_codeflaws, f'model_last.pth'))
+                   ConfigClass.trained_dir_codeflaws, f'model_last_gumtree.pth'))
 
 
 def get_line_mapping(dataloader, real_idx):
@@ -194,7 +195,7 @@ def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts):
     return nx_g.subgraph(n_asts)
 
 
-def eval_by_line(model, dataloader, epoch, mode='val'):
+def eval_by_line(model, dataloader, epoch, mode='val', draw=False):
     # Map from these indices to line
     # Calculate mean scores for these lines
     # Get these unique lines
@@ -204,7 +205,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     elif mode == 'test':
         dataloader.test()
 
-    os.makedirs(f'images_{epoch}', exist_ok=True)
+    os.makedirs(f'images_{epoch}_gumtree', exist_ok=True)
     f1_meter = BinFullMeter()
     top_1_meter = AverageMeter()
     top_3_meter = AverageMeter()
@@ -213,8 +214,8 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     model.eval()
     out_dict = {}
     line_mapping = {}
-    if os.path.exists('preprocessed/line_mapping.pkl'):
-        line_mapping = pkl.load(open('preprocessed/line_mapping.pkl', 'rb'))
+    if os.path.exists('preprocessed/codeflaws_line_mapping_gumtree.pkl'):
+        line_mapping = pkl.load(open('preprocessed/codeflaws_line_mapping_gumtree.pkl', 'rb'))
     # Line mapping: index -> ast['line']
     f1_meter.reset()
     top_1_meter.reset()
@@ -225,6 +226,8 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     for i in tqdm.trange(len(dataloader)):
         real_idx = dataloader.active_idxs[i]
         g = dataloader[i]
+        if g.number_of_nodes('ast') > 3000 or i == 181:
+            continue
         g = g.to(device)
         g = model(g)
 
@@ -250,7 +253,7 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
         if nx_g.number_of_nodes() > 1000:
             continue
         try:
-            ast_to_agraph(nx_g, f'images_{epoch}/{real_idx}.png',
+            ast_to_agraph(nx_g, f'images_{epoch}_gumtree/{real_idx}.png',
                           take_content=False)
         except:
             continue
@@ -304,11 +307,11 @@ def eval_by_line(model, dataloader, epoch, mode='val'):
     out_dict['f1'] = f1_meter.get()
     print(out_dict)
     with open(ConfigClass.result_dir_codeflaws +
-              '/eval_dict_by_line_e{}.json'.format(epoch), 'w') as f:
+              '/eval_dict_by_line_e{}_gumtree.json'.format(epoch), 'w') as f:
         json.dump(out_dict, f, indent=2)
 
     if line_mapping_changed:
-        pkl.dump(line_mapping, open('preprocessed/line_mapping.pkl', 'wb'))
+        pkl.dump(line_mapping, open('preprocessed/codeflaws_line_mapping_gumtree.pkl', 'wb'))
     return out_dict
 
 
@@ -386,7 +389,7 @@ def eval(model, dataloader, epoch, mode='val'):
     out_dict['mean_acc'] = mean_ast_acc.avg
     out_dict['mean_loss'] = mean_ast_loss.avg
     out_dict['f1'] = f1_meter.get()
-    with open(ConfigClass.result_dir_codeflaws + f'/eval_dict_e{epoch}.json', 'w') as f:
+    with open(ConfigClass.result_dir_codeflaws + f'/eval_dict_e{epoch}_gumtree.json', 'w') as f:
         json.dump(out_dict, f, indent=2)
     print(out_dict)
     return mean_ast_loss.avg, mean_ast_acc.avg, f1_meter.get()['aux_f1']
@@ -405,11 +408,15 @@ if __name__ == '__main__':
         num_classes_ast=3)
     # train(model, dataset, ConfigClass.n_epochs)
     list_models_paths = list(
-        glob.glob(f"{ConfigClass.trained_dir_codeflaws}/model*best.pth"))
+        glob.glob(f"{ConfigClass.trained_dir_codeflaws}/model*best_gumtree.pth"))
+    print(list_models_paths)
     for model_path in list_models_paths:
         epoch = int(model_path.split("_")[1])
         print(f"Evaluating {model_path}:")
-        model.load_state_dict(torch.load(model_path))
+        try:
+            model.load_state_dict(torch.load(model_path))
+        except:
+            continue
         print("Val: ")
         eval_by_line(model, dataset, epoch, 'val')
         print('Test: ')
@@ -417,7 +424,7 @@ if __name__ == '__main__':
     print(ConfigClass.trained_dir_codeflaws)
     best_latest = max(int(model_path.split("_")[1])
                       for model_path in list_models_paths)
-    model_path = f"{ConfigClass.trained_dir_codeflaws}/model_{best_latest}_best.pth"
+    model_path = f"{ConfigClass.trained_dir_codeflaws}/model_{best_latest}_best_gumtree.pth"
     model.load_state_dict(torch.load(model_path))
     print(f"Evaluation: {model_path}")
     dataset.test()

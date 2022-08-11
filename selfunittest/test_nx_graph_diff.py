@@ -9,7 +9,7 @@ from nbl.utils import all_keys, get_nx_ast_stmt_annt_gumtree
 from json import JSONDecodeError
 
 def test1():
-    for i in list(range(10)) + [28] + [715]:
+    for i in list(range(50)) + [715]:
         nx_ast, nx_ast_f, nx_cfg, nx_cfg_f, nx_cfg_ast, nx_cfg_ast_cov\
             = get_cfg_ast_cov(all_codeflaws_keys[i])
         draw_utils.ast_to_agraph(nx_ast,
@@ -31,7 +31,7 @@ def test2():
                     continue
                 nx_g = get_nx_ast_stmt_annt_cfl(key)
                 os.makedirs(os.path.dirname(filename), exist_ok=True)
-                draw_utils.ast_to_agraph(nx_g.subgraph([n for n in nx_g.nodes() 
+                draw_utils.ast_to_agraph(nx_g.subgraph([n for n in nx_g.nodes()
                     if nx_g.nodes[n]['graph'] == 'ast']), filename)
             except ParseError:
                 count += 1
@@ -44,7 +44,7 @@ def test2():
                 print(key)
                 raise
         # break
-            
+
 def test3():
     bar = tqdm.tqdm(all_keys)
     for key in bar:
@@ -53,7 +53,7 @@ def test3():
             print(filename)
             nx_g = get_nx_ast_stmt_annt_gumtree(key)
             os.makedirs(os.path.dirname(filename), exist_ok=True)
-            draw_utils.ast_to_agraph(nx_g.subgraph([n for n in nx_g.nodes() 
+            draw_utils.ast_to_agraph(nx_g.subgraph([n for n in nx_g.nodes()
                 if nx_g.nodes[n]['graph'] == 'ast']), filename)
         except JSONDecodeError:
             print('error:', key)
@@ -64,4 +64,6 @@ def test3():
 
 
 if __name__ == '__main__':
+    test1()
+    test2()
     test3()

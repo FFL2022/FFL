@@ -31,38 +31,17 @@ class CodeflawsNxDataset(object):
             self.process()
             self.save()
 
+        self.active_idxs = list(range(len(self.ast_lbs_d)))
+
     def __len__(self):
         return len(self.active_idxs)
 
     def __getitem__(self, i):
-        idx = self.active_idxs[i]
-        try:
-            nx_g = pkl.load(open(f'{self.save_dir}/nx_keyonly_{idx}', 'rb'))
-        except:
-            _, _, _, _, _, nx_g = get_cfg_ast_cov(all_codeflaws_keys[idx])
-            ast_lb_d = []
-            ast_lb_i = []
-            cfg_lb = []
-            for n in nx_g.nodes():
-                if nx_g.nodes[n]['graph'] == 'test':
-                    continue
-                if nx_g.nodes[n]['graph'] == 'ast':
-                    if nx_g.nodes[n]['status'] == 2:
-                        ast_lb_i.append(n)
-                    elif nx_g.nodes[n]['status'] == 1:
-                        ast_lb_d.append(n)
-                elif nx_g.nodes[n]['graph'] == 'cfg':
-                    if nx_g.nodes[n]['status'] == 1:
-                        cfg_lb.append(n)
-                del nx_g.nodes[n]['status']
-            pkl.dump(nx_g,
-                     open(
-                         os.path.join(self.save_dir, f'nx_keyonly_{idx}'),
-                         'wb'))
-        return nx_g,\
-            self.ast_lbs_d[i], \
-            self.ast_lbs_i[i], \
-            self.cfg_lbs[i]
+        return pkl.load(open(
+            f'{self.save_dir}/nx_{self.active_idxs[i]}', 'rb')),\
+            self.ast_lbs_d[self.active_idxs[i]], \
+            self.ast_lbs_i[self.active_idxs[i]], \
+            self.cfg_lbs[self.active_idxs[i]]
 
     def process(self):
         self.ast_types = []
@@ -71,18 +50,13 @@ class CodeflawsNxDataset(object):
         self.ast_lbs_d = []
         self.cfg_lbs = []
         self.keys = []
-        self.active_idxs = []
         error_instance = []
         bar = tqdm.tqdm(enumerate(all_codeflaws_keys))
         bar.set_description('Loading Nx Data')
         err_count = 0
         for i, key in bar:
             try:
-                if os.path.exists(f'{self.save_dir}/nx_keyonly_{i}'):
-                    nx_g = pkl.load(open(f'{self.save_dir}/nx_keyonly_{i}',
-                                         'rb'))
-                else:
-                    _, _, _, _, _, nx_g = get_cfg_ast_cov(key)
+                _, _, _, _, _, nx_g = get_cfg_ast_cov(key)
                 ast_lb_d = []
                 ast_lb_i = []
                 cfg_lb = []
@@ -100,7 +74,7 @@ class CodeflawsNxDataset(object):
                     del nx_g.nodes[n]['status']
                 pkl.dump(nx_g,
                          open(
-                             os.path.join(self.save_dir, f'nx_keyonly_{i}'),
+                             os.path.join(self.save_dir, f'nx_{i}'),
                              'wb'))
             except ParseError:
                 err_count += 1
@@ -113,7 +87,6 @@ class CodeflawsNxDataset(object):
             self.ast_types.extend(
                 [nx_g.nodes[node]['ntype'] for node in nx_g.nodes()
                  if nx_g.nodes[node]['graph'] == 'ast'])
-            self.active_idxs.append(i)
             self.ast_lbs_i.append(ast_lb_i)
             self.ast_lbs_d.append(ast_lb_d)
             self.cfg_lbs.append(cfg_lb)
@@ -133,8 +106,6 @@ class CodeflawsNxDataset(object):
                 'ast_lb_d': self.ast_lbs_d,
                 'ast_lb_i': self.ast_lbs_i,
                 'cfg_lb': self.cfg_lbs,
-                'keys': self.keys,
-                'active_idxs': self.active_idxs,
                 'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes},
             open(self.info_path, 'wb'))
 
@@ -145,8 +116,6 @@ class CodeflawsNxDataset(object):
         self.ast_lbs_d = gs_label['ast_lb_d']
         self.ast_lbs_i = gs_label['ast_lb_i']
         self.cfg_lbs = gs_label['cfg_lb']
-        self.keys = gs_label['keys']
-        self.active_idxs = gs_label['active_idxs']
 
     def has_cache(self):
         return os.path.exists(self.info_path)
@@ -201,11 +170,11 @@ class CodeflawsFullDGLDataset(DGLDataset):
         save_graphs(self.graph_save_path, self.gs)
         self.master_idxs = list(range(len(self.gs)))
         random.shuffle(self.master_idxs)
-        self.train_idxs = list(self.master_idxs[:int(len(self.gs)*0.8)])
+        self.train_idxs = list(self.master_idxs[:int(len(self.gs)*0.6)])
         self.val_idxs = list(self.master_idxs[
-            int(len(self.gs)*0.8):int(len(self.gs)*0.9)])
+            int(len(self.gs)*0.6):int(len(self.gs)*0.8)])
         self.test_idxs = list(self.master_idxs[
-            int(len(self.gs)*0.9):int(len(self.gs))])
+            int(len(self.gs)*0.8):int(len(self.gs))])
         pkl.dump({'cfg_content_dim': self.cfg_content_dim,
                   'ast_content_dim': self.ast_content_dim,
                   'master_idxs': self.master_idxs,

@@ -138,3 +138,23 @@ def get_nx_ast_stmt_gumtree(key):
 
     return GumtreeBasedAnnotation.build_nx_ast_cov(
         src_b, cov_maps, verdicts)
+
+def get_most_failed_val_set():
+    result = []
+    for i, key in enumerate(all_keys):
+        if int(key['buggy']) not in mapping_eval: # only val_set
+            continue
+        pid = key['problem_id']
+        vid = key['buggy']
+        tests_list = list(test_verdict[pid][vid].keys())
+        pass_cnt = 0
+        fail_cnt = 0
+        for j, test in enumerate(tests_list):
+            if test_verdict[pid][vid][test] == 0:
+                fail_cnt += 1
+        if (fail_cnt / len(tests_list) >= 0.9):
+            # print(vid, fail_cnt, len(tests_list))
+            result.append(vid)
+    return result
+
+most_failed_val_set = get_most_failed_val_set();
