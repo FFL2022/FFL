@@ -31,12 +31,9 @@ if __name__ == '__main__':
     end_time2 = time.time()
     print("Build CFG AST COV took: {}".format(end_time - start_time))
     print("Build CFG COV took: {}".format(end_time2 - end_time))
-    draw_utils.cfg_to_agraph(cfg,
-                             'visualize_nx_graphs/cfg.png')
-    draw_utils.ast_to_agraph(ast,
-                             'visualize_nx_graphs/ast.png')
-    draw_utils.cfg_ast_to_agraph(cfg_ast,
-                                 'visualize_nx_graphs/cfg_ast.png')
+    draw_utils.cfg_to_agraph(cfg, 'visualize_nx_graphs/cfg.png')
+    draw_utils.ast_to_agraph(ast, 'visualize_nx_graphs/ast.png')
+    draw_utils.cfg_ast_to_agraph(cfg_ast, 'visualize_nx_graphs/cfg_ast.png')
     ''' Dont try this shit, it's too dense to see anyway
     draw_utils.cfg_ast_cov_to_agraph(cfg_cov,
                                      'visualize_nx_graphs/cfg_cov.png')
