@@ -23,7 +23,7 @@ Extract `jars.zip` into folder `jars`
 ## Training: 
 ```bash
 # Codeflaws node-level
-python3 -m codeflaws.train_nx_a_nc_cfl
+python3 -m codeflaws.train_nx_a_nc_old
 # NBL node-level
 python3 -m nbl.train_nx_a_nc
 
