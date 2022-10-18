@@ -45,3 +45,17 @@ Copy the pretrained model into `train_dirs` in the configured `utils/utils.py` f
 
 ## Others
 Please note that while this is not required in our original settings, codebert pretrain file can be placed in `preprocess` folder for each AST content to be used instead of just nodetype.
+
+Please cite the following article if you find FFL to be useful:
+```
+@article{Nguyen2022,
+   author = {Thanh-Dat Nguyen and Thanh Le-Cong and Duc-Minh Luong and Van-Hai Duong and Xuan-Bach D Le and David Lo and Quyet-Thang Huynh},
+   city = {Cyprus},
+   journal = {The 38th IEEE International Conference on Software Maintenance and Evolution},
+   keywords = {Graph Neural Network,Index Terms-Fault Localization,Programming Education},
+   month = {11},
+   title = {FFL: Fine-grained Fault Localization for Student Programs via Syntactic and Semantic Reasoning},
+   url = {https://github.com/FFL2022/FFL},
+   year = {2022},
+}
+```
