@@ -622,6 +622,4 @@ class GCN_A_L(torch.nn.Module):
             h_g.nodes['ast'].data['h'] = ast_feats + h_g.nodes['ast'].data['h']
 
         h_g = self.h_process5(h_g)
-        if self.ast_label_encoder is not None:
-            h_g.apply_nodes(self.ast_decode_node_func, ntype='ast')
         return h_g

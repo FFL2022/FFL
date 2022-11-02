@@ -9,36 +9,66 @@ e2idmap = [(e, i) for i, e in enumerate(edge_types)]
 
 
 class MPNNModel(nn.Module):
-    def __init__(self, ncfg_lfts, ncfg_cfts,
-                 hfts, efts, netypes, ncls,
-                 nast_lfts, nast_cfts, n_layers=5, device=device):
+    def __init__(self, cl_dim, cc_dim,
+                 hdim, edim, netypes, ncls,
+                 al_dim, ac_dim, n_layers=5, device=device):
         super().__init__()
-        self.cfgl_enc = nn.Linear(ncfg_lfts, hfts)
-        self.cfgc_enc = nn.Linear(ncfg_cfts, hfts)
+        self.cl_enc = nn.Linear(cl_dim, hdim)
+        self.cc_enc = nn.Linear(cc_dim, hdim)
 
-        self.ast_lenc = nn.Linear(nast_lfts, hfts)
-        self.ast_cenc = nn.Linear(nast_cfts, hfts)
+        self.al_enc = nn.Linear(al_dim, hdim)
+        self.ac_enc = nn.Linear(ac_dim, hdim)
 
-        nn.init.xavier_normal_(self.ast_lenc.weight)
-        nn.init.normal_(self.ast_lenc.bias)
-        nn.init.xavier_normal_(self.ast_cenc.weight)
-        nn.init.normal_(self.ast_cenc.bias)
+        nn.init.xavier_normal_(self.al_enc.weight)
+        nn.init.normal_(self.al_enc.bias)
+        nn.init.xavier_normal_(self.al_enc.weight)
+        nn.init.normal_(self.ac_enc.bias)
 
-        self.pt_emb = nn.Parameter(torch.FloatTensor(hfts))
+        self.pt_emb = nn.Parameter(torch.FloatTensor(hdim))
         nn.init.normal_(self.pt_emb)
-        self.ft_emb = nn.Parameter(torch.FloatTensor(hfts))
+        self.ft_emb = nn.Parameter(torch.FloatTensor(hdim))
         nn.init.normal_(self.ft_emb)
 
         self.netypes = netypes
         self.n_layers = n_layers
-        self.mpnn_cc = [
+        self.relu = nn.ReLU()
+        self.mpnn_cc = nn.ModuleList(
+            [nn.Sequential(nn.Linear(hdim, hdim), nn.ReLU())
+             for _ in range(n_layers)])
+        self.mpnn_tc = nn.ModuleList(
+            [nn.Sequential(nn.Linear(hdim, hdim), nn.ReLU())
+             for _ in range(n_layers)])
+        self.mpnn_ac = nn.ModuleList(
+            [nn.Sequential(nn.Linear(hdim, hdim), nn.ReLU())
+             for _ in range(n_layers)])
+        self.mpnn_aa = nn.ModuleList(
+            [nn.Sequential(nn.Linear(hdim, hdim), nn.ReLU())
+             for _ in range(n_layers)])
+        self.mpnn_ca = nn.ModuleList(
+            [nn.Sequential(nn.Linear(hdim, hdim), nn.ReLU())
+             for _ in range(n_layers)])
+        self.mpnn_ta = nn.ModuleList(
+            [nn.Sequential(nn.Linear(hdim, hdim), nn.ReLU())
+             for _ in range(n_layers)])
+        self.mpnn_ct = nn.ModuleList(
+            [nn.Sequential(nn.Linear(hdim, hdim), nn.ReLU())
+             for _ in range(n_layers)])
+        self.mpnn_at = nn.ModuleList(
+            [nn.Sequential(nn.Linear(hdim, hdim), nn.ReLU())
+             for _ in range(n_layers)])
 
     def forward(self, x_cl, x_cc, x_al, x_ac, x_pt, x_ft,
+                e_cc_f, e_ca_f, e_ct_f, e_ac_f, e_aa_f, e_at_f, e_tc_f, e_ta_f,
                 e_cc, e_ca, e_ct, e_ac, e_aa, e_at, e_tc, e_ta):
-        # 1. message passing to update x_cl
-        # 2. message passing to update x_cc
-        # 3. message passing to update x_al
-        # 4. message passing to update x_ac
-        # 5. message passing to update x_pt
-        # 6. message passing to update x_ft
+        x_c = self.relu(self.cc_enc(x_cc) + self.cl_enc(x_cl))
+        x_a = self.relu(self.ac_enc(x_ac) + self.al_enc(x_al))
+        for _ in range(self.n_layers):
+            # 1. message passing to update x_cl
+            # 2. message passing to update x_cc
+            # 3. message passing to update x_al
+            # 4. message passing to update x_ac
+            # 5. message passing to update x_pt
+            # 6. message passing to update x_ft
+            pass
         pass
+
