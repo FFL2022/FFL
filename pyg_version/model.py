@@ -28,7 +28,7 @@ class MPNN(MessagePassing):
 class MPNNModel(nn.Module):
     def __init__(self, dim_cl, dim_cc,
                  dim_h, edim, netypes, t_srcs, t_tgts,
-                 dim_al, dim_ac, n_layers=5, device=device):
+                 dim_al, dim_ac, n_layers=5, n_classes=3, device=device):
         super().__init__()
         self.enc_cl = nn.Linear(dim_cl, dim_h)
         self.enc_cc = nn.Linear(dim_cc, dim_h)
@@ -57,6 +57,11 @@ class MPNNModel(nn.Module):
                     nn.Sequential(nn.Linear(dim_h, dim_h), nn.ReLU())
                     for _ in range(self.netypes)])
                 for _ in range(self.n_layers)])
+        self.decode = nn.Linear(dim_h, n_classes)
+        if n_classes > 1:
+            self.last_act = nn.Softmax(dim=1)
+        else:
+            self.last_act = nn.Sigmoid()
 
 
     def forward(self, xs, ess, weights=None):
@@ -71,5 +76,5 @@ class MPNNModel(nn.Module):
                 out[t_tgt] += self.mpnns[i][j](xs[t_src], xs[t_tgt], es,
                                                weights[j])
             xs = self.relu(out)
-        return xs
-
+        last = self.decode(xs)
+        return last, self.Softmax(last)
