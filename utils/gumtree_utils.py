@@ -3,6 +3,16 @@ import json
 import networkx as nx
 from graph_algos.nx_shortcuts import neighbors_in, neighbors_out
 
+NESTABLE_STMTS_JAVA = [
+    'Block', 'SwitchStatement', 'IfStatement', 'ForStatement',
+    'WhileStatement']
+
+STMTS_CPP_SRCML = ['for', 'while', 'switch', 'decl_stmt',
+                   'if_stmt', 'case', 'break', 'do',
+                   'continue', 'goto', 'empty_stmt', 'expr_stmt',
+                   'default', 'label', 'continue', 'return',
+                   'placeholder_stmt']
+
 
 class GumtreeWrapper:
     ast_cpp_command = "java -jar ./jars/ast_extractor_cpp.jar "
@@ -30,11 +40,7 @@ class GumtreeASTUtils:
         return 'Statement' in ntype
 
     def check_is_stmt_cpp(ntype):
-        return ntype in ['for', 'while', 'switch', 'decl_stmt',
-                         'if_stmt', 'case', 'break', 'do',
-                         'continue', 'goto', 'empty_stmt', 'expr_stmt',
-                         'default', 'label', 'continue', 'return',
-                         'placeholder_stmt']
+        return ntype in STMTS_CPP_SRCML
 
     def get_prev_sibs(u, q: nx.MultiDiGraph):
         parents = neighbors_in(u, q)
@@ -73,7 +79,6 @@ class GumtreeASTUtils:
         return False
 
 
-
 class GumtreeBasedAnnotation:
     '''Gumtree-based annotation between differencing ASTs'''
     def add_placeholder_stmts_java(nx_ast):
@@ -81,9 +86,7 @@ class GumtreeBasedAnnotation:
         queue = [0]
         while (len(queue) > 0):
             node = queue.pop(0)
-            if nx_ast.nodes[node]['ntype'] in [
-                    'Block', 'SwitchStatement', 'IfStatement', 'ForStatement',
-                    'WhileStatement']:
+            if nx_ast.nodes[node]['ntype'] in NESTABLE_STMTS_JAVA:
                 child_stmts = neighbors_out(node, nx_ast)
                 new_node = max(nx_ast.nodes()) + 1
                 if len(child_stmts) > 0:
@@ -91,14 +94,10 @@ class GumtreeBasedAnnotation:
                                     for c in child_stmts])
                 else:
                     end_line = nx_ast.nodes[node]['start_line']
-                nx_ast.add_node(new_node,
-                                ntype='PlaceHolderStatement',
-                                token='',
-                                graph='ast',
-                                start_line=end_line,
-                                end_line=end_line,
-                                status=0
-                                )
+                nx_ast.add_node(
+                    new_node, ntype='PlaceHolderStatement',
+                    token='', graph='ast', start_line=end_line,
+                    end_line=end_line, status=0)
                 nx_ast.add_edge(node, new_node, label='parent_child')
                 child_stmts = child_stmts + [len(nx_ast.nodes())-1]
                 queue.extend(child_stmts)
@@ -121,18 +120,15 @@ class GumtreeBasedAnnotation:
                                     for c in child_stmts])
                 else:
                     end_line = nx_ast.nodes[node]['start_line']
-                nx_ast.add_node(new_node,
-                                ntype='placeholder_stmt',
-                                token='',
-                                graph='ast',
-                                start_line=end_line,
-                                end_line=end_line,
-                                status=0
-                                )
+                nx_ast.add_node(
+                    new_node, ntype='placeholder_stmt',
+                    token='', graph='ast', start_line=end_line,
+                    end_line=end_line, status=0)
                 nx_ast.add_edge(node, new_node, label='parent_child')
                 child_stmts = child_stmts + [len(nx_ast.nodes())-1]
             queue.extend(neighbors_out(node, nx_ast))
         return nx_ast
+
     def check_statement_elem_removed(
             n, nx_ast, ldels, check_func=GumtreeASTUtils.check_is_stmt_java):
         queue = [n]
@@ -181,7 +177,6 @@ class GumtreeBasedAnnotation:
         return ns
 
 
-
     def find_inserted_statement(nx_ast_src, nx_ast_dst, rev_map_dict, lisrts,
                                 check_func=GumtreeASTUtils.check_is_stmt_java):
         ns = [n for n in nx_ast_dst.nodes()
@@ -220,6 +215,7 @@ class GumtreeBasedAnnotation:
                     s_n, nx_ast_dst, lisrts, check_func):
                 inserted_stmts.append(rev_map_dict[s_n])
         return inserted_stmts
+
 
     def build_nx_graph_stmt_annt(map_dict, lang='java'):
         ''' Statement-level annotation'''
@@ -434,7 +430,6 @@ class GumtreeBasedAnnotation:
             nx_ast_src, cov_maps, verdicts)
         return nx_ast_cov
 
-
     def build_nx_ast_cov(src_b, cov_maps, verdicts, lang='cpp'):
         map_dict = GumtreeWrapper.get_tree_diff(src_b, src_b)
         nx_ast_src = GumtreeASTUtils.build_nx_graph(map_dict['srcNodes'])
@@ -502,4 +497,3 @@ class GumtreeBasedAnnotation:
             nx_ast_src.nodes[st_n]['status'] = 1
 
         return nx_ast_src, nx_ast_dst
-
