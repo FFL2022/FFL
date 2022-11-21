@@ -120,6 +120,7 @@ class CodeflawsCFLNxStatementDataset(object):
 class ASTMetadata(object):
     def __init__(self, nx_g_dataset):
         self.t_asts = nx_g_dataset.ast_types
+        self.ntype2id = {n: i for i, n in enumerate(self.t_asts)}
         self.t_e_asts = nx_g_dataset.ast_etypes
         self.meta_graph = self.construct_edge_metagraph()
 
