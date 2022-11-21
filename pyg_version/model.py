@@ -41,7 +41,7 @@ class MPNNModelFull(nn.Module):
         nn.init.xavier_normal_(self.enc_al.weight)
         nn.init.normal_(self.enc_ac.bias)
 
-        self.emb_test = nn.Embedding(2, dim_h)
+        self.emb_test = nn.Embedding(1, dim_h)
         self.t_srcs = t_srcs
         self.t_tgts = t_tgts
 
@@ -88,7 +88,7 @@ class MPNNModel_A_T(nn.Module):
         nn.init.xavier_normal_(self.enc_al.weight)
         nn.init.normal_(self.enc_ac.bias)
 
-        self.emb_test = nn.Embedding(2, dim_h)
+        self.emb_test = nn.Embedding(1, dim_h)
         self.t_srcs = t_srcs
         self.t_tgts = t_tgts
 
@@ -106,7 +106,6 @@ class MPNNModel_A_T(nn.Module):
             self.last_act = nn.Softmax(dim=1)
         else:
             self.last_act = nn.Sigmoid()
-
 
     def forward(self, xs, ess, weights=None):
         '''xs: al, ac, t'''
@@ -131,7 +130,7 @@ class MPNNModel_A_T_L(nn.Module):
         nn.init.xavier_normal_(self.enc_al.weight)
         nn.init.normal_(self.enc_al.bias)
 
-        self.emb_test = nn.Embedding(2, dim_h)
+        self.emb_test = nn.Embedding(1, dim_h)
         self.t_srcs = t_srcs
         self.t_tgts = t_tgts
 

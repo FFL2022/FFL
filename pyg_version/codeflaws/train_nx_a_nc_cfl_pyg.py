@@ -1,0 +1,111 @@
+from __future__ import print_function, unicode_literals
+from utils.train_utils import BinFullMeter, AverageMeter
+from utils.utils import ConfigClass
+import pickle as pkl
+import json
+import os
+import tqdm
+import torch
+import torch.nn.functional as F
+import numpy as np
+from pyg_version.codeflaws.dataloader_cfl_pyg import CodeflawsCFLPyGStatementDataset
+
+from pyg_version.model import MPNNModel_A_T_L
+import pandas as pd
+
+from utils.common import device
+
+
+def train(model, dataloader, n_epochs, eval_func, start_epoch=0):
+    opt = torch.optim.Adam(model.parameters())
+    avg_loss, avg_acc = AverageMeter(), AverageMeter()
+
+    top_1_rec, top_2_rec, top_5_rec, top_10_rec = [AverageMeter()
+                                                   for _ in range(4)]
+    f1_meter = BinFullMeter()
+    best_f1, best_top1, best_top2, best_top5, best_top10 = [0.0] * 5
+    best_f1_train, best_top1_train, best_top2_train, best_top5_train, \
+        best_top10_train = [0.0] * 5
+
+    for epoch in range(n_epochs):
+        model.train()
+        for meter in [avg_loss, avg_acc, f1_meter, top_10_rec, top_5_rec,
+                      top_2_rec, top_1_rec]:
+            meter.reset()
+
+        bar = tqdm.trange(len(dataloader))
+        bar.set_description(f'Epoch {epoch}')
+        for i in bar:
+            g, stmt_nodes = dataloader[i]
+            if g is None:
+                continue
+            g, stmt_nodes = g.to(device), stmt_nodes.to(device)
+            ast_lb = g.lbl[stmt_nodes]
+            non_zeros_lbs = torch.nonzero(ast_lb).detach()
+            ast_lbidxs = torch.flatten(non_zeros_lbs).detach().cpu().tolist()
+            logits, preds = model(g.xs, g.ess)
+            loss = F.cross_entropy(logits[stmt_nodes], ast_lb)
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+            ast_lb = ast_lb.detach().cpu()
+            if non_zeros_lbs.shape[0] == 0:
+                continue
+            _, ast_cal = torch.max(preds[stmt_nodes].detach().cpu(), dim=1)
+            sus_preds = preds[stmt_nodes, 1].detach().cpu()
+            top_updates = [(10, top_10_rec), (5, top_5_rec), (2, top_2_rec),
+                           (1, top_1_rec)]
+            for k, meter in top_updates:
+                k = min(stmt_nodes.shape[0], k)
+                _, indices = torch.topk(sus_preds, k)
+                topk_val = indices[:k].tolist()
+                meter.update(int(any([i in ast_lbidxs for i in topk_val])), 1)
+            avg_loss.update(loss.item(), stmt_nodes.shape[0])
+            avg_acc.update(
+                torch.sum(ast_cal.cpu() == ast_lb.cpu()).item()/stmt_nodes.shape[0],
+                stmt_nodes.shape[0])
+            f1_meter.update(ast_cal, ast_lb)
+            bar.set_postfix(ast_loss=loss.item(), acc=avg_acc.avg)
+
+            out_dict = {
+                'top_1': top_1_rec.avg, 'top_2': top_2_rec.avg,
+                'top_5': top_5_rec.avg, 'top_10': top_10_rec.avg,
+                'mean_acc': avg_acc.avg, 'mean_loss': avg_loss.avg,
+                'mean_ast_acc': avg_acc.avg, 'mean_ast_loss': avg_loss.avg,
+                'f1': f1_meter.get()
+            }
+
+            best_top1_train = max(top_1_rec.avg, best_top1_train)
+            best_top2_train = max(top_2_rec.avg, best_top2_train)
+            best_top5_train = max(top_5_rec.avg, best_top5_train)
+            best_top10_train = max(top_10_rec.avg, best_top10_train)
+            if f1_meter.get()['aux_f1'] != 'unk':
+                best_f1_train = max(best_f1_train, f1_meter.get()['aux_f1'])
+
+            with open(
+                    f"{ConfigClass.trained_dir_codeflaws}/" +
+                    f"training_dict_cfl_stmt_e{epoch}.json", 'w') as f:
+                json.dump(out_dict, f, indent=2)
+            print(json.dumps(out_dict, indent=2))
+            print(f1_meter.get())
+            if epoch % ConfigClass.save_rate == 0:
+                edict = eval_func(model, epoch)
+
+def eval(model, dataloader, epoch):
+    avg_loss, avg_acc = AverageMeter(), AverageMeter()
+    f1_meter = BinFullMeter()
+
+    for meter in [avg_loss, avg_acc, f1_meter]:
+        meter.reset()
+
+    model.eval()
+    bar = tqdm.trange(len(dataloader))
+    bar.set_description(f'Eval epoch {epoch}')
+
+    top_1_rec, top_2_rec, top_5_rec, top_10_rec = [AverageMeter()
+                                                   for _ in range(4)]
+    for i in bar:
+        g, stmt_nodes = dataloader[i]
+        if g is None:
+            continue
+        g, stmt_nodes = g.to(device), stmt_nodes.to(device)

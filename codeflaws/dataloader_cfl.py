@@ -1,27 +1,18 @@
 from utils.utils import ConfigClass
 from codeflaws.data_utils import all_codeflaws_keys,\
-    get_nx_ast_node_annt_gumtree,\
-    get_nx_ast_stmt_annt_gumtree, \
     get_nx_ast_stmt_annt_cfl, \
     cfl_check_is_stmt_cpp
-from utils.gumtree_utils import GumtreeASTUtils
-from utils.nx_graph_builder import augment_with_reverse_edge_cat
 import os
-import random
 import pickle as pkl
-import json
-import torch
 import tqdm
 from pycparser.plyparser import ParseError
-
-from json import JSONDecodeError
 
 
 class CodeflawsCFLNxStatementDataset(object):
     def __init__(self, raw_dataset_dir=ConfigClass.codeflaws_data_path,
                  save_dir=ConfigClass.preprocess_dir_codeflaws):
         self.save_dir = save_dir
-        self.info_path = f"{save_dir}/'nx_cfl_stmt_dataset_info.pkl"
+        self.info_path = f"{save_dir}/nx_cfl_stmt_dataset_info.pkl"
 
         if self.has_cache():
             self.load()
@@ -29,22 +20,22 @@ class CodeflawsCFLNxStatementDataset(object):
             self.process()
             self.save()
 
-
     def __len__(self):
         return len(self.active_idxs)
 
     def __getitem__(self, i):
         try:
             nx_g = pkl.load(open(
-                f'{self.save_dir}/nx_cfl_stmt_{self.active_idxs[i]}.pkl', 'rb'))
+                f'{self.save_dir}/nx_cfl_stmt_{self.active_idxs[i]}.pkl', 'rb')
+            )
         except UnicodeDecodeError:
-            nx_g = get_nx_ast_stmt_annt_cfl(all_codeflaws_keys[self.active_idxs[i]])
-            pkl.dump(nx_g,
-                     open(
-                         f'{self.save_dir}/nx_cfl_stmt_{self.active_idxs[i]}.pkl', 'wb')
-                    )
+            nx_g = get_nx_ast_stmt_annt_cfl(
+                all_codeflaws_keys[self.active_idxs[i]])
+            pkl.dump(
+                nx_g,
+                open(f'{self.save_dir}/nx_cfl_stmt_{self.active_idxs[i]}.pkl',
+                     'wb'))
         return nx_g, self.stmt_nodes[i]
-
 
     def process(self):
         self.ast_types = set()
@@ -74,8 +65,6 @@ class CodeflawsCFLNxStatementDataset(object):
                 count = len(self.err_idxs)
                 bar.set_postfix(syntax_error_files=count)
                 continue
-            except:
-                raise
             self.active_idxs.append(i)
             self.keys.append(key)
             self.ast_types.union(

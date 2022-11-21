@@ -35,8 +35,11 @@ class CodeflawsCFLPyGStatementDataset(Dataset):
             return os.path.exists(self.graph_save_path) &\
                 os.path.exists(self.info_path)
 
+        def __len__(self):
+            return len(self.gs)
+
         def __getitem__(self, i):
-            pass
+            return self.gs[i], self.gs_stmt_nodes[i]
 
         def convert_from_nx_to_pyg(self, nx_g, stmt_nodes):
             nx_g = augment_with_reverse_edge_cat(nx_g, self.meta_data.t_e_asts,
@@ -62,7 +65,14 @@ class CodeflawsCFLPyGStatementDataset(Dataset):
                 ).float()
             # for cfg, it will be text
             data.lbl = torch.tensor([nx_g.nodes[n]['status'] for n in n_asts])
-            return data, list(map_ns[n] for n in stmt_nodes)
+            ts = torch.tensor([0] * (len(nx_g.nodes()) - len(n_asts)))
+            data.xs = [l_a, ts]
+            return data, \
+                torch.tensor(list(map_ns[n] for n in stmt_nodes)).int()
 
         def process(self):
-            pass
+            self.gs, self.gs_stmt_nodes = []
+            for nx_g, stmt_nodes in self.nx_dataset:
+                g, g_stmt_nodes = self.convert_from_nx_to_pyg(nx_g, stmt_nodes)
+                self.gs.append(g)
+                self.gs_stmt_nodes.append(g_stmt_nodes)

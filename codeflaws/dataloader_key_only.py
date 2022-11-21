@@ -226,8 +226,8 @@ class CodeflawsFullDGLDataset(DGLDataset):
         n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
         ast2id = dict([n, i] for i, n in enumerate(n_asts))
         # Create a node mapping for test
-        n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
-        t2id = dict([n, i] for i, n in enumerate(n_tests))
+        n_ts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
+        t2id = dict([n, i] for i, n in enumerate(n_ts))
         # map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
         map2id = {'ast': ast2id, 'test': t2id}
 
@@ -317,9 +317,9 @@ class CodeflawsFullDGLDataset(DGLDataset):
         #     [et + '_reverse' for et in self.nx_dataset.cfg_etypes]
         # self.c_a_etypes = ['corresponding_ast']
         # self.a_c_etypes = ['corresponding_cfg']
-        # self.c_t_etypes = ['c_pass_test', 'c_fail_test']
+        # self.c_t_etypes = ['c_pass_t', 'c_fail_t']
         # self.t_c_etypes = ['t_pass_c', 't_fail_c']
-        # self.a_t_etypes = ['a_pass_test', 'a_fail_test']
+        # self.a_t_etypes = ['a_pass_t', 'a_fail_t']
         self.t_a_etypes = ['t_pass_a', 't_fail_a']
         self.all_etypes = (
             self.ast_etypes +
@@ -438,8 +438,8 @@ class CodeflawsFullDGLDatasetCFG(DGLDataset):
         n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
         ast2id = dict([n, i] for i, n in enumerate(n_asts))
         # Create a node mapping for test
-        n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
-        t2id = dict([n, i] for i, n in enumerate(n_tests))
+        n_ts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
+        t2id = dict([n, i] for i, n in enumerate(n_ts))
         map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
         # map2id = {'ast': ast2id, 'test': t2id}
 
@@ -522,9 +522,9 @@ class CodeflawsFullDGLDatasetCFG(DGLDataset):
             [et + '_reverse' for et in self.nx_dataset.cfg_etypes]
         self.c_a_etypes = ['corresponding_ast']
         self.a_c_etypes = ['corresponding_cfg']
-        self.c_t_etypes = ['c_pass_test', 'c_fail_test']
+        self.c_t_etypes = ['c_pass_t', 'c_fail_t']
         self.t_c_etypes = ['t_pass_c', 't_fail_c']
-        self.a_t_etypes = ['a_pass_test', 'a_fail_test']
+        self.a_t_etypes = ['a_pass_t', 'a_fail_t']
         self.t_a_etypes = ['t_pass_a', 't_fail_a']
         self.all_etypes = (
             self.ast_etypes +
@@ -644,8 +644,8 @@ class CodeflawsASTDGLDataset(DGLDataset):
         n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
         ast2id = dict([n, i] for i, n in enumerate(n_asts))
         # Create a node mapping for test
-        # n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
-        # t2id = dict([n, i] for i, n in enumerate(n_tests))
+        # n_ts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
+        # t2id = dict([n, i] for i, n in enumerate(n_ts))
         # map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
         # map2id = {'ast': ast2id, 'test': t2id}
         map2id = {'ast': ast2id}
@@ -739,9 +739,9 @@ class CodeflawsASTDGLDataset(DGLDataset):
         #     [et + '_reverse' for et in self.nx_dataset.cfg_etypes]
         # self.c_a_etypes = ['corresponding_ast']
         # self.a_c_etypes = ['corresponding_cfg']
-        # self.c_t_etypes = ['c_pass_test', 'c_fail_test']
+        # self.c_t_etypes = ['c_pass_t', 'c_fail_t']
         # self.t_c_etypes = ['t_pass_c', 't_fail_c']
-        # self.a_t_etypes = ['a_pass_test', 'a_fail_test']
+        # self.a_t_etypes = ['a_pass_t', 'a_fail_t']
         # self.t_a_etypes = ['t_pass_a', 't_fail_a']
         self.all_etypes = self.ast_etypes
         self.all_ntypes = [('ast', 'ast') for et in self.ast_etypes]
