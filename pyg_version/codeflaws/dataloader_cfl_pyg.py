@@ -1,6 +1,7 @@
 from torch.utils.data import Dataset
 from codeflaws.dataloader_cfl import CodeflawsCFLNxStatementDataset, \
-    ASTMetadata
+    CodeflawsCFLStatementGraphMetadata
+from utils.data_utils import NxDataloader
 from utils.utils import ConfigClass
 from utils.nx_graph_builder import augment_with_reverse_edge_cat
 from Typing import List
@@ -12,18 +13,20 @@ import torch.utils.data
 
 
 class CodeflawsCFLPyGStatementDataset(Dataset):
-    def __init__(self, nx_dataset: CodeflawsCFLNxStatementDataset,
-                 idxs: List[int],
-                 meta_data: ASTMetadata,
+    def __init__(self, dataloader: NxDataloader,
+                 meta_data: CodeflawsCFLStatementGraphMetadata,
                  ast_enc=None,
-                 save_dir=ConfigClass.preprocess_dir_codeflaws):
-        self.nx_dataset = nx_dataset
-        self.meta_data = meta_data if meta_data else ASTMetadata(nx_dataset)
+                 save_dir=ConfigClass.preprocess_dir_codeflaws,
+                 name='pyg_cfl_stmt'):
+        self.dataloader = dataloader
+        self.meta_data = meta_data if meta_data else\
+            CodeflawsCFLStatementGraphMetadata(dataloader.get_dataset())
         self.save_dir = save_dir
         self.vocab_dict = dict(tuple(line.split()) for line in open(
             'preprocess/codeflaws_vocab.txt', 'r'))
-        self.graph_save_path = f"{save_dir}/pyg_cfl_stmt.pkl"
-        self.info_path = f"{save_dir}/pyg_cfl_info_stmt.pkl"
+        self.name = name
+        self.graph_save_path = f"{save_dir}/{name}.pkl"
+        self.info_path = f"{save_dir}/{name}_info.pkl"
         self.ast_enc = ast_enc
         if self.has_cache():
             self.load()
@@ -72,7 +75,7 @@ class CodeflawsCFLPyGStatementDataset(Dataset):
 
         def process(self):
             self.gs, self.gs_stmt_nodes = []
-            for nx_g, stmt_nodes in self.nx_dataset:
+            for nx_g, stmt_nodes in self.dataloader:
                 g, g_stmt_nodes = self.convert_from_nx_to_pyg(nx_g, stmt_nodes)
                 self.gs.append(g)
                 self.gs_stmt_nodes.append(g_stmt_nodes)

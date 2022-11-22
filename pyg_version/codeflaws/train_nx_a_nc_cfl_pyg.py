@@ -9,11 +9,13 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 from pyg_version.codeflaws.dataloader_cfl_pyg import CodeflawsCFLPyGStatementDataset
-
 from pyg_version.model import MPNNModel_A_T_L
+from codeflaws.dataloader_cfl import CodeflawsCFLNxStatementDataset, \
+    CodeflawsCFLStatementGraphMetadata
 import pandas as pd
 
 from utils.common import device
+from utils.data_utils import split_nx_dataset
 
 
 def train(model, dataloader, n_epochs, eval_func, start_epoch=0):
@@ -89,6 +91,10 @@ def train(model, dataloader, n_epochs, eval_func, start_epoch=0):
             print(json.dumps(out_dict, indent=2))
             print(f1_meter.get())
             if epoch % ConfigClass.save_rate == 0:
+                torch.save(
+                    model.state_dict(),
+                    f"{ConfigClass.trained_dir_codeflaws}/" +
+                    f"training_model_cfl_stmt_e{epoch}.pth")
                 edict = eval_func(model, epoch)
 
 def eval(model, dataloader, epoch):
@@ -109,3 +115,70 @@ def eval(model, dataloader, epoch):
         if g is None:
             continue
         g, stmt_nodes = g.to(device), stmt_nodes.to(device)
+        ast_lb = g.lbl[stmt_nodes]
+        logits, preds = model(g.xs, g.ess)
+
+        non_zeros_lbs = torch.nonzero(ast_lb).detach()
+        if not non_zeros_lbs.shape[0]:
+            continue
+
+        ast_lbidxs = torch.flatten(non_zeros_lbs).detach().cpu().tolist()
+        loss = F.cross_entropy(logits[stmt_nodes], ast_lb)
+
+        _, ast_cal = torch.max(preds[stmt_nodes].detach().cpu(), dim=1)
+        sus_preds = preds[stmt_nodes, 1].detach().cpu()
+        top_updates = [(10, top_10_rec), (5, top_5_rec), (2, top_2_rec),
+                       (1, top_1_rec)]
+        for k, meter in top_updates:
+            k = min(stmt_nodes.shape[0], k)
+            _, indices = torch.topk(sus_preds, k)
+            topk_val = indices[:k].tolist()
+            meter.update(int(any([i in ast_lbidxs for i in topk_val])), 1)
+        avg_loss.update(loss.item(), stmt_nodes.shape[0])
+        avg_acc.update(
+            torch.sum(ast_cal.cpu() == ast_lb.cpu()).item()/stmt_nodes.shape[0],
+            stmt_nodes.shape[0])
+        f1_meter.update(ast_cal, ast_lb)
+        bar.set_postfix(ast_loss=loss.item(), acc=avg_acc.avg)
+
+    out_dict = {
+        'top_1': top_1_rec.avg, 'top_2': top_2_rec.avg,
+        'top_5': top_5_rec.avg, 'top_10': top_10_rec.avg,
+        'mean_acc': avg_acc.avg, 'mean_loss': avg_loss.avg,
+        'mean_ast_acc': avg_acc.avg, 'mean_ast_loss': avg_loss.avg,
+        'f1': f1_meter.get()['aux_f1']
+    }
+    with open(
+        f"{ConfigClass.trained_dir_codeflaws}/" +
+        f"eval_dict_cfl_stmt_e{epoch}.json", 'w') as f:
+            json.dump(out_dict, f, indent=2)
+    print(json.dumps(out_dict, indent=2))
+    print(f1_meter.get())
+    return out_dict
+
+
+if __name__ == '__main__':
+    nx_dataset = CodeflawsCFLNxStatementDataset()
+    meta_data = CodeflawsCFLStatementGraphMetadata(nx_dataset)
+    train_nxs, val_nxs, test_nxs = split_nx_dataset(nx_dataset, [0.6, 0.2, 0.2])
+    train_pyg_dataset = CodeflawsCFLPyGStatementDataset(
+        dataloader=train_nxs, meta_data=meta_data, ast_enc=None,
+        name='train_pyg_cfl_stmt')
+    val_pyg_dataset = CodeflawsCFLPyGStatementDataset(
+        dataloader=val_nxs, meta_data=meta_data, ast_enc=None,
+        name='val_pyg_cfl_stmt')
+    test_pyg_dataset = CodeflawsCFLPyGStatementDataset(
+        dataloader=test_nxs, meta_data=meta_data, ast_enc=None,
+        name='test_pyg_cfl_stmt')
+    t2id = {'ast': 0, 'test': 1}
+    model = MPNNModel_A_T_L(
+        dim_h=64, n_etypes=len(meta_data.meta_graph),
+        t_srcs=[t2id[e[0]] for e in meta_data.meta_graph],
+        t_dsts=[t2id[e[2]] for e in meta_data.meta_graph],
+        n_al=len(meta_data.t_asts), n_layers=5,
+        n_classes=2)
+
+    train(model, train_pyg_dataset, 100,
+          lambda x: eval(x[0], val_pyg_dataset, x[1]), 0)
+    print("Eval test")
+    eval(model, test_pyg_dataset, 100)

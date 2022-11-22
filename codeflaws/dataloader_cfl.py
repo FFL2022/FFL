@@ -6,19 +6,15 @@ import os
 import pickle as pkl
 import tqdm
 from pycparser.plyparser import ParseError
+from utils.data_utils import NxDataset
 
 
-class CodeflawsCFLNxStatementDataset(object):
+class CodeflawsCFLNxStatementDataset(NxDataset):
     def __init__(self, raw_dataset_dir=ConfigClass.codeflaws_data_path,
                  save_dir=ConfigClass.preprocess_dir_codeflaws):
         self.save_dir = save_dir
         self.info_path = f"{save_dir}/nx_cfl_stmt_dataset_info.pkl"
-
-        if self.has_cache():
-            self.load()
-        else:
-            self.process()
-            self.save()
+        super().__init__()
 
     def __len__(self):
         return len(self.active_idxs)
@@ -106,7 +102,7 @@ class CodeflawsCFLNxStatementDataset(object):
         return os.path.exists(self.info_path)
 
 
-class ASTMetadata(object):
+class CodeflawsCFLStatementGraphMetadata(object):
     def __init__(self, nx_g_dataset):
         self.t_asts = nx_g_dataset.ast_types
         self.ntype2id = {n: i for i, n in enumerate(self.t_asts)}

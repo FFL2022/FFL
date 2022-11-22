@@ -124,7 +124,7 @@ class MPNNModel_A_T(nn.Module):
 
 class MPNNModel_A_T_L(nn.Module):
     def __init__(self, dim_h, netypes, t_srcs, t_tgts,
-                 n_al, dim_ac, n_layers=5, n_classes=3, device=device):
+                 n_al, n_layers=5, n_classes=3, device=device):
         super().__init__()
         self.enc_al = nn.Embedding(n_al, dim_h)
         nn.init.xavier_normal_(self.enc_al.weight)
