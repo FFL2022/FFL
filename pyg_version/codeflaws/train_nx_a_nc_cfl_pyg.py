@@ -95,7 +95,7 @@ def train(model, dataloader, n_epochs, eval_func, start_epoch=0):
                 model.state_dict(),
                 f"{ConfigClass.trained_dir_codeflaws}/" +
                 f"training_model_cfl_stmt_e{epoch}.pth")
-            edict = eval_func(model, epoch)
+            edict = eval_func((model, epoch))
 
 def eval(model, dataloader, epoch):
     avg_loss, avg_acc = AverageMeter(), AverageMeter()
