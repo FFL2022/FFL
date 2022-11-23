@@ -63,13 +63,12 @@ class CodeflawsCFLNxStatementDataset(NxDataset):
                 continue
             self.active_idxs.append(i)
             self.keys.append(key)
-            self.ast_types.union(
+            self.ast_types = self.ast_types.union(
                 [nx_g.nodes[n]['ntype'] for n in nx_g.nodes()
                  if nx_g.nodes[n]['graph'] == 'ast'])
-            self.ast_etypes.union(
+            self.ast_etypes = self.ast_etypes.union(
                 [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
-                 if nx_g.nodes[u]['graph'] == 'ast' and
-                 nx_g.nodes[v]['graph'] == 'ast'])
+                 if nx_g.nodes[u]['graph'] == 'ast' and nx_g.nodes[v]['graph'] == 'ast'])
             self.stmt_nodes.append(list(
                 filter(lambda x: nx_g.nodes[x]['graph'] == 'ast' and
                        cfl_check_is_stmt_cpp(nx_g.nodes[x]), nx_g.nodes())))
@@ -110,11 +109,11 @@ class CodeflawsCFLStatementGraphMetadata(object):
         self.meta_graph = self.construct_edge_metagraph()
 
     def construct_edge_metagraph(self):
-        self.t_e_a_a = self.t_asts + \
-            list(map(lambda x: f'{x}_reverse', self.nx_dataset.t_e_asts))
+        self.t_e_a_a = self.t_e_asts + \
+            list(map(lambda x: f'{x}_reverse', self.t_e_asts))
         self.t_e_a_t = ['a_pass_t', 'a_fail_t']
         self.t_e_t_a = ['t_pass_a', 't_fail_a']
-        self.t_all = (self.ast_etypes + self.a_t_etypes + self.t_a_etypes)
+        self.t_all = (self.t_e_a_a + self.t_e_a_t + self.t_e_t_a)
         self.srcs = ['ast'] * len(self.t_e_a_a) +\
             ['ast'] * len(self.t_e_a_t) + ['test'] * len(self.t_e_t_a)
         self.dsts = ['ast'] * len(self.t_e_a_a) +\

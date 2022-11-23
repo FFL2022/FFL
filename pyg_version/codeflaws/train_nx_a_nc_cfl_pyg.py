@@ -69,33 +69,33 @@ def train(model, dataloader, n_epochs, eval_func, start_epoch=0):
             f1_meter.update(ast_cal, ast_lb)
             bar.set_postfix(ast_loss=loss.item(), acc=avg_acc.avg)
 
-            out_dict = {
-                'top_1': top_1_rec.avg, 'top_2': top_2_rec.avg,
-                'top_5': top_5_rec.avg, 'top_10': top_10_rec.avg,
-                'mean_acc': avg_acc.avg, 'mean_loss': avg_loss.avg,
-                'mean_ast_acc': avg_acc.avg, 'mean_ast_loss': avg_loss.avg,
-                'f1': f1_meter.get()
-            }
+        out_dict = {
+            'top_1': top_1_rec.avg, 'top_2': top_2_rec.avg,
+            'top_5': top_5_rec.avg, 'top_10': top_10_rec.avg,
+            'mean_acc': avg_acc.avg, 'mean_loss': avg_loss.avg,
+            'mean_ast_acc': avg_acc.avg, 'mean_ast_loss': avg_loss.avg,
+            'f1': f1_meter.get()
+        }
 
-            best_top1_train = max(top_1_rec.avg, best_top1_train)
-            best_top2_train = max(top_2_rec.avg, best_top2_train)
-            best_top5_train = max(top_5_rec.avg, best_top5_train)
-            best_top10_train = max(top_10_rec.avg, best_top10_train)
-            if f1_meter.get()['aux_f1'] != 'unk':
-                best_f1_train = max(best_f1_train, f1_meter.get()['aux_f1'])
+        best_top1_train = max(top_1_rec.avg, best_top1_train)
+        best_top2_train = max(top_2_rec.avg, best_top2_train)
+        best_top5_train = max(top_5_rec.avg, best_top5_train)
+        best_top10_train = max(top_10_rec.avg, best_top10_train)
+        if f1_meter.get()['aux_f1'] != 'unk':
+            best_f1_train = max(best_f1_train, f1_meter.get()['aux_f1'])
 
-            with open(
-                    f"{ConfigClass.trained_dir_codeflaws}/" +
-                    f"training_dict_cfl_stmt_e{epoch}.json", 'w') as f:
-                json.dump(out_dict, f, indent=2)
-            print(json.dumps(out_dict, indent=2))
-            print(f1_meter.get())
-            if epoch % ConfigClass.save_rate == 0:
-                torch.save(
-                    model.state_dict(),
-                    f"{ConfigClass.trained_dir_codeflaws}/" +
-                    f"training_model_cfl_stmt_e{epoch}.pth")
-                edict = eval_func(model, epoch)
+        with open(
+                f"{ConfigClass.trained_dir_codeflaws}/" +
+                f"training_dict_cfl_stmt_e{epoch}.json", 'w') as f:
+            json.dump(out_dict, f, indent=2)
+        print(json.dumps(out_dict, indent=2))
+        print(f1_meter.get())
+        if epoch % ConfigClass.save_rate == 0:
+            torch.save(
+                model.state_dict(),
+                f"{ConfigClass.trained_dir_codeflaws}/" +
+                f"training_model_cfl_stmt_e{epoch}.pth")
+            edict = eval_func(model, epoch)
 
 def eval(model, dataloader, epoch):
     avg_loss, avg_acc = AverageMeter(), AverageMeter()
@@ -172,11 +172,11 @@ if __name__ == '__main__':
         name='test_pyg_cfl_stmt')
     t2id = {'ast': 0, 'test': 1}
     model = MPNNModel_A_T_L(
-        dim_h=64, n_etypes=len(meta_data.meta_graph),
+        dim_h=64, netypes=len(meta_data.meta_graph),
         t_srcs=[t2id[e[0]] for e in meta_data.meta_graph],
-        t_dsts=[t2id[e[2]] for e in meta_data.meta_graph],
+        t_tgts=[t2id[e[2]] for e in meta_data.meta_graph],
         n_al=len(meta_data.t_asts), n_layers=5,
-        n_classes=2)
+        n_classes=2).to(device)
 
     train(model, train_pyg_dataset, 100,
           lambda x: eval(x[0], val_pyg_dataset, x[1]), 0)

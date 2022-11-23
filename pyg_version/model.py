@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch_geometric.nn import MessagePassing
-from common import device
+from utils.common import device
 
 
 __author__ = "Marc: thanhdatn@student.unimelb.edu.au"
@@ -37,8 +37,7 @@ class MPNNModelFull(nn.Module):
         self.enc_ac = nn.Linear(dim_ac, dim_h)
 
         nn.init.xavier_normal_(self.enc_al.weight)
-        nn.init.normal_(self.enc_al.bias)
-        nn.init.xavier_normal_(self.enc_al.weight)
+        nn.init.xavier_normal_(self.enc_ac.weight)
         nn.init.normal_(self.enc_ac.bias)
 
         self.emb_test = nn.Embedding(1, dim_h)
@@ -49,11 +48,8 @@ class MPNNModelFull(nn.Module):
         self.n_layers = n_layers
         self.relu = nn.ReLU()
         self.mpnns = nn.ModuleList(
-            [nn.ModuleList(
-                [
-                    nn.Sequential(nn.Linear(dim_h, dim_h), nn.ReLU())
-                    for _ in range(self.netypes)])
-                for _ in range(self.n_layers)])
+            [nn.ModuleList([MPNN(dim_h, dim_h) for _ in range(self.netypes)])
+             for _ in range(self.n_layers)])
         self.decode = nn.Linear(dim_h, n_classes)
         if n_classes > 1:
             self.last_act = nn.Softmax(dim=1)
@@ -62,18 +58,18 @@ class MPNNModelFull(nn.Module):
 
     def forward(self, xs, ess, weights=None):
         '''xs: cl, cc, al, ac, test'''
-        xs = [self.enc_cl(xs[0]) + self.enc_cc(xs[1]),
-              self.enc_al(xs[2]) + self.enc_ac(xs[3]),
-              self.emb_test(xs[4])]
+        xs = [self.enc_cl(xs[0].int()) + self.enc_cc(xs[1]),
+              self.enc_al(xs[2].int()) + self.enc_ac(xs[3]),
+              self.emb_test(xs[4].int())]
         for i in range(self.n_layers):
             out = [0, 0, 0, 0]
             for j, (es, t_src, t_tgt) in enumerate(
                     zip(ess, self.t_srcs, self.t_tgts)):
                 out[t_tgt] += self.mpnns[i][j](xs[t_src], xs[t_tgt], es,
-                                               weights[j])
-            xs = self.relu(out)
+                                               weights[j] if weights else None)
+            xs = list([self.relu(o) for o in out])
         last = self.decode(xs)
-        return last, self.Softmax(last)
+        return last, self.last_act(last)
 
 
 class MPNNModel_A_T(nn.Module):
@@ -84,8 +80,7 @@ class MPNNModel_A_T(nn.Module):
         self.enc_ac = nn.Linear(dim_ac, dim_h)
 
         nn.init.xavier_normal_(self.enc_al.weight)
-        nn.init.normal_(self.enc_al.bias)
-        nn.init.xavier_normal_(self.enc_al.weight)
+        nn.init.xavier_normal_(self.enc_ac.weight)
         nn.init.normal_(self.enc_ac.bias)
 
         self.emb_test = nn.Embedding(1, dim_h)
@@ -96,11 +91,8 @@ class MPNNModel_A_T(nn.Module):
         self.n_layers = n_layers
         self.relu = nn.ReLU()
         self.mpnns = nn.ModuleList(
-            [nn.ModuleList(
-                [
-                    nn.Sequential(nn.Linear(dim_h, dim_h), nn.ReLU())
-                    for _ in range(self.netypes)])
-                for _ in range(self.n_layers)])
+            [nn.ModuleList([MPNN(dim_h, dim_h) for _ in range(self.netypes)])
+             for _ in range(self.n_layers)])
         self.decode = nn.Linear(dim_h, n_classes)
         if n_classes > 1:
             self.last_act = nn.Softmax(dim=1)
@@ -109,17 +101,17 @@ class MPNNModel_A_T(nn.Module):
 
     def forward(self, xs, ess, weights=None):
         '''xs: al, ac, t'''
-        xs = [self.enc_al(xs[0]) + self.enc_ac(xs[1]),
-              self.emb_test(xs[2])]
+        xs = [self.enc_al(xs[0].int()) + self.enc_ac(xs[1]),
+              self.emb_test(xs[2].int())]
         for i in range(self.n_layers):
             out = [0, 0]
             for j, (es, t_src, t_tgt) in enumerate(
                     zip(ess, self.t_srcs, self.t_tgts)):
                 out[t_tgt] += self.mpnns[i][j](xs[t_src], xs[t_tgt], es,
-                                               weights[j])
+                                               weights[j] if weights else None)
             xs = self.relu(out)
         last = self.decode(xs)
-        return last, self.Softmax(last)
+        return last, self.last_act(last)
 
 
 class MPNNModel_A_T_L(nn.Module):
@@ -128,7 +120,6 @@ class MPNNModel_A_T_L(nn.Module):
         super().__init__()
         self.enc_al = nn.Embedding(n_al, dim_h)
         nn.init.xavier_normal_(self.enc_al.weight)
-        nn.init.normal_(self.enc_al.bias)
 
         self.emb_test = nn.Embedding(1, dim_h)
         self.t_srcs = t_srcs
@@ -138,11 +129,8 @@ class MPNNModel_A_T_L(nn.Module):
         self.n_layers = n_layers
         self.relu = nn.ReLU()
         self.mpnns = nn.ModuleList(
-            [nn.ModuleList(
-                [
-                    nn.Sequential(nn.Linear(dim_h, dim_h), nn.ReLU())
-                    for _ in range(self.netypes)])
-                for _ in range(self.n_layers)])
+            [nn.ModuleList([MPNN(dim_h, dim_h) for _ in range(self.netypes)])
+             for _ in range(self.n_layers)])
         self.decode = nn.Linear(dim_h, n_classes)
         if n_classes > 1:
             self.last_act = nn.Softmax(dim=1)
@@ -151,13 +139,13 @@ class MPNNModel_A_T_L(nn.Module):
 
     def forward(self, xs, ess, weights=None):
         '''xs: al, t'''
-        xs = [self.enc_al(xs[0]), self.emb_test(xs[1])]
+        xs = [self.enc_al(xs[0].int()), self.emb_test(xs[1].int())]
         for i in range(self.n_layers):
             out = [0, 0]
             for j, (es, t_src, t_tgt) in enumerate(
                     zip(ess, self.t_srcs, self.t_tgts)):
                 out[t_tgt] += self.mpnns[i][j](xs[t_src], xs[t_tgt], es,
-                                               weights[j])
-            xs = self.relu(out)
-        last = self.decode(xs)
-        return last, self.Softmax(last)
+                                     weights[j] if weights else None)
+            xs = [self.relu(out[0]), self.relu(out[1])]
+        last = self.decode(xs[0])
+        return last, self.last_act(last)
