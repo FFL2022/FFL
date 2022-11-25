@@ -1,6 +1,7 @@
 import networkx as nx
 from utils.nx_graph_builder import augment_with_reverse_edge
-from graph_algos.nx_shortcuts import nodes_where
+from graph_algos.nx_shortcuts import nodes_where, edges_where, \
+        where_node
 
 import torch.nn.functional as F
 import torch.nn as nn
@@ -24,23 +25,13 @@ def map_explain_with_nx(dgl_g, nx_g):
     # exit()
 
     # Augment with reverse edge so that the two met
-    # ast_etypes = set()
-    # for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-    #     if nx_g.nodes[u]['graph'] == 'ast' and\
-    #             nx_g.nodes[v]['graph'] == 'ast':
-    #         ast_etypes.add(e['label'])
-    # cfg_etypes = set()
-    # for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-    #     if nx_g.nodes[u]['graph'] == 'cfg' and\
-    #             nx_g.nodes[v]['graph'] == 'cfg':
-    #         cfg_etypes.add(e['label'])
-
+    # ast_etypes = set([x[-1]['label'] for x in edges_where(
+    #     nx_g, where_node(graph='ast'), where_node(graph='ast'))])
+    # cfg_etypes = set([x[-1]['label'] for x in edges_where(
+    #     nx_g, where_node(graph='cfg'), where_node(graph='cfg'))])
     # nx_g = augment_with_reverse_edge(nx_g, ast_etypes, cfg_etypes)
 
-    all_etypes = set()
-    for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-        all_etypes.add((nx_g.nodes[u]['graph'], e['label'], nx_g.nodes[v]['graph']))
-
+    all_etypes = set(x[-1]['label'] for x in nx_g.edges(keys=True, data=True))
     existed_etypes = []
     for etype in dgl_g.etypes:
         if dgl_g.number_of_edges(etype) > 0:

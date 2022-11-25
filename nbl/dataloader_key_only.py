@@ -12,7 +12,7 @@ import fasttext
 from utils.utils import ConfigClass
 from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.nx_graph_builder import augment_with_reverse_edge
-from graph_algos.nx_shortcuts import nodes_where
+from graph_algos.nx_shortcuts import nodes_where, where_node, edges_where
 from nbl.utils import all_keys, eval_set, mapping_eval, most_failed_val_set
 from utils.get_bug_localization import get_bug_localization
 from graph_algos.nx_shortcuts import combine_multi, neighbors_out
@@ -143,9 +143,8 @@ class NBLNxDataset(object):
             self.cfg_lbs.append(cfg_lb)
 
             self.ast_etypes.extend(
-                [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
-                 if nx_g.nodes[u]['graph'] == 'ast' and
-                 nx_g.nodes[v]['graph'] == 'ast'])
+                [e['label'] for u, v, k, e in edges_where(nx_g,
+                    where_node(graph='ast'), where_node(graph='ast'))
         self.ast_types = list(set(self.ast_types))
         self.ast_etypes = list(set(self.ast_etypes))
 

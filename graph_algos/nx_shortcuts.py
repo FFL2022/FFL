@@ -11,6 +11,14 @@ def where_node(*filter_funcs, **kwargs):
     lambda_final = lambda nx_g, x: all(l(nx_g, x) for l in lambdas) and lambda_f(x)
     return lambda_final
 
+
+def where_node_not(*filter_funcs, **kwargs):
+    lambdas = [(lambda nx_g, x: nx_g.nodes[x][k] == v) for k, v in kwargs.items()]
+    lambda_f = lambda x: not any(f(x) for f in filter_funcs)
+    lambda_final = lambda nx_g, x: (not any(l(nx_g, x) for l in lambdas)) and lambda_f(x)
+    return lambda_final
+
+
 def where_edge(where_source, where_target, *filter_funcs, **kwargs):
     lambdas_e = [(lambda e: e[k] == v) for k, v in kwargs.items()]
     lambdas_single_filter = lambda u, v, e: all(filter_func(u, v, e) for filter_func in filter_funcs)
@@ -35,6 +43,10 @@ def nodes_where(nx_g, *filter_funcs, **kwargs) -> List[Union[str, int]]:
     lambda_final = where_node(*filter_funcs, **kwargs)
     return list([n for n in nx_g.nodes() if lambda_final(nx_g, n)])
 
+def nodes_where_not(nx_g, *filter_funcs, **kwargs):
+    lambda_final = where_node(*filter_funcs, **kwargs)
+    return list([n for n in nx_g.nodes() if not lambda_final(nx_g, n)])
+
 def update_nodes(nx_g, nodes=None, **kwargs):
     if nodes is None:
         nodes = nx_g.nodes()
@@ -49,6 +61,14 @@ def edges_where(nx_g, where_source, where_target, *filter_funcs, **kwargs):
                 if l(nx_g, [u, v, k, e])]
     else:
         return [(u, v, e) for u, v, e in nx_g.edges(data=True) if l(nx_g, (u, v, e))]
+
+def edges_where_not(nx_g, where_source, where_target, *filter_funcs, **kwargs):
+    l = where_edge(where_source, where_target, *filter_funcs, **kwargs)
+    if isinstance(nx_g, nx.MultiGraph):
+        return [(u, v, k, e) for u, v, k, e in nx_g.edges(keys=True, data=True)
+                if not l(nx_g, [u, v, k, e])]
+    else:
+        return [(u, v, e) for u, v, e in nx_g.edges(data=True) if not l(nx_g, (u, v, e))]
 
 
 def neighbors_in(u, q, filter_func=None):

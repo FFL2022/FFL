@@ -7,7 +7,7 @@ from dgl import save_graphs, load_graphs
 import dgl
 from utils.utils import ConfigClass
 from utils.nx_graph_builder import augment_with_reverse_edge_cat
-from graph_algos.nx_shortcuts import nodes_where
+from graph_algos.nx_shortcuts import nodes_where, where_node_not, edges_where
 import os
 import random
 import pickle as pkl
@@ -86,9 +86,8 @@ def eval_nbl():
                 all_canon_etypes[k] = []
             nx_g = augment_with_reverse_edge_cat(nx_g, nx_ast_etypes, [])
 
-            for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-                if nx_g.nodes[u]['graph'] == 'cfg' or nx_g.nodes[v]['graph'] == 'cfg':
-                    continue
+            for u, v, k, e in edges_where(nx_g, where_node_not(graph='cfg'),
+                                          where_node_not(graph='cfg')):
                 map_u = map2id[nx_g.nodes[u]['graph']]
                 map_v = map2id[nx_g.nodes[v]['graph']]
                 all_canon_etypes[

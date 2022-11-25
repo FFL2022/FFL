@@ -2,6 +2,7 @@
 from __future__ import print_function, unicode_literals
 import networkx as nx
 import numpy as np
+from graph_algos.nx_shortcuts import edges_where, where_node
 
 
 def make_graph_fully_connected(G: nx.MultiDiGraph):
@@ -46,7 +47,6 @@ def remove_no_edge(G: nx.MultiDiGraph):
         The stripped graph
     '''
     G = G.copy()
-    for u, v, k, e in G.edges(keys=True, data=True):
-        if e['label'] == 'no_connect':
-            G.remove_edge(u, v, k)
+    for u, v, k, e in edges_where(nx_g, label='no_connect'):
+        G.remove_edge(u, v, k)
     return G
