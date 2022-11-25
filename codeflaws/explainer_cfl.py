@@ -3,6 +3,7 @@ from codeflaws.dataloader_cfl import CodeflawsCFLDGLStatementDataset
 from utils.explain_utils import entropy_loss_mask, consistency_loss, size_loss
 from utils.explain_utils import map_explain_with_nx
 from utils.explain_utils import WrapperModel
+from graph_algos.nx_shortcuts import nodes_where
 
 from model import GCN_A_L_T_1
 from utils.draw_utils import ast_to_agraph
@@ -82,8 +83,7 @@ def explain(model, dataloader, iters=10):
                 opt.step()
 
             visualized_nx_g = map_explain_with_nx(gi, nx_gi)
-            n_asts = [n for n in visualized_nx_g if
-                      visualized_nx_g.nodes[n]['graph'] == 'ast']
+            n_asts = nodes_where(visualized_nx_g, graph='ast')
             visualized_ast = nx_gi.subgraph(n_asts)
 
             # color = red
