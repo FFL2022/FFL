@@ -2,6 +2,7 @@ from utils.utils import ConfigClass
 from codeflaws.data_utils import all_codeflaws_keys,\
     get_nx_ast_stmt_annt_cfl, \
     cfl_check_is_stmt_cpp
+from graph_algos.nx_shortcuts import nodes_where
 import os
 import pickle as pkl
 import tqdm
@@ -64,14 +65,15 @@ class CodeflawsCFLNxStatementDataset(NxDataset):
             self.active_idxs.append(i)
             self.keys.append(key)
             self.ast_types = self.ast_types.union(
-                [nx_g.nodes[n]['ntype'] for n in nx_g.nodes()
-                 if nx_g.nodes[n]['graph'] == 'ast'])
+                [nx_g.nodes[n]['ntype'] for n in nodes_where(nx_g, graph='ast')])
             self.ast_etypes = self.ast_etypes.union(
                 [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
                  if nx_g.nodes[u]['graph'] == 'ast' and nx_g.nodes[v]['graph'] == 'ast'])
-            self.stmt_nodes.append(list(
-                filter(lambda x: nx_g.nodes[x]['graph'] == 'ast' and
-                       cfl_check_is_stmt_cpp(nx_g.nodes[x]), nx_g.nodes())))
+            self.stmt_nodes.append(
+                nodes_where(
+                    nx_g,
+                    lambda x: cfl_check_is_stmt_cpp(nx_g.nodes[x]),
+                    graph='ast'))
 
         self.ast_types = list(self.ast_types)
         self.ast_etypes = list(self.ast_etypes)
