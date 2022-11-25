@@ -5,6 +5,7 @@ from utils.utils import ConfigClass
 from utils.nx_graph_builder import build_nx_cfg_ast_coverage_codeflaws,\
     build_nx_cfg_coverage_codeflaws, augment_with_reverse_edge
 from utils.codeflaws_data_utils import make_codeflaws_dict
+from graph_algos.nx_shortcuts import nodes_where
 import os
 import random
 import pickle as pkl
@@ -170,14 +171,10 @@ class CodeflawsDGLDataset(DGLDataset):
 
     def convert_from_nx_to_dgl(self, embedding_model, nx_g, lbl):
         # Create a node mapping for cfg
-        n_cfgs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
-        cfg2id = dict([n, i] for i, n in enumerate(n_cfgs))
-        # Create a node mapping for ast
-        n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
-        ast2id = dict([n, i] for i, n in enumerate(n_asts))
-        # Create a node mapping for test
-        n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
-        t2id = dict([n, i] for i, n in enumerate(n_tests))
+        n_cfgs, n_asts, n_tests = nodes_where(nx_g, graph='cfg')\
+            nodes_where(nx_g, graph='ast'), nodes_where(nx_g, graph='test')
+        cfg2id, ast2id, t2id = [dict([n, i] for i, n in enumerate(ns))
+                                for ns in [n_cfgs, n_asts, n_tests]]
         map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
 
         # Create dgl cfg node
@@ -334,14 +331,10 @@ class TestCodeflawsDGLDataset(DGLDataset):
 
     def convert_from_nx_to_dgl(self, embedding_model, nx_g, lbl):
         # Create a node mapping for cfg
-        n_cfgs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
-        cfg2id = dict([n, i] for i, n in enumerate(n_cfgs))
-        # Create a node mapping for ast
-        n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
-        ast2id = dict([n, i] for i, n in enumerate(n_asts))
-        # Create a node mapping for test
-        n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
-        t2id = dict([n, i] for i, n in enumerate(n_tests))
+        n_cfgs, n_asts, n_tests = [nodes_where(nx_g, graph=t)
+                                   for t in ['cfg', 'ast', 'test']]
+        cfg2id, ast2id, t2id = [dict([n, i] for i, n in enumerate(ns))
+                                for ns in [n_cfgs, n_asts, n_tests]]
         map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
 
         # Create dgl cfg node
@@ -434,8 +427,7 @@ class CodeflawsFullDGLDataset(DGLDataset):
     def __init__(self, raw_dir=ConfigClass.raw_dir,
                  save_dir=ConfigClass.preprocess_dir,
                  label_mapping_path=ConfigClass.codeflaws_full_cfgidx_map_pkl,
-                 graph_opt=1):
-        self.mode = os.path.splitext(os.path.split(label_mapping_path)[-1])[0]
+                 graph_opt=1): self.mode = os.path.splitext(os.path.split(label_mapping_path)[-1])[0]
         self.graph_save_path = os.path.join(
             save_dir, f'dgl_nx_graphs_{graph_opt}_{self.mode}.bin')
         self.info_path = os.path.join(
@@ -501,14 +493,10 @@ class CodeflawsFullDGLDataset(DGLDataset):
 
     def convert_from_nx_to_dgl(self, embedding_model, nx_g, lbl):
         # Create a node mapping for cfg
-        n_cfgs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
-        cfg2id = dict([n, i] for i, n in enumerate(n_cfgs))
-        # Create a node mapping for ast
-        n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
-        ast2id = dict([n, i] for i, n in enumerate(n_asts))
-        # Create a node mapping for test
-        n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
-        t2id = dict([n, i] for i, n in enumerate(n_tests))
+        n_cfgs, n_asts, n_tests = [nodes_where(nx_g, graph=t)
+                                   for t in ['cfg', 'ast', 'test']]
+        cfg2id, ast2id, t2id = [dict([n, i] for i, n in enumerate(ns))
+                                for ns in [n_cfgs, n_asts, n_tests]]
         map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
 
         # Create dgl cfg node

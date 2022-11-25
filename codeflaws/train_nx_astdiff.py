@@ -4,6 +4,7 @@ import os
 import torch.nn.functional as F
 from codeflaws.dataloader_key_only import CodeflawsFullDGLDataset
 from model import HeteroMPNNPredictor1TestNodeType
+from graph_algos.nx_shortcuts import nodes_where
 from utils.utils import ConfigClass
 from utils.draw_utils import ast_to_agraph
 import tqdm
@@ -163,7 +164,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
 
 def get_line_mapping(dataloader, real_idx):
     nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
-    n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+    n_asts = nodes_where(nx_g, graph='ast')
     line = torch.tensor([nx_g.nodes[n]['coord_line'] for n in n_asts],
                         dtype=torch.long)
     return line
@@ -171,7 +172,7 @@ def get_line_mapping(dataloader, real_idx):
 
 def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts):
     nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
-    n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+    n_asts = nodes_where(nx_g, graph='ast')
     for i, n in enumerate(n_asts):
         nx_g.node[n]['status'] = 0
         if node_preds[i] == 0:

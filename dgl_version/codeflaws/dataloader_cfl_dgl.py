@@ -6,6 +6,7 @@ import os
 from codeflaws.dataloader_cfl import CodeflawsCFLNxStatementDataset, \
     ASTMetadata
 from utils.nx_graph_builder import augment_with_reverse_edge_cat
+from graph_algos.nx_shortcuts import nodes_where
 import pickle as pkl
 import random
 import torch
@@ -79,11 +80,10 @@ class CodeflawsCFLDGLStatementDataset(DGLDataset):
 
     def convert_from_nx_to_dgl(self, nx_g, stmt_nodes):
         # Create a node mapping for ast
-        n_asts = list(filter(lambda x: nx_g.nodes[x]['graph'] == 'ast',
-                             nx_g.nodes()))
+        n_asts = nodes_where(nx_g, graph='ast')
         ast2id = {n: i for i, n in enumerate(n_asts)}
         # Create a node mapping for test
-        n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
+        n_tests = nodes_where(nx_g, graph='test')
         t2id = {n: i for i, n in enumerate(n_tests)}
         # map2id = {'oncfg': cfg2id, 'ast': ast2id, 'test': t2id}
         n2id = {'ast': ast2id, 'test': t2id}

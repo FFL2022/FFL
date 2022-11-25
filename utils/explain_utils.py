@@ -1,5 +1,6 @@
 import networkx as nx
 from utils.nx_graph_builder import augment_with_reverse_edge
+from graph_algos.nx_shortcuts import nodes_where
 
 import torch.nn.functional as F
 import torch.nn as nn
@@ -14,11 +15,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def map_explain_with_nx(dgl_g, nx_g):
     # check every types of edges
-    n_as = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
-    n_cs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
-    n_ts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
-
-    n_alls = {'ast': n_as, 'cfg': n_cs, 'test': n_ts}
+    n_alls = {'ast': nodes_where(nx_g, graph='ast'),
+              'cfg': nodes_where(nx_g, graph='cfg'),
+              'test': nodes_where(nx_g, graph='test')}
 
     # print(len(n_alls['ast']))
     # print(dgl_g.nodes(ntype='ast').shape)
@@ -40,9 +39,7 @@ def map_explain_with_nx(dgl_g, nx_g):
 
     all_etypes = set()
     for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-        all_etypes.add((nx_g.nodes[u]['graph'],
-                        e['label'],
-                        nx_g.nodes[v]['graph']))
+        all_etypes.add((nx_g.nodes[u]['graph'], e['label'], nx_g.nodes[v]['graph']))
 
     existed_etypes = []
     for etype in dgl_g.etypes:
