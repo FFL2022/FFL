@@ -6,7 +6,7 @@ import numpy as np
 
 
 def nodes_where(nx_g, *filter_funcs, **kwargs) -> List[Union[str, int]]:
-    lambdas = filter_funcs + [(lambda x: nx_g.nodes[x][k] == v) for k, v in kwargs.items()]
+    lambdas = list(filter_funcs) + [(lambda x: nx_g.nodes[x][k] == v) for k, v in kwargs.items()]
     lambda_final = lambda x: all(l(x) for l in lambdas)
     return list([n for n in nx_g.nodes() if lambda_final(n)])
 
