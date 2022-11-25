@@ -5,6 +5,11 @@ from typing import List
 import numpy as np
 
 
+def nodes_where(nx_g, **kwargs):
+    lambdas = [(lambda x: nx_g.nodes[x][k] == v) for k, v in kwargs.items()]
+    lambda_final = lambda x: all(l(x) for l in lambdas)
+    return list(n for n in nx_g in lambda_final(n))
+
 def neighbors_in(u, q, filter_func=None):
     ''' Get neighbor having edges into this node
     Parameters
