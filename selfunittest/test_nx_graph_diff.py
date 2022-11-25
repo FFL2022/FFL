@@ -7,6 +7,7 @@ import os
 from pycparser.plyparser import ParseError
 from nbl.utils import all_keys, get_nx_ast_stmt_annt_gumtree
 from json import JSONDecodeError
+from graph_algos.nx_shortcuts import nodes_where
 
 def test1():
     for i in list(range(50)) + [715]:
@@ -31,8 +32,7 @@ def test2():
                     continue
                 nx_g = get_nx_ast_stmt_annt_cfl(key)
                 os.makedirs(os.path.dirname(filename), exist_ok=True)
-                draw_utils.ast_to_agraph(nx_g.subgraph([n for n in nx_g.nodes()
-                    if nx_g.nodes[n]['graph'] == 'ast']), filename)
+                draw_utils.ast_to_agraph(nx_g.subgraph(nodes_where(nx_g, graph='ast')), filename)
             except ParseError:
                 count += 1
                 bar.set_postfix(parse_error_files=count)
@@ -53,8 +53,8 @@ def test3():
             print(filename)
             nx_g = get_nx_ast_stmt_annt_gumtree(key)
             os.makedirs(os.path.dirname(filename), exist_ok=True)
-            draw_utils.ast_to_agraph(nx_g.subgraph([n for n in nx_g.nodes()
-                if nx_g.nodes[n]['graph'] == 'ast']), filename)
+            draw_utils.ast_to_agraph(nx_g.subgraph(nodse_where(nx_g, graph='ast')),
+                    filename)
         except JSONDecodeError:
             print('error:', key)
             raise

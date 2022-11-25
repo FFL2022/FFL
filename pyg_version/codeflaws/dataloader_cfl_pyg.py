@@ -8,6 +8,7 @@ from typing import List
 import os
 from torch_geometric.utils import add_self_loops
 from torch_geometric.data import Data
+from graph_algos.nx_shortcuts import nodes_where
 import networkx as nx
 import torch.utils.data
 
@@ -58,7 +59,7 @@ class CodeflawsCFLPyGStatementDataset(Dataset):
             ess[e['label']][1].append(v)
         ess = [add_self_loops(torch.tensor(es).long())[0] for es in ess]
         data = Data(ess=ess)
-        n_asts = [n for n in nx_g if nx_g.nodes[n]['graph'] == 'ast']
+        n_asts = nodes_where(nx_g, graph='ast')
         l_a = torch.tensor(
             [self.meta_data.ntype2id[nx_g.nodes[n]['ntype']]
                 for n in n_asts]).long()

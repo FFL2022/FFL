@@ -4,6 +4,7 @@ import dgl
 from utils.utils import ConfigClass
 from codeflaws.data_utils import get_cfg_ast_cov, all_codeflaws_keys
 from utils.nx_graph_builder import augment_with_reverse_edge_cat
+from graph_algos.nx_shortcuts import nodes_where
 import os
 import random
 import pickle as pkl
@@ -43,22 +44,18 @@ class CodeflawsNxDataset(object):
             ast_lb_d = []
             ast_lb_i = []
             cfg_lb = []
-            for n in nx_g.nodes():
-                if nx_g.nodes[n]['graph'] == 'test':
-                    continue
-                if nx_g.nodes[n]['graph'] == 'ast':
-                    if nx_g.nodes[n]['status'] == 2:
-                        ast_lb_i.append(n)
-                    elif nx_g.nodes[n]['status'] == 1:
-                        ast_lb_d.append(n)
-                elif nx_g.nodes[n]['graph'] == 'cfg':
-                    if nx_g.nodes[n]['status'] == 1:
-                        cfg_lb.append(n)
+            n_asts, n_cfgs = nodes_where(nx_g, graph='ast'), nodes_where(nx_g, graph='cfg')
+            for n in n_asts:
+                if nx_g.nodes[n]['status'] == 2:
+                    ast_lb_i.append(n)
+                elif nx_g.nodes[n]['status'] == 1:
+                    ast_lb_d.append(n)
                 del nx_g.nodes[n]['status']
-            pkl.dump(nx_g,
-                     open(
-                         os.path.join(self.save_dir, f'nx_keyonly_{idx}'),
-                         'wb'))
+            for n in n_cfgs:
+                if nx_g.nodes[n]['status'] == 1:
+                    cfg_lb.append(n)
+                del nx_g.nodes[n]['status']
+            pkl.dump(nx_g, open(f"{self.save_dir}/nx_keyonly_{idx}", 'wb'))
         return nx_g,\
             self.ast_lbs_d[i], \
             self.ast_lbs_i[i], \
@@ -83,25 +80,15 @@ class CodeflawsNxDataset(object):
                                          'rb'))
                 else:
                     _, _, _, _, _, nx_g = get_cfg_ast_cov(key)
-                ast_lb_d = []
-                ast_lb_i = []
-                cfg_lb = []
-                for n in nx_g.nodes():
-                    if nx_g.nodes[n]['graph'] == 'test':
-                        continue
-                    if nx_g.nodes[n]['graph'] == 'ast':
-                        if nx_g.nodes[n]['status'] == 2:
-                            ast_lb_i.append(n)
-                        elif nx_g.nodes[n]['status'] == 1:
-                            ast_lb_d.append(n)
-                    elif nx_g.nodes[n]['graph'] == 'cfg':
-                        if nx_g.nodes[n]['status'] == 1:
-                            cfg_lb.append(n)
+                n_asts, n_cfgs = nodes_where(nx_g, graph='ast'), nodes_where(nx_g, graph='cfg')
+                ast_lb_d = list([n for n in n_asts if nx_g.nodes[n]['status'] == 1])
+                ast_lb_i = list([n for n in n_asts if nx_g.nodes[n]['status'] == 2])
+                for n in n_asts:
                     del nx_g.nodes[n]['status']
-                pkl.dump(nx_g,
-                         open(
-                             os.path.join(self.save_dir, f'nx_keyonly_{i}'),
-                             'wb'))
+                cfg_lb = list([n for n in n_cfgs if nx_g.nodes[n]['status']])
+                for n in n_cfgs:
+                    del nx_g.nodes[n]['status']
+                pkl.dump(nx_g, open(f"{self.save_dir}/nx_keyonly_{i}", 'wb'))
             except ParseError:
                 err_count += 1
                 print(f"Total syntax error files: {err_count}")
@@ -110,9 +97,7 @@ class CodeflawsNxDataset(object):
                 json.dump(error_instance, open('error_instance.json', 'w'))
                 continue
             self.keys.append(key)
-            self.ast_types.extend(
-                [nx_g.nodes[node]['ntype'] for node in nx_g.nodes()
-                 if nx_g.nodes[node]['graph'] == 'ast'])
+            self.ast_types.extend(nodes_where(nx_g, graph='ast'))
             self.active_idxs.append(i)
             self.ast_lbs_i.append(ast_lb_i)
             self.ast_lbs_d.append(ast_lb_d)
@@ -129,13 +114,10 @@ class CodeflawsNxDataset(object):
         os.makedirs(self.save_dir, exist_ok=True)
         # gs is saved somewhere else
         pkl.dump(
-            {
-                'ast_lb_d': self.ast_lbs_d,
-                'ast_lb_i': self.ast_lbs_i,
-                'cfg_lb': self.cfg_lbs,
-                'keys': self.keys,
-                'active_idxs': self.active_idxs,
-                'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes},
+            {'ast_lb_d': self.ast_lbs_d, 'ast_lb_i': self.ast_lbs_i,
+             'cfg_lb': self.cfg_lbs, 'keys': self.keys,
+             'active_idxs': self.active_idxs, 'ast_types': self.ast_types,
+             'ast_etypes': self.ast_etypes},
             open(self.info_path, 'wb'))
 
     def load(self):
@@ -223,10 +205,10 @@ class CodeflawsFullDGLDataset(DGLDataset):
         cfg2id = dict([n, i] for i, n in enumerate(n_cfgs))
         '''
         # Create a node mapping for ast
-        n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+        n_asts = nodes_where(nx_g, graph='ast')
         ast2id = dict([n, i] for i, n in enumerate(n_asts))
         # Create a node mapping for test
-        n_ts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
+        n_ts = nodes_where(nx_g, graph='test')
         t2id = dict([n, i] for i, n in enumerate(n_ts))
         # map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
         map2id = {'ast': ast2id, 'test': t2id}
@@ -432,13 +414,13 @@ class CodeflawsFullDGLDatasetCFG(DGLDataset):
     def convert_from_nx_to_dgl(self, embedding_model, nx_g, ast_lb_d,
                                ast_lb_i, cfg_lb):
         # Create a node mapping for cfg
-        n_cfgs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
+        n_cfgs = nodes_where(nx_g, graph='cfg')
         cfg2id = dict([n, i] for i, n in enumerate(n_cfgs))
         # Create a node mapping for ast
-        n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+        n_asts = nodes_where(nx_g, graph='ast')
         ast2id = dict([n, i] for i, n in enumerate(n_asts))
         # Create a node mapping for test
-        n_ts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
+        n_ts = nodes_where(nx_g, graph='test')
         t2id = dict([n, i] for i, n in enumerate(n_ts))
         map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
         # map2id = {'ast': ast2id, 'test': t2id}
@@ -484,8 +466,7 @@ class CodeflawsFullDGLDatasetCFG(DGLDataset):
                 continue
             map_u = map2id[nx_g.nodes[u]['graph']]
             map_v = map2id[nx_g.nodes[v]['graph']]
-            all_canon_etypes[
-                (nx_g.nodes[u]['graph'], e['label'], nx_g.nodes[v]['graph'])
+            all_canon_etypes[ (nx_g.nodes[u]['graph'], e['label'], nx_g.nodes[v]['graph'])
             ].append([map_u[u], map_v[v]])
 
         for k in all_canon_etypes:

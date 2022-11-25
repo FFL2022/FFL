@@ -7,6 +7,7 @@ from dgl import save_graphs, load_graphs
 import dgl
 from utils.utils import ConfigClass
 from utils.nx_graph_builder import augment_with_reverse_edge_cat
+from graph_algos.nx_shortcuts import nodes_where
 import os
 import random
 import pickle as pkl
@@ -66,10 +67,10 @@ def eval_nbl():
 
             # dgl
             # Create a node mapping for ast
-            n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+            n_asts = nodes_where(nx_g, graph='ast')
             ast2id = dict([n, i] for i, n in enumerate(n_asts))
             # Create a node mapping for test
-            n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
+            n_tests = nodes_where(nx_g, graph='test')
             t2id = dict([n, i] for i, n in enumerate(n_tests))
             # map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
             map2id = {'ast': ast2id, 'test': t2id}
@@ -158,10 +159,10 @@ def eval_codeflaws():
 
             # dgl
             # Create a node mapping for ast
-            n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+            n_asts = nodes_where(nx_g, graph='ast')
             ast2id = dict([n, i] for i, n in enumerate(n_asts))
             # Create a node mapping for test
-            n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
+            n_tests = nodes_where(nx_g, graph='test')
             t2id = dict([n, i] for i, n in enumerate(n_tests))
             # map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
             map2id = {'ast': ast2id, 'test': t2id}

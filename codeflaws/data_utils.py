@@ -3,7 +3,7 @@ from utils.utils import ConfigClass
 from cfg import cfg
 from codeflaws.data_format import key2bug, key2bugfile,\
     key2fixfile, key2test_verdict, get_gcov_file, test_verdict
-from graph_algos.nx_shortcuts import neighbors_out, neighbors_in
+from graph_algos.nx_shortcuts import neighbors_out, neighbors_in, nodes_where
 from utils.get_bug_localization import get_bug_localization
 from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.nx_graph_builder import build_nx_graph_cfg_ast
@@ -60,8 +60,7 @@ def get_coverage_graph_cfg(key: str, nx_cfg, nline_removed):
         covfile = get_gcov_file(key, test)
         coverage_map = get_coverage(covfile, nline_removed)
         test_node = nx_cfg_cov.number_of_nodes()
-        nx_cfg_cov.add_node(test_node, name=f'test_{i}',
-                            ntype='test', graph='test')
+        nx_cfg_cov.add_node(test_node, name=f'test_{i}', ntype='test', graph='test')
         link_type = 'pass' if tests_list[test] > 0 else 'fail'
         for node in nx_cfg_cov.nodes():
             # Check the line
@@ -92,8 +91,7 @@ def get_coverage_graph_ast(key, nx_ast_g, nline_removed):
         # fail/pass = neg in covfile
         coverage_map = get_coverage(covfile, nline_removed)
         test_node = max(nx_ast_g.nodes()) + 1
-        nx_ast_g.add_node(test_node, name=f'test_{i}',
-                           ntype='test', graph='test')
+        nx_ast_g.add_node(test_node, name=f'test_{i}', ntype='test', graph='test')
         link_type = 'fail' if 'neg' in covfile else 'pass'
         for line in coverage_map:
             if coverage_map[line] <= 0:
@@ -127,40 +125,37 @@ def get_coverage_graph_cfg_ast(key: str, nx_cfg_ast, nline_removed):
         covfile = get_gcov_file(key, test)
         coverage_map = get_coverage(covfile, nline_removed)
         t_n = nx_cat.number_of_nodes()
-        nx_cat.add_node(t_n, name=f'test_{i}',
-                                ntype='test', graph='test')
+        nx_cat.add_node(t_n, name=f'test_{i}', ntype='test', graph='test')
         link_type = 'fail' if 'neg' in covfile else 'pass'
-        for c_n in nx_cat.nodes():
-            # Check the line
-            if nx_cat.nodes[c_n]['graph'] == 'cfg':
-                # Get corresponding lines
-                start = nx_cat.nodes[c_n]['start_line']
-                end = nx_cat.nodes[c_n]['end_line']
-                if end - start > 0:     # This is a parent node
-                    continue
+        for c_n in nodes_where(nx_cat, graph='cfg')
+            # Get corresponding lines
+            start = nx_cat.nodes[c_n]['start_line']
+            end = nx_cat.nodes[c_n]['end_line']
+            if end - start > 0:     # This is a parent node
+                continue
 
-                for line in coverage_map:
-                    if line == start:
-                        # The condition of parent node passing is less strict
-                        if coverage_map[line] <= 0:
+            for line in coverage_map:
+                if line == start:
+                    # The condition of parent node passing is less strict
+                    if coverage_map[line] <= 0:
+                        continue
+                    nx_cat.add_edge(
+                        c_n, t_n, label=f'c_{link_type}_test')
+                    queue = neighbors_out(
+                        c_n, nx_cat,
+                        lambda u, v, k, e: e['label'] =='corresponding_ast')
+                    while len(queue) > 0:
+                        a_n = queue.pop()
+                        if len(neighbors_out(
+                            a_n, nx_cat, lambda u, v, k, e: v == t_n)
+                        ) > 0:
+                            # Visited
                             continue
                         nx_cat.add_edge(
-                            c_n, t_n, label=f'c_{link_type}_test')
-                        queue = neighbors_out(
-                            c_n, nx_cat,
-                            lambda u, v, k, e: e['label'] =='corresponding_ast')
-                        while len(queue) > 0:
-                            a_n = queue.pop()
-                            if len(neighbors_out(
-                                a_n, nx_cat, lambda u, v, k, e: v == t_n)
-                            ) > 0:
-                                # Visited
-                                continue
-                            nx_cat.add_edge(
-                                a_n, t_n, label=f'a_{link_type}_test')
-                            queue.extend(neighbors_out(
-                                a_n, nx_cat,
-                                lambda u, v, k, e: nx_cat.nodes[v]['graph'] == 'ast'))
+                            a_n, t_n, label=f'a_{link_type}_test')
+                        queue.extend(neighbors_out(
+                            a_n, nx_cat,
+                            lambda u, v, k, e: nx_cat.nodes[v]['graph'] == 'ast'))
     return nx_cat
 
 
