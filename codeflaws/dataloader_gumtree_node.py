@@ -40,16 +40,9 @@ class CodeflawsGumtreeNxNodeDataset(object):
             nx_g = pkl.load(open(
                 f'{self.save_dir}/nx_new_gumtree_node_{idx}.pkl',
                 'rb'))
-            check_status = True
-            for n in nx_g.nodes():
-                if nx_g.nodes[n]['graph'] != 'ast':
-                    continue
-                if 'status' not in nx_g.nodes[n]:
-                    check_status = False
-                    break
-                else:
-                    break
-            if not check_status:
+            n_asts = nodes_where(nx_g, graph='ast')
+            assert len(n_asts), "ASSERT ERROR: EMPTY AST"
+            if 'status' not in nx_g.nodes[n_asts[0]]:
                 nx_g = get_nx_ast_node_annt_gumtree(all_codeflaws_keys[idx])
                 pkl.dump(nx_g, open(
                     f'{self.save_dir}/nx_new_gumtree_node_{idx}.pkl', 'wb')

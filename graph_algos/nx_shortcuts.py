@@ -17,6 +17,7 @@ def update_nodes(nx_g, nodes=None, **kwargs):
         for k, v in kwargs.items():
             nx_g.nodes[n][k] = v
 
+
 def neighbors_in(u, q, filter_func=None):
     ''' Get neighbor having edges into this node
     Parameters

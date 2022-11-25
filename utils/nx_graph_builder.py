@@ -33,15 +33,13 @@ def combine_ast_cfg(nx_ast, nx_cfg):
     ''' Combine ast cfg by adding each corresponding edge'''
     nx_h_g, batch = combine_multi([nx_ast, nx_cfg])
     for n_cfg in nodes_where(nx_h_g, graph='cfg'):
-        s, e = nx_h_g.nodes[node]['start_line'], nx_h_g.nodes[node]['end_line']
+        s, e = nx_h_g.nodes[n_cfg]['start_line'], nx_h_g.nodes[n_cfg]['end_line']
         if e - s > 0:  # This is a parent node
             continue
-        # for n in nx_h_g.nodes():
-        #     print(nx_h_g.nodes[n])
-        corresponding_ast_nodes = [n for n in nodes_where(nx_h_g, graph='ast') if
-                                   s <= nx_h_g.nodes[n]['start_line'] <= e]
-        for ast_node in corresponding_ast_nodes:
-            nx_h_g.add_edge(node, ast_node, label='corresponding_ast')
+        corres_n_asts = [n for n in nodes_where(nx_h_g, graph='ast') if
+                         s <= nx_h_g.nodes[n]['start_line'] <= e]
+        for n_ast in corres_n_asts:
+            nx_h_g.add_edge(n_cfg, n_ast, label='corresponding_ast')
     return nx_h_g
 
 

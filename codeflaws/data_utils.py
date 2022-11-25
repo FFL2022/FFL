@@ -62,10 +62,7 @@ def get_coverage_graph_cfg(key: str, nx_cfg, nline_removed):
         test_node = nx_cfg_cov.number_of_nodes()
         nx_cfg_cov.add_node(test_node, name=f'test_{i}', ntype='test', graph='test')
         link_type = 'pass' if tests_list[test] > 0 else 'fail'
-        for node in nx_cfg_cov.nodes():
-            # Check the line
-            if nx_cfg_cov.nodes[node]['graph'] != 'cfg':
-                continue
+        for node in nodes_where(nx_cfg_cov, graph='cfg'):
             # Get corresponding lines
             start = nx_cfg_cov.nodes[node]['start_line']
             end = nx_cfg_cov.nodes[node]['end_line']
@@ -73,11 +70,8 @@ def get_coverage_graph_cfg(key: str, nx_cfg, nline_removed):
                 continue
 
             for line in coverage_map:
-                if line == start:
-                    # The condition of parent node passing is less strict
-                    if coverage_map[line] > 0:
-                        nx_cfg_cov.add_edge(
-                            node, test_node, label=f'c_{link_type}_test')
+                if line == start and coverage_map[line] > 0:
+                    nx_cfg_cov.add_edge(node, test_node, label=f'c_{link_type}_test')
     return nx_cfg_cov
 
 

@@ -3,6 +3,7 @@ import os
 import tqdm
 from pycparser.plyparser import ParseError
 from utils.codeflaws_data_utils import get_cfg_ast_cov, all_codeflaws_keys
+from graph_algos.nx_shortcuts import nodes_where
 import json
 import pickle as pkl
 
@@ -46,25 +47,14 @@ class CodeflawsNxDataset(object):
         for i, key in bar:
             try:
                 _, _, _, _, _, nx_g = get_cfg_ast_cov(key)
-                ast_lb_d = []
-                ast_lb_i = []
-                cfg_lb = []
-                for n in nx_g.nodes():
-                    if nx_g.nodes[n]['graph'] == 'test':
-                        continue
-                    if nx_g.nodes[n]['graph'] == 'ast':
-                        if nx_g.nodes[n]['status'] == 2:
-                            ast_lb_i.append(n)
-                        elif nx_g.nodes[n]['status'] == 1:
-                            ast_lb_d.append(n)
-                    elif nx_g.nodes[n]['graph'] == 'cfg':
-                        if nx_g.nodes[n]['status'] == 1:
-                            cfg_lb.append(n)
+                ast_lb_d = nodes_where(nx_g, graph='ast', status=1)
+                ast_lb_i = nodes_where(nx_g, graph='ast', status=2)
+                cfg_lb = nodes_where(nx_g, graph='cfg', status=1)
+                for n in (nodes_where(nx_g, graph='cfg') +
+                          nodes_where(nx_g, graph='ast')):
                     del nx_g.nodes[n]['status']
                 pkl.dump(nx_g,
-                         open(
-                             os.path.join(self.save_dir, f'nx_{i}'),
-                             'wb'))
+                         open(f"{self.save_dir}/nx_{i}", 'wb'))
             except ParseError:
                 err_count += 1
                 print(f"Total syntax error files: {err_count}")
