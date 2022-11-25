@@ -2,7 +2,8 @@ from utils.utils import ConfigClass
 from codeflaws.data_utils import all_codeflaws_keys,\
     get_nx_ast_stmt_annt_cfl, \
     cfl_check_is_stmt_cpp
-from graph_algos.nx_shortcuts import nodes_where
+from graph_algos.nx_shortcuts import nodes_where, edges_where,\
+        where_node
 import os
 import pickle as pkl
 import tqdm
@@ -67,8 +68,7 @@ class CodeflawsCFLNxStatementDataset(NxDataset):
             self.ast_types = self.ast_types.union(
                 [nx_g.nodes[n]['ntype'] for n in nodes_where(nx_g, graph='ast')])
             self.ast_etypes = self.ast_etypes.union(
-                [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
-                 if nx_g.nodes[u]['graph'] == 'ast' and nx_g.nodes[v]['graph'] == 'ast'])
+                x[-1]['label'] for x in edges_where(nx_g, where_node(graph='ast'), where_node(graph='ast')))
             self.stmt_nodes.append(
                 nodes_where(
                     nx_g,

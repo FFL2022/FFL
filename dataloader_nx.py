@@ -5,7 +5,7 @@ from utils.utils import ConfigClass
 from utils.nx_graph_builder import build_nx_cfg_ast_coverage_codeflaws,\
     build_nx_cfg_coverage_codeflaws, augment_with_reverse_edge
 from utils.codeflaws_data_utils import make_codeflaws_dict
-from graph_algos.nx_shortcuts import nodes_where
+from graph_algos.nx_shortcuts import nodes_where, edges_where, where_node
 import os
 import random
 import pickle as pkl
@@ -84,9 +84,7 @@ class CodeflawsNxDataset(object):
                  if nx_g.nodes[node]['graph'] == 'ast'])
 
             self.ast_etypes.extend(
-                [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
-                 if nx_g.nodes[u]['graph'] == 'ast' and
-                 nx_g.nodes[v]['graph'] == 'ast'])
+                x[-1]['label'] for x in edges_where(nx_g, where_node(graph='ast'), where_edge(graph='ast')))
 
             # Process label
             # or not

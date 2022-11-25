@@ -3,7 +3,8 @@ from utils.utils import ConfigClass
 from cfg import cfg
 from codeflaws.data_format import key2bug, key2bugfile,\
     key2fixfile, key2test_verdict, get_gcov_file, test_verdict
-from graph_algos.nx_shortcuts import neighbors_out, neighbors_in, nodes_where
+from graph_algos.nx_shortcuts import neighbors_out, neighbors_in, \
+        nodes_where, where_node, edges_where
 from utils.get_bug_localization import get_bug_localization
 from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.nx_graph_builder import build_nx_graph_cfg_ast
@@ -310,8 +311,8 @@ def cfl_add_placeholder_stmts_cpp(nx_ast):
                             n_order=0 if all(item==0 for item in n_orders) else max(n_orders)+1,
                             status=0
                             )
-            labels = list(set([e['label'] for u, v, k, e in nx_ast.edges(keys=True, data=True)
-                                                            if u==node]))
+            labels = list(set(x[-1]['label'] for x in edges_where(
+                nx_ast, where_node(lambda x: x == node), where_node())))
 
             nx_ast.add_edge(node, new_node, label='parent_child' if len(labels)>1 else labels[0])
             child_stmts = child_stmts + [len(nx_ast.nodes())-1]
