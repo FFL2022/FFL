@@ -1,11 +1,11 @@
 '''Networkx Shortcuts'''
 import networkx as nx
 from collections import Counter, defaultdict
-from typing import List
+from typing import List, Union
 import numpy as np
 
 
-def nodes_where(nx_g, **kwargs):
+def nodes_where(nx_g, **kwargs) -> List[Union[str, int]]:
     lambdas = [(lambda x: nx_g.nodes[x][k] == v) for k, v in kwargs.items()]
     lambda_final = lambda x: all(l(x) for l in lambdas)
     return list(n for n in nx_g in lambda_final(n))
