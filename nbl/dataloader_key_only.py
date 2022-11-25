@@ -12,6 +12,7 @@ import fasttext
 from utils.utils import ConfigClass
 from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.nx_graph_builder import augment_with_reverse_edge
+from graph_algos.nx_shortcuts import nodes_where
 from nbl.utils import all_keys, eval_set, mapping_eval, most_failed_val_set
 from utils.get_bug_localization import get_bug_localization
 from graph_algos.nx_shortcuts import combine_multi, neighbors_out
@@ -243,16 +244,13 @@ class NBLFullDGLDataset(DGLDataset):
                                ast_lb_i, cfg_lb):
         '''
         # Create a node mapping for cfg
-        n_cfgs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
+        n_cfgs = nodes_where(nx_g, graph='ast')
         cfg2id = dict([n, i] for i, n in enumerate(n_cfgs))
         '''
         # Create a node mapping for ast
-        n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+        n_asts, n_tests = nodes_where(nx_g, graph='ast'), nodes_where(nx_g, graph='test')
         ast2id = dict([n, i] for i, n in enumerate(n_asts))
-        # Create a node mapping for test
-        n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
         t2id = dict([n, i] for i, n in enumerate(n_tests))
-        # map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
         map2id = {'ast': ast2id, 'test': t2id}
 
         # Create dgl cfg node
@@ -455,14 +453,12 @@ class NBLASTDGLDataset(DGLDataset):
                                ast_lb_i, cfg_lb):
         '''
         # Create a node mapping for cfg
-        n_cfgs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
+        n_cfgs = nodes_where(nx_g, graph='cfg')
         cfg2id = dict([n, i] for i, n in enumerate(n_cfgs))
         '''
         # Create a node mapping for ast
-        n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+        n_asts = nodes_where(nx_g, graph='ast')
         ast2id = dict([n, i] for i, n in enumerate(n_asts))
-        # Create a node mapping for test
-        # map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
         map2id = {'ast': ast2id}
 
         # Create dgl ast node

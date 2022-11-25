@@ -7,6 +7,7 @@ from nbl.utils import all_keys, get_nx_ast_stmt_annt_gumtree
 from utils.utils import ConfigClass
 from utils.gumtree_utils import GumtreeASTUtils
 from utils.nx_graph_builder import augment_with_reverse_edge_cat
+from graph_algos.nx_shortcuts import nodes_where
 import os
 import random
 import pickle as pkl
@@ -81,11 +82,10 @@ class NBLGumtreeNxStatementDataset(object):
                 [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
                  if nx_g.nodes[u]['graph'] == 'ast' and
                  nx_g.nodes[v]['graph'] == 'ast'])
-            self.stmt_nodes.append(list(
-                [n for n in nx_g.nodes() if
-                 nx_g.nodes[n]['graph'] == 'ast'
-                 and GumtreeASTUtils.check_is_stmt_cpp(nx_g.nodes[n]['ntype'])]
-            ))
+            self.stmt_nodes.append(
+                nodes_where(nx_g,
+                    lambda n: GumtreeASTUtils.check_is_stmt_cpp(nx_g.nodes[n]['ntype']),
+                    graph='ast'))
 
         self.ast_types = list(set(self.ast_types))
         self.ast_etypes = list(set(self.ast_etypes))
@@ -180,12 +180,9 @@ class NBLGumtreeDGLStatementDataset(DGLDataset):
 
     def convert_from_nx_to_dgl(self, nx_g, stmt_nodes):
         # Create a node mapping for ast
-        n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+        n_asts, n_tests = nodes_where(nx_g, graph='ast'), nodes_where(nx_g, graph='test')
         ast2id = dict([n, i] for i, n in enumerate(n_asts))
-        # Create a node mapping for test
-        n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
         t2id = dict([n, i] for i, n in enumerate(n_tests))
-        # map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
         map2id = {'ast': ast2id, 'test': t2id}
 
         # Create dgl ast node

@@ -10,6 +10,7 @@ import tqdm
 import json
 import glob
 from utils.train_utils import BinFullMeter, KFullMeter, AverageMeter
+from graph_algos.nx_shortcuts import nodes_where
 import pickle as pkl
 
 
@@ -181,7 +182,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
 
 def get_line_mapping(dataloader, real_idx):
     nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
-    n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+    n_asts = nodes_where(nx_g, graph='ast')
     line = torch.tensor([nx_g.nodes[n]['start_line'] for n in n_asts],
                         dtype=torch.long)
     return line
@@ -189,7 +190,7 @@ def get_line_mapping(dataloader, real_idx):
 
 def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts):
     nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
-    n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+    n_asts = nodes_where(nx_g, graph='ast')
     for i, n in enumerate(n_asts):
         nx_g.nodes[n]['status'] = 0
         if node_preds[i] == 0:

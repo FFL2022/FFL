@@ -6,7 +6,7 @@ from utils.explain_utils import WrapperModel
 
 from model import GCN_A_L_T_1
 from utils.draw_utils import ast_to_agraph
-
+from graph_algos.nx_shortcuts import nodes_where
 import torch.nn.functional as F
 import torch.nn as nn
 import torch
@@ -44,10 +44,8 @@ def explain(model, dataloader, iters=10):
                 num_edges_dict[etype] = g.number_of_edges(etype)
         etypes = list(num_edges_dict.keys())
 
-        wrapper = WrapperModel(model,
-                               g.number_of_nodes(),
-                               num_edges_dict,
-                               model.hidden_feats).to(device)
+        wrapper = WrapperModel(model, g.number_of_nodes(),
+                               num_edges_dict, model.hidden_feats).to(device)
 
         wrapper.model.eval()
 
@@ -107,8 +105,7 @@ def explain(model, dataloader, iters=10):
 
 
             visualized_nx_g = map_explain_with_nx(gi, nx_gi)
-            n_asts = [n for n in visualized_nx_g if
-                      visualized_nx_g.nodes[n]['graph'] == 'ast']
+            n_asts = nodes_where(visualized_nx_g, graph='ast')
             visualized_ast = nx_gi.subgraph(n_asts)
 
             # color = red

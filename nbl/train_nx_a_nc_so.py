@@ -3,6 +3,7 @@ import torch
 import os
 import torch.nn.functional as F
 from nbl.dataloader_key_only import NBLASTDGLDataset
+from graph_algos.nx_shortcuts import nodes_where
 from model import GCN_A_L
 from utils.utils import ConfigClass
 from utils.draw_utils import ast_to_agraph
@@ -40,14 +41,10 @@ def train(model, dataloader, n_epochs, start_epoch=0):
     for epoch in range(n_epochs):
         dataloader.train()
         # mean_loss.reset()
-        mean_ast_loss.reset()
-        mean_ast_acc.reset()
-        # mean_acc.reset()
-        f1_meter.reset()
-        top_10_meter.reset()
-        top_5_meter.reset()
-        top_2_meter.reset()
-        top_1_meter.reset()
+        for meter in [mean_ast_acc, mean_ast_loss, f1_meter,
+                      top_1_meter, top_2_meter, top_5_meter,
+                      top_10_meter]:
+            meter.reset()
 
         model.train()
         bar = tqdm.trange(len(dataloader))
@@ -137,16 +134,15 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             bar.set_postfix(ast_loss=ast_loss.item(), acc=mean_ast_acc.avg)
 
         if epoch % ConfigClass.print_rate == 0:
-            out_dict = {}
-            out_dict['top_1'] = top_1_meter.avg
-            out_dict['top_2'] = top_2_meter.avg
-            out_dict['top_5'] = top_5_meter.avg
-            out_dict['top_10'] = top_10_meter.avg
-            out_dict['mean_acc'] = mean_ast_acc.avg
-            out_dict['mean_loss'] = mean_ast_loss.avg
-            out_dict['mean_ast_acc'] = mean_ast_acc.avg
-            out_dict['mean_ast_loss'] = mean_ast_loss.avg
-            out_dict['f1'] = f1_meter.get()
+            out_dict = {
+                'top_1': top_1_meter.avg, 'top_2': top_2_meter.avg,
+                'top_5': top_5_meter.avg, 'top_10': top_10_meter.avg,
+                'mean_acc': mean_ast_acc.avg, 'mean_loss': mean_ast_loss.avg
+                'mean_ast_acc': mean_ast_acc.avg,
+                'mean_ast_loss': mean_ast_loss.avg
+                'f1': f1_meter.get()
+            }
+            
             with open(ConfigClass.result_dir_nbl +
                       '/training_dict_ast_e{}.json'.format(epoch), 'w') as f:
                 json.dump(out_dict, f, indent=2)
@@ -181,15 +177,14 @@ def train(model, dataloader, n_epochs, start_epoch=0):
 
 def get_line_mapping(dataloader, real_idx):
     nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
-    n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
-    line = torch.tensor([nx_g.nodes[n]['coord_line'] for n in n_asts],
-                        dtype=torch.long)
+    n_asts = nodes_where(nx_g, graph='ast')
+    line = torch.tensor([nx_g.nodes[n]['coord_line'] for n in n_asts], dtype=torch.long)
     return line
 
 
 def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts):
     nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
-    n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+    n_asts = nodes_where(nx_g, graph='ast')
     for i, n in enumerate(n_asts):
         nx_g.nodes[n]['status'] = 0
         if node_preds[i] == 0:

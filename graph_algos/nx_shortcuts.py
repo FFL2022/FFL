@@ -10,6 +10,13 @@ def nodes_where(nx_g, *filter_funcs, **kwargs) -> List[Union[str, int]]:
     lambda_final = lambda x: all(l(x) for l in lambdas)
     return list([n for n in nx_g.nodes() if lambda_final(n)])
 
+def update_nodes(nx_g, nodes=None, **kwargs):
+    if nodes is None:
+        nodes = nx_g.nodes()
+    for n in nodes:
+        for k, v in kwargs.items():
+            nx_g.nodes[n][k] = v
+
 def neighbors_in(u, q, filter_func=None):
     ''' Get neighbor having edges into this node
     Parameters

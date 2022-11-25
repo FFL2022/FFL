@@ -2,8 +2,8 @@ from utils.utils import ConfigClass
 from cfg import cfg
 from utils.traverse_utils import build_nx_cfg, build_nx_ast_base,\
     build_nx_ast_full
-from graph_algos.nx_shortcuts import neighbors_in, neighbors_out
-from graph_algos.nx_shortcuts import combine_multi
+from graph_algos.nx_shortcuts import neighbors_in, neighbors_out,\
+        combine_multi, nodes_where, update_nodes
 from utils.gumtree_utils import GumtreeWrapper
 import networkx as nx
 import json
@@ -30,35 +30,16 @@ def augment_cfg_with_content(nx_cfg: nx.MultiDiGraph, code: list):
 
 
 def combine_ast_cfg(nx_ast, nx_cfg):
-    ''' Combine ast cfg
-    Parameters
-    ----------
-    nx_ast:
-          Short description
-    nx_cfg:
-          Short description
-    Returns
-    ----------
-    param_name: type
-          Short description
-    '''
+    ''' Combine ast cfg by adding each corresponding edge'''
     nx_h_g, batch = combine_multi([nx_ast, nx_cfg])
-    for node in nx_h_g.nodes():
-        if nx_h_g.nodes[node]['graph'] != 'cfg':
-            continue
-        # only take on-liners
-        # Get corresponding lines
-
-        start = nx_h_g.nodes[node]['start_line']
-        end = nx_h_g.nodes[node]['end_line']
-        if end - start > 0:  # This is a parent node
+    for n_cfg in nodes_where(nx_h_g, graph='cfg'):
+        s, e = nx_h_g.nodes[node]['start_line'], nx_h_g.nodes[node]['end_line']
+        if e - s > 0:  # This is a parent node
             continue
         # for n in nx_h_g.nodes():
         #     print(nx_h_g.nodes[n])
-        corresponding_ast_nodes = [n for n in nx_h_g.nodes()
-                                   if nx_h_g.nodes[n]['graph'] == 'ast' and
-                                   nx_h_g.nodes[n]['start_line'] >= start and
-                                   nx_h_g.nodes[n]['start_line'] <= end]
+        corresponding_ast_nodes = [n for n in nodes_where(nx_h_g, graph='ast') if
+                                   s <= nx_h_g.nodes[n]['start_line'] <= e]
         for ast_node in corresponding_ast_nodes:
             nx_h_g.add_edge(node, ast_node, label='corresponding_ast')
     return nx_h_g
@@ -85,10 +66,8 @@ def build_nx_graph_cfg_ast(graph, code: list, full_ast=True):
     else:
         nx_ast, ast2nx = build_nx_ast_base(ast)
 
-    for node in nx_cfg.nodes():
-        nx_cfg.nodes[node]['graph'] = 'cfg'
-    for node in nx_ast.nodes():
-        nx_ast.nodes[node]['graph'] = 'ast'
+    update_nodes(nx_cfg, graph='cfg')
+    update_nodes(nx_ast, graph='ast')
     return nx_cfg, nx_ast, combine_ast_cfg(nx_ast, nx_cfg)
 
 
