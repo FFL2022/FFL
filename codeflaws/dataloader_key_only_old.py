@@ -4,6 +4,7 @@ import dgl
 from utils.utils import ConfigClass
 from codeflaws.data_utils import get_cfg_ast_cov, all_codeflaws_keys
 from utils.nx_graph_builder import augment_with_reverse_edge_cat
+from graph_algos.nx_shortcuts import nodes_where
 import os
 import random
 import pickle as pkl
@@ -188,14 +189,14 @@ class CodeflawsFullDGLDataset(DGLDataset):
                                ast_lb_i, cfg_lb):
         '''
         # Create a node mapping for cfg
-        n_cfgs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
+        n_cfgs = nodes_where(nx_g, graph='ast')
         cfg2id = dict([n, i] for i, n in enumerate(n_cfgs))
         '''
         # Create a node mapping for ast
-        n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+        n_asts = nodes_where(nx_g, graph='ast')
         ast2id = dict([n, i] for i, n in enumerate(n_asts))
         # Create a node mapping for test
-        n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
+        n_tests = nodes_where(nx_g, graph='test')
         t2id = dict([n, i] for i, n in enumerate(n_tests))
         # map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
         map2id = {'ast': ast2id, 'test': t2id}
@@ -400,14 +401,11 @@ class CodeflawsFullDGLDatasetCFG(DGLDataset):
 
     def convert_from_nx_to_dgl(self, embedding_model, nx_g, ast_lb_d,
                                ast_lb_i, cfg_lb):
-        # Create a node mapping for cfg
-        n_cfgs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
+        n_cfgs, n_asts = nodes_where(nx_g, graph='cfg'), nodes_where(nx_g, graph='ast')
+        n_tests = nodes_where(nx_g, graph='test')
+
         cfg2id = dict([n, i] for i, n in enumerate(n_cfgs))
-        # Create a node mapping for ast
-        n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
         ast2id = dict([n, i] for i, n in enumerate(n_asts))
-        # Create a node mapping for test
-        n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
         t2id = dict([n, i] for i, n in enumerate(n_tests))
         map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
         # map2id = {'ast': ast2id, 'test': t2id}
@@ -606,14 +604,14 @@ class CodeflawsASTDGLDataset(DGLDataset):
                                ast_lb_i, cfg_lb):
         '''
         # Create a node mapping for cfg
-        n_cfgs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
+        n_cfgs = nodes_where(nx_g, graph='cfg')
         cfg2id = dict([n, i] for i, n in enumerate(n_cfgs))
         '''
         # Create a node mapping for ast
-        n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+        n_asts = nodes_where(nx_g, graph='ast')
         ast2id = dict([n, i] for i, n in enumerate(n_asts))
         # Create a node mapping for test
-        # n_tests = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
+        # n_tests = nodes_where(nx_g, graph='ast')
         # t2id = dict([n, i] for i, n in enumerate(n_tests))
         # map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
         # map2id = {'ast': ast2id, 'test': t2id}

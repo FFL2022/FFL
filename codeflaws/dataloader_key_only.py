@@ -80,13 +80,12 @@ class CodeflawsNxDataset(object):
                                          'rb'))
                 else:
                     _, _, _, _, _, nx_g = get_cfg_ast_cov(key)
-                n_asts, n_cfgs = nodes_where(nx_g, graph='ast'), nodes_where(nx_g, graph='cfg')
-                ast_lb_d = list([n for n in n_asts if nx_g.nodes[n]['status'] == 1])
-                ast_lb_i = list([n for n in n_asts if nx_g.nodes[n]['status'] == 2])
-                for n in n_asts:
+                ast_lb_d = nodes_where(nx_g, graph='ast', status=1)
+                ast_lb_i = nodes_where(nx_g, graph='ast', status=2)
+                for n in nodes_where(nx_g, graph='ast'):
                     del nx_g.nodes[n]['status']
-                cfg_lb = list([n for n in n_cfgs if nx_g.nodes[n]['status']])
-                for n in n_cfgs:
+                cfg_lb = nodes_where(nx_g, graph='cfg', status=1)
+                for n in nodes_where(nx_g, graph='cfg'):
                     del nx_g.nodes[n]['status']
                 pkl.dump(nx_g, open(f"{self.save_dir}/nx_keyonly_{i}", 'wb'))
             except ParseError:
@@ -201,7 +200,7 @@ class CodeflawsFullDGLDataset(DGLDataset):
                                ast_lb_i, cfg_lb):
         '''
         # Create a node mapping for cfg
-        n_cfgs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
+        n_cfgs = nodes_where(nx_g, graph='cfg')
         cfg2id = dict([n, i] for i, n in enumerate(n_cfgs))
         '''
         # Create a node mapping for ast
@@ -618,14 +617,14 @@ class CodeflawsASTDGLDataset(DGLDataset):
                                ast_lb_i, cfg_lb):
         '''
         # Create a node mapping for cfg
-        n_cfgs = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'cfg']
+        n_cfgs = nodes_where(nx_g, graph='cfg')
         cfg2id = dict([n, i] for i, n in enumerate(n_cfgs))
         '''
         # Create a node mapping for ast
-        n_asts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'ast']
+        n_asts = nodes_where(nx_g, graph='ast')
         ast2id = dict([n, i] for i, n in enumerate(n_asts))
         # Create a node mapping for test
-        # n_ts = [n for n in nx_g.nodes() if nx_g.nodes[n]['graph'] == 'test']
+        # n_ts = nodes_where(nx_g, graph='test')
         # t2id = dict([n, i] for i, n in enumerate(n_ts))
         # map2id = {'cfg': cfg2id, 'ast': ast2id, 'test': t2id}
         # map2id = {'ast': ast2id, 'test': t2id}
