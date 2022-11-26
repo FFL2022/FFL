@@ -4,7 +4,8 @@ import dgl
 from utils.utils import ConfigClass
 from codeflaws.data_utils import get_cfg_ast_cov, all_codeflaws_keys
 from utils.nx_graph_builder import augment_with_reverse_edge_cat
-from graph_algos.nx_shortcuts import nodes_where
+from graph_algos.nx_shortcuts import nodes_where, edges_where, \
+        where_node, where_node_not
 import os
 import random
 import pickle as pkl
@@ -81,9 +82,7 @@ class CodeflawsNxDataset(object):
             self.cfg_lbs.append(cfg_lb)
 
             self.ast_etypes.extend(
-                [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
-                 if nx_g.nodes[u]['graph'] == 'ast' and
-                 nx_g.nodes[v]['graph'] == 'ast'])
+                [x[-1]['label'] for x in edges_where(nx_G, where_node(graph='ast'), where_node(graph='ast')])
         self.ast_types = list(set(self.ast_types))
         self.ast_etypes = list(set(self.ast_etypes))
 
@@ -228,9 +227,8 @@ class CodeflawsFullDGLDataset(DGLDataset):
         nx_g = augment_with_reverse_edge_cat(nx_g, self.nx_dataset.ast_etypes,
                                          self.nx_dataset.cfg_etypes)
 
-        for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-            if nx_g.nodes[u]['graph'] == 'cfg' or nx_g.nodes[v]['graph'] == 'cfg':
-                continue
+        for u, v, k, e in edges_where(nx_g, where_node_not(graph='cfg'),
+                                      where_node_not(graph='cfg')):
             map_u = map2id[nx_g.nodes[u]['graph']]
             map_v = map2id[nx_g.nodes[v]['graph']]
             all_canon_etypes[
@@ -253,19 +251,15 @@ class CodeflawsFullDGLDataset(DGLDataset):
         g.nodes['ast'].data['content'] = ast_contents
         g = dgl.add_self_loop(g, etype=('ast', 'a_self_loop', 'ast'))
         # g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
-        # tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
         ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
-        for node in ast_lb_d:
-            ast_tgts[ast2id[node]] = 1
-        for node in ast_lb_i:
-            ast_tgts[ast2id[node]] = 2
+        ast_tgts[list(map(lambda x: ast2id[x], ast_lb_d))] = 1
+        ast_tgts[list(map(lambda x: ast2id[x], ast_lb_i))] = 2
+        g.nodes['ast'].data['tgt'] = ast_tgts
         '''
-        for node in cfg_lb:
-            tgts[cfg2id[node]] = 1
-
+        tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
+        tgts[list(map(lambda x: ast2id[x], cfg_lb))] = 1
         g.nodes['cfg'].data['tgt'] = tgts
         '''
-        g.nodes['ast'].data['tgt'] = ast_tgts
         return g
 
     def construct_edge_metagraph(self):
@@ -459,15 +453,12 @@ class CodeflawsFullDGLDatasetCFG(DGLDataset):
         g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
         tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
         ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
-        for node in ast_lb_d:
-            ast_tgts[ast2id[node]] = 1
-        for node in ast_lb_i:
-            ast_tgts[ast2id[node]] = 2
-        for node in cfg_lb:
-            tgts[cfg2id[node]] = 1
-
-        g.nodes['cfg'].data['tgt'] = tgts
+        ast_tgts[list(map(lambda x: ast2id[x], ast_lb_d))] = 1
+        ast_tgts[list(map(lambda x: ast2id[x], ast_lb_i))] = 2
         g.nodes['ast'].data['tgt'] = ast_tgts
+
+        tgts[list(map(lambda x: ast2id[x], cfg_lb))] = 1
+        g.nodes['cfg'].data['tgt'] = tgts
         return g
 
     def construct_edge_metagraph(self):
@@ -674,17 +665,14 @@ class CodeflawsASTDGLDataset(DGLDataset):
         # g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
         # tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
         ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
-        for node in ast_lb_d:
-            ast_tgts[ast2id[node]] = 1
-        for node in ast_lb_i:
-            ast_tgts[ast2id[node]] = 2
-        '''
-        for node in cfg_lb:
-            tgts[cfg2id[node]] = 1
+        ast_tgts[list(map(lambda x: ast2id[x], ast_lb_d))] = 1
+        ast_tgts[list(map(lambda x: ast2id[x], ast_lb_i))] = 2
+        g.nodes['ast'].data['tgt'] = ast_tgts
 
+        '''
+        tgts[list(map(lambda x: ast2id[x], cfg_lb))] = 1
         g.nodes['cfg'].data['tgt'] = tgts
         '''
-        g.nodes['ast'].data['tgt'] = ast_tgts
         return g
 
     def construct_edge_metagraph(self):

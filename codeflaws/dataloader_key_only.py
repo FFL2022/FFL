@@ -4,7 +4,8 @@ import dgl
 from utils.utils import ConfigClass
 from codeflaws.data_utils import get_cfg_ast_cov, all_codeflaws_keys
 from utils.nx_graph_builder import augment_with_reverse_edge_cat
-from graph_algos.nx_shortcuts import nodes_where
+from graph_algos.nx_shortcuts import nodes_where, where_node_not, \
+        edges_where, where_node
 import os
 import random
 import pickle as pkl
@@ -12,6 +13,7 @@ import json
 import fasttext
 import torch
 import tqdm
+from collections import defaultdict
 from pycparser.plyparser import ParseError
 
 embedding_model = fasttext.load_model(ConfigClass.pretrained_fastext)
@@ -41,25 +43,16 @@ class CodeflawsNxDataset(object):
             nx_g = pkl.load(open(f'{self.save_dir}/nx_keyonly_{idx}', 'rb'))
         except:
             _, _, _, _, _, nx_g = get_cfg_ast_cov(all_codeflaws_keys[idx])
-            ast_lb_d = []
-            ast_lb_i = []
-            cfg_lb = []
+            ast_lb_d = nodes_where(nx_g, graph='ast', status=1)
+            ast_lb_i = nodes_where(nx_g, graph='ast', status=2)
+            cfg_lb = nodes_where(nx_g, graph='cfg', status=1)
             n_asts, n_cfgs = nodes_where(nx_g, graph='ast'), nodes_where(nx_g, graph='cfg')
             for n in n_asts:
-                if nx_g.nodes[n]['status'] == 2:
-                    ast_lb_i.append(n)
-                elif nx_g.nodes[n]['status'] == 1:
-                    ast_lb_d.append(n)
                 del nx_g.nodes[n]['status']
             for n in n_cfgs:
-                if nx_g.nodes[n]['status'] == 1:
-                    cfg_lb.append(n)
                 del nx_g.nodes[n]['status']
             pkl.dump(nx_g, open(f"{self.save_dir}/nx_keyonly_{idx}", 'wb'))
-        return nx_g,\
-            self.ast_lbs_d[i], \
-            self.ast_lbs_i[i], \
-            self.cfg_lbs[i]
+        return nx_g, self.ast_lbs_d[i], self.ast_lbs_i[i], self.cfg_lbs[i]
 
     def process(self):
         self.ast_types = []
@@ -103,9 +96,7 @@ class CodeflawsNxDataset(object):
             self.cfg_lbs.append(cfg_lb)
 
             self.ast_etypes.extend(
-                [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
-                 if nx_g.nodes[u]['graph'] == 'ast' and
-                 nx_g.nodes[v]['graph'] == 'ast'])
+                [x[-1]['label'] for x in edges_where(nx_g, where_node(graph='ast'), graph='ast')])
         self.ast_types = list(set(self.ast_types))
         self.ast_etypes = list(set(self.ast_etypes))
 
@@ -235,9 +226,7 @@ class CodeflawsFullDGLDataset(DGLDataset):
         # Create dgl test node
         # No need, will be added automatically when we update edges
 
-        all_canon_etypes = {}
-        for k in self.meta_graph:
-            all_canon_etypes[k] = []
+        all_canon_etypes = defaultdict(list)
         '''
         line2cfg = {}
         for n in n_cfgs:
@@ -251,9 +240,8 @@ class CodeflawsFullDGLDataset(DGLDataset):
         nx_g = augment_with_reverse_edge_cat(nx_g, self.nx_dataset.ast_etypes,
                                          self.nx_dataset.cfg_etypes)
 
-        for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-            if nx_g.nodes[u]['graph'] == 'cfg' or nx_g.nodes[v]['graph'] == 'cfg':
-                continue
+        for u, v, k, e in edges_where(nx_g, where_node_not(graph='cfg'),
+                                      where_node_not(graph='cfg'):
             map_u = map2id[nx_g.nodes[u]['graph']]
             map_v = map2id[nx_g.nodes[v]['graph']]
             all_canon_etypes[
@@ -261,12 +249,8 @@ class CodeflawsFullDGLDataset(DGLDataset):
             ].append([map_u[u], map_v[v]])
 
         for k in all_canon_etypes:
-            if len(all_canon_etypes[k]) > 0:
-                type_es = torch.tensor(all_canon_etypes[k], dtype=torch.int32)
-                all_canon_etypes[k] = (type_es[:, 0], type_es[:, 1])
-            else:
-                all_canon_etypes[k] = (torch.tensor([], dtype=torch.int32),
-                                       torch.tensor([], dtype=torch.int32))
+            type_es = torch.tensor(all_canon_etypes[k], dtype=torch.int32)
+            all_canon_etypes[k] = (type_es[:, 0], type_es[:, 1])
         g = dgl.heterograph(all_canon_etypes)
         '''
         g.nodes['cfg'].data['label'] = cfg_labels
@@ -278,17 +262,13 @@ class CodeflawsFullDGLDataset(DGLDataset):
         # g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
         # tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
         ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
-        for node in ast_lb_d:
-            ast_tgts[ast2id[node]] = 1
-        for node in ast_lb_i:
-            ast_tgts[ast2id[node]] = 2
+        ast_tgts[list(map(lambda n: ast2id[n], ast_lb_d))] = 1
+        ast_tgts[list(map(lambda n: ast2id[n], ast_lb_i))] = 2
+        g.nodes['ast'].data['tgt'] = ast_tgts
         '''
-        for node in cfg_lb:
-            tgts[cfg2id[node]] = 1
-
+        tgts[list(map(lambda n: cfg2id[n], cfg_lb))] = 1
         g.nodes['cfg'].data['tgt'] = tgts
         '''
-        g.nodes['ast'].data['tgt'] = ast_tgts
         return g
 
     def construct_edge_metagraph(self):
@@ -445,9 +425,7 @@ class CodeflawsFullDGLDatasetCFG(DGLDataset):
         # Create dgl test node
         # No need, will be added automatically when we update edges
 
-        all_canon_etypes = {}
-        for k in self.meta_graph:
-            all_canon_etypes[k] = []
+        all_canon_etypes = defaultdict(list)
         line2cfg = {}
         for n in n_cfgs:
             if nx_g.nodes[n]['end_line'] - nx_g.nodes[n]['start_line'] > 0:
@@ -460,21 +438,17 @@ class CodeflawsFullDGLDatasetCFG(DGLDataset):
             nx_g, self.nx_dataset.ast_etypes,
             self.nx_dataset.cfg_etypes)
 
-        for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-            if nx_g.nodes[u]['graph'] == 'cfg' or nx_g.nodes[v]['graph'] == 'cfg':
-                continue
+        for u, v, k, e in edges_where(nx_g, where_node_not(graph='cfg'),
+                                      where_node_not(graph='cfg'):
             map_u = map2id[nx_g.nodes[u]['graph']]
             map_v = map2id[nx_g.nodes[v]['graph']]
             all_canon_etypes[ (nx_g.nodes[u]['graph'], e['label'], nx_g.nodes[v]['graph'])
             ].append([map_u[u], map_v[v]])
 
         for k in all_canon_etypes:
-            if len(all_canon_etypes[k]) > 0:
-                type_es = torch.tensor(all_canon_etypes[k], dtype=torch.int32)
-                all_canon_etypes[k] = (type_es[:, 0], type_es[:, 1])
-            else:
-                all_canon_etypes[k] = (torch.tensor([], dtype=torch.int32),
-                                       torch.tensor([], dtype=torch.int32))
+            type_es = torch.tensor(all_canon_etypes[k], dtype=torch.int32)
+            all_canon_etypes[k] = (type_es[:, 0], type_es[:, 1])
+
         g = dgl.heterograph(all_canon_etypes)
         g.nodes['cfg'].data['label'] = cfg_labels
         g.nodes['cfg'].data['content'] = cfg_contents
@@ -482,17 +456,15 @@ class CodeflawsFullDGLDatasetCFG(DGLDataset):
         g.nodes['ast'].data['content'] = ast_contents
         g = dgl.add_self_loop(g, etype=('ast', 'a_self_loop', 'ast'))
         g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
-        tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
-        ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
-        for node in ast_lb_d:
-            ast_tgts[ast2id[node]] = 1
-        for node in ast_lb_i:
-            ast_tgts[ast2id[node]] = 2
-        for node in cfg_lb:
-            tgts[cfg2id[node]] = 1
 
-        g.nodes['cfg'].data['tgt'] = tgts
+        ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
+        ast_tgts[list(map(lambda n: ast2id[n], ast_lb_d))] = 1
+        ast_tgts[list(map(lambda n: ast2id[n], ast_lb_i))] = 2
         g.nodes['ast'].data['tgt'] = ast_tgts
+
+        tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
+        tgts[list(map(lambda n: cfg2id[n], cfg_lb))] = 1
+        g.nodes['cfg'].data['tgt'] = tgts
         return g
 
     def construct_edge_metagraph(self):
@@ -653,9 +625,7 @@ class CodeflawsASTDGLDataset(DGLDataset):
         # Create dgl test node
         # No need, will be added automatically when we update edges
 
-        all_canon_etypes = {}
-        for k in self.meta_graph:
-            all_canon_etypes[k] = []
+        all_canon_etypes = defaultdict(list)
         '''
         line2cfg = {}
         for n in n_cfgs:
@@ -670,24 +640,12 @@ class CodeflawsASTDGLDataset(DGLDataset):
             nx_g, self.nx_dataset.ast_etypes,
             self.nx_dataset.cfg_etypes)
 
-        for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-            if nx_g.nodes[u]['graph'] == 'cfg' or nx_g.nodes[v]['graph'] == 'cfg':
-                continue
-            if nx_g.nodes[u]['graph'] == 'test' or nx_g.nodes[v]['graph'] == 'test':
-                continue
-            map_u = map2id[nx_g.nodes[u]['graph']]
-            map_v = map2id[nx_g.nodes[v]['graph']]
-            all_canon_etypes[
-                (nx_g.nodes[u]['graph'], e['label'], nx_g.nodes[v]['graph'])
-            ].append([map_u[u], map_v[v]])
+        for u, v, k, e in edges_where(nx_g, where_node(graph='ast'), where_node(graph='ast')):
+            all_canon_etypes[('ast', e['label'], 'ast')].append([ast2id[u], ast2id[v]])
 
         for k in all_canon_etypes:
-            if len(all_canon_etypes[k]) > 0:
-                type_es = torch.tensor(all_canon_etypes[k], dtype=torch.int32)
-                all_canon_etypes[k] = (type_es[:, 0], type_es[:, 1])
-            else:
-                all_canon_etypes[k] = (torch.tensor([], dtype=torch.int32),
-                                       torch.tensor([], dtype=torch.int32))
+            type_es = torch.tensor(all_canon_etypes[k], dtype=torch.int32)
+            all_canon_etypes[k] = (type_es[:, 0], type_es[:, 1])
         g = dgl.heterograph(all_canon_etypes)
         '''
         g.nodes['cfg'].data['label'] = cfg_labels
@@ -697,19 +655,16 @@ class CodeflawsASTDGLDataset(DGLDataset):
         g.nodes['ast'].data['content'] = ast_contents
         g = dgl.add_self_loop(g, etype=('ast', 'a_self_loop', 'ast'))
         # g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
-        # tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
         ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
-        for node in ast_lb_d:
-            ast_tgts[ast2id[node]] = 1
-        for node in ast_lb_i:
-            ast_tgts[ast2id[node]] = 2
-        '''
-        for node in cfg_lb:
-            tgts[cfg2id[node]] = 1
+        ast_tgts[list(map(lambda n: ast2id[n], ast_lb_d))] = 1
+        ast_tgts[list(map(lambda n: ast2id[n], ast_lb_i))] = 2
+        g.nodes['ast'].data['tgt'] = ast_tgts
 
+        '''
+        tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
+        tgts[list(map(lambda n: cfg2id[n], cfg_lb))] = 1
         g.nodes['cfg'].data['tgt'] = tgts
         '''
-        g.nodes['ast'].data['tgt'] = ast_tgts
         return g
 
     def construct_edge_metagraph(self):

@@ -3,6 +3,7 @@ import networkx as nx
 from collections import Counter, defaultdict
 from typing import List, Union
 import numpy as np
+import inspect
 
 
 def where_node(*filter_funcs, **kwargs):
@@ -21,7 +22,11 @@ def where_node_not(*filter_funcs, **kwargs):
     return lambda_final
 
 
-def where_edge(where_source, where_target, *filter_funcs, **kwargs):
+def where_edge(where_source=None, where_target=None, *filter_funcs, **kwargs):
+    if where_source is None:
+        where_source = where_node()
+    if where_target is None:
+        where_target = where_node()
     lambdas_e = [(lambda e: e[k] == v) for k, v in kwargs.items()]
     lambdas_single_filter = lambda u, v, e: all(filter_func(u, v, e) for filter_func in filter_funcs)
     lambdas_multi_filter = lambda u, v, k, e: all(filter_func(u, v, k, e) for filter_func in filter_funcs)

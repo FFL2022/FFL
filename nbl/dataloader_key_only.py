@@ -15,8 +15,10 @@ from utils.nx_graph_builder import augment_with_reverse_edge
 from graph_algos.nx_shortcuts import nodes_where, where_node, edges_where
 from nbl.utils import all_keys, eval_set, mapping_eval, most_failed_val_set
 from utils.get_bug_localization import get_bug_localization
-from graph_algos.nx_shortcuts import combine_multi, neighbors_out
+from graph_algos.nx_shortcuts import combine_multi, neighbors_out,\
+        nodes_where, where_node, edges_where
 
+from utils.graph_visitor import DirectedVisitor
 from pycparser.plyparser import ParseError
 import torch
 import random
@@ -35,38 +37,25 @@ def get_cfg_ast_cov(key):
         covfile = f"{ConfigClass.nbl_test_path}/{pid}/{test}-{vid}.gcov"
         coverage_map = get_coverage(covfile, nline_removed1)
         t_n = nx_cat.number_of_nodes()
-        nx_cat.add_node(t_n, name=f'test_{i}',
-                        ntype='test', graph='test')
-        for n in nx_cat.nodes():
-            if nx_cat.nodes[n]['graph'] != 'cfg':
-                continue
+        nx_cat.add_node(t_n, name=f'test_{i}', ntype='test', graph='test')
+        for n in nodes_where(nx_cat, graph='cfg'):
             start = nx_cat.nodes[n]['start_line']
             end = nx_cat.nodes[n]['end_line']
             if end - start > 0:     # This is a parent node
                 continue
-            # Get corresponding lines
-            for line in coverage_map:
-                if line == start:
-                    # The condition of parent node passing is less strict
-                    if coverage_map[line] > 0:
-                        nx_cat.add_edge(
-                            n, t_n, label=f'c_{link_type}_test')
-                        queue = neighbors_out(
-                            n, nx_cat,
-                            lambda u, v, k, e: e['label'] =='corresponding_ast')
-                        while len(queue) > 0:
-                            a_n = queue.pop()
-                            if len(neighbors_out(
-                                a_n, nx_cat,
-                                lambda u, v, k, e: v == t_n)
-                            ) > 0:
-                                # Visited
-                                continue
-                            nx_cat.add_edge(
-                                a_n, t_n, label=f'a_{link_type}_test')
-                            queue.extend(neighbors_out(
-                                a_n, nx_cat,
-                                lambda u, v, k, e: nx_cat.nodes[v]['graph'] == 'ast'))
+            # Get corresponding covered line.
+            for line in filter(lambda x: x == start and coverage_map[x] > 0,
+                               coverage_map):
+                nx_cat.add_edge(n, t_n, label=f'c_{link_type}_test')
+                start_n_asts = neighbors_out(
+                    n, nx_cat,
+                    lambda u, v, k, e: e['label'] == 'corresponding_ast')
+                for a_n in DirectedVisitor(
+                        nx_cat, start_n_asts,
+                        lambda u, v, k, e: nx_cat.nodes[v]['graph'] == 'ast' and\
+                                           u != v and v != t_n):
+                    nx_cat.add_edge(
+                        a_n, t_n, label=f'a_{link_type}_test')
     return nx_cat
 
 
@@ -291,9 +280,8 @@ class NBLFullDGLDataset(DGLDataset):
         nx_g = augment_with_reverse_edge(nx_g, self.nx_dataset.ast_etypes,
                                          self.nx_dataset.cfg_etypes)
 
-        for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-            if nx_g.nodes[u]['graph'] == 'cfg' or nx_g.nodes[v]['graph'] == 'cfg':
-                continue
+        for u, v, k, e in edges_where(nx_g, where_node_not(graph='cfg'),
+                                      where_node_not(graph='cfg')):
             map_u = map2id[nx_g.nodes[u]['graph']]
             map_v = map2id[nx_g.nodes[v]['graph']]
             all_canon_etypes[
@@ -318,10 +306,8 @@ class NBLFullDGLDataset(DGLDataset):
         # g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
         # tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
         ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
-        for node in ast_lb_d:
-            ast_tgts[ast2id[node]] = 1
-        for node in ast_lb_i:
-            ast_tgts[ast2id[node]] = 2
+        ast_tgts[list(map(lambda n: ast2id[n], ast_lb_d))] = 1
+        ast_tgts[list(map(lambda n: ast2id[n], ast_lb_i))] = 2
         '''
         for node in cfg_lb:
             tgts[cfg2id[node]] = 1
@@ -479,13 +465,9 @@ class NBLASTDGLDataset(DGLDataset):
         nx_g = augment_with_reverse_edge(nx_g, self.nx_dataset.ast_etypes,
                                          self.nx_dataset.cfg_etypes)
 
-        for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-            if nx_g.nodes[u]['graph'] == 'cfg' or nx_g.nodes[v]['graph'] == 'cfg':
-                continue
-            if nx_g.nodes[u]['graph'] == 'test' or nx_g.nodes[v]['graph'] == 'test':
-                continue
-            map_u = map2id[nx_g.nodes[u]['graph']]
-            map_v = map2id[nx_g.nodes[v]['graph']]
+        for u, v, k, e in edges_where(nx_g, where_node(graph='ast'),
+                                      where_node(graph='ast')) :
+            map_u, map_v = map2id['ast'], map2id['ast']
             all_canon_etypes[
                 (nx_g.nodes[u]['graph'], e['label'], nx_g.nodes[v]['graph'])
             ].append([map_u[u], map_v[v]])
@@ -516,8 +498,7 @@ class NBLASTDGLDataset(DGLDataset):
             [et + '_reverse' for et in self.nx_dataset.ast_etypes]
         self.all_etypes = self.ast_etypes
         self.all_ntypes = [('ast', 'ast') for et in self.ast_etypes]
-        return [(t[0], et, t[1]) for t, et in zip(self.all_ntypes,
-                                                  self.all_etypes)]
+        return [(t[0], et, t[1]) for t, et in zip(self.all_ntypes, self.all_etypes)]
 
     def process(self):
         self.meta_graph = self.construct_edge_metagraph()

@@ -26,10 +26,7 @@ def construct_edge_metagraph(nx_ast_etypes):
         [et + '_reverse' for et in nx_ast_etypes]
     a_t_etypes = ['a_pass_test', 'a_fail_test']
     t_a_etypes = ['t_pass_a', 't_fail_a']
-    all_etypes = (
-        ast_etypes +
-        a_t_etypes +
-        t_a_etypes)
+    all_etypes = (ast_etypes + a_t_etypes + t_a_etypes)
     all_ntypes = (
         [('ast', 'ast') for et in ast_etypes] +
         [('ast', 'test') for et in a_t_etypes] +
@@ -104,7 +101,6 @@ def eval_nbl():
 
             g = dgl.heterograph(all_canon_etypes)
             g.nodes['ast'].data['label'] = ast_labels
-            g.nodes['ast'].data['label'] = ast_labels
             g = dgl.add_self_loop(g, etype=('ast', 'a_self_loop', 'ast'))
             # g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
             # tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
@@ -120,11 +116,10 @@ def eval_nbl():
             print('error:', key)
             continue
     print(time_list)
-    time_list = np.array(time_list)
-    print('mean:', np.mean(time_list))
-    print('std:', np.std(time_list))
-    print('min:', np.min(time_list))
-    print('max:', np.max(time_list))
+    for m, f in [('mean', np.mean), ('std', np.std),
+            ('min', np.min), ('max', np.max)]:
+        print(f'{m}': f(np.array(time_list)))
+
 
 def eval_codeflaws():
 
@@ -177,9 +172,7 @@ def eval_codeflaws():
                 all_canon_etypes[k] = []
             nx_g = augment_with_reverse_edge_cat(nx_g, nx_ast_etypes, [])
 
-            for u, v, k, e in list(nx_g.edges(keys=True, data=True)):
-                if nx_g.nodes[u]['graph'] == 'cfg' or nx_g.nodes[v]['graph'] == 'cfg':
-                    continue
+            for u, v, k, e in edges_where(nx_g, where_node_not(graph='cfg'), where_node_not(graph='cfg')):
                 map_u = map2id[nx_g.nodes[u]['graph']]
                 map_v = map2id[nx_g.nodes[v]['graph']]
                 all_canon_etypes[
@@ -196,10 +189,7 @@ def eval_codeflaws():
 
             g = dgl.heterograph(all_canon_etypes)
             g.nodes['ast'].data['label'] = ast_labels
-            g.nodes['ast'].data['label'] = ast_labels
             g = dgl.add_self_loop(g, etype=('ast', 'a_self_loop', 'ast'))
-            # g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
-            # tgts = torch.zeros(len(n_cfgs), dtype=torch.long)
             ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
             for node in ast2id:
                 ast_tgts[ast2id[node]] = nx_g.nodes[node]['status']
@@ -212,11 +202,9 @@ def eval_codeflaws():
             print('error:', key)
             continue
     print(time_list)
-    time_list = np.array(time_list)
-    print('mean:', np.mean(time_list))
-    print('std:', np.std(time_list))
-    print('min:', np.min(time_list))
-    print('max:', np.max(time_list))
+    for m, f in [('mean', np.mean), ('std', np.std),
+            ('min', np.min), ('max', np.max)]:
+        print(f'{m}': f(np.array(time_list)))
 
 
 def eval_codeflaws_2():
@@ -242,21 +230,18 @@ def eval_codeflaws_2():
         tic = time.time()
         g = model(g)
         time_list.append(time.time() - tic)
-    time_list = np.array(time_list)
-    print('codeflaws mean:', np.mean(time_list))
-    print('codeflaws std:', np.std(time_list))
-    print('codeflaws min:', np.min(time_list))
-    print('codeflaws max:', np.max(time_list))
+    for m, f in [('mean', np.mean), ('std', np.std),
+            ('min', np.min), ('max', np.max)]:
+        print(f'codeflaws {m}': f(np.array(time_list)))
 
 def eval_nbl_2():
     dataset = NBLGumtreeDGLStatementDataset()
     meta_graph = dataset.meta_graph
 
     model = GCN_A_L_T_1(
-        128, meta_graph,
-        device=device,
-        num_ast_labels=len(dataset.nx_dataset.ast_types),
-        num_classes_ast=2)
+            128, meta_graph, device=device,
+            num_ast_labels=len(dataset.nx_dataset.ast_types),
+            num_classes_ast=2)
 
     model.eval()
     dataset.val()
@@ -271,11 +256,10 @@ def eval_nbl_2():
         tic = time.time()
         g = model(g)
         time_list.append(time.time() - tic)
-    time_list = np.array(time_list)
-    print('nbl mean:', np.mean(time_list))
-    print('nbl std:', np.std(time_list))
-    print('nbl min:', np.min(time_list))
-    print('nbl max:', np.max(time_list))
+    for m, f in [('mean', np.mean), ('std', np.std),
+            ('min', np.min), ('max', np.max)]:
+        print(f'nbl {m}': f(np.array(time_list)))
+
 
 if __name__ == '__main__':
     eval_codeflaws_2()
