@@ -17,103 +17,16 @@ from pycparser.plyparser import ParseError
 
 embedding_model = fasttext.load_model(ConfigClass.pretrained_fastext)
 
-
-class CodeflawsGumtreeNxNodeDataset(object):
-    def __init__(self, raw_dataset_dir=ConfigClass.codeflaws_data_path,
+class CodeflawsGumtreeNxNodeDataset(AstNxDataset):
+    def __init__(self,
                  save_dir=ConfigClass.preprocess_dir_codeflaws):
-        self.save_dir = save_dir
-        self.info_path = os.path.join(
-            save_dir, 'nx_new_gumtree_node_dataset_info.pkl')
+        super().__init__(
+                all_entries=all_codeflaws_keys,
+                process_func=get_nx_ast_node_annt_gumtree,
+                save_dir=save_dir,
+                name='gumtree_node',
+                special_attrs=[]
         self.cfg_etypes = ['parent_child', 'next', 'ref', 'func_call']
-        if self.has_cache():
-            self.load()
-        else:
-            self.process()
-            self.save()
-
-    def __len__(self):
-        return len(self.active_idxs)
-
-    def __getitem__(self, i):
-        idx = self.active_idxs[i]
-        try:
-            nx_g = pkl.load(open(
-                f'{self.save_dir}/nx_new_gumtree_node_{idx}.pkl',
-                'rb'))
-            n_asts = nodes_where(nx_g, graph='ast')
-            assert len(n_asts), "ASSERT ERROR: EMPTY AST"
-            if 'status' not in nx_g.nodes[n_asts[0]]:
-                nx_g = get_nx_ast_node_annt_gumtree(all_codeflaws_keys[idx])
-                pkl.dump(nx_g, open(
-                    f'{self.save_dir}/nx_new_gumtree_node_{idx}.pkl', 'wb')
-                )
-
-        except pkl.UnpicklingError:
-            nx_g = get_nx_ast_node_annt_gumtree(all_codeflaws_keys[idx])
-            pkl.dump(nx_g, open(
-                f'{self.save_dir}/nx_new_gumtree_node_{idx}.pkl', 'wb')
-            )
-        return nx_g
-
-    def process(self):
-        self.ast_types = []
-        self.ast_etypes = []
-        self.keys = []
-        self.active_idxs = []
-        error_instance = []
-        bar = tqdm.tqdm(all_codeflaws_keys)
-        bar.set_description('Loading Nx Data')
-        err_count = 0
-        for i, key in enumerate(bar):
-            try:
-                if not os.path.exists(f'{self.save_dir}/nx_new_gumtree_node_{i}.pkl'):
-                    nx_g = get_nx_ast_node_annt_gumtree(key)
-                    pkl.dump(nx_g, open(
-                        f'{self.save_dir}/nx_new_gumtree_node_{i}.pkl', 'wb')
-                    )
-                else:
-                    nx_g = pkl.load(open(
-                        f'{self.save_dir}/nx_new_gumtree_node_{i}.pkl', 'rb')
-                    )
-            except ParseError:
-                err_count += 1
-                print(f"Total syntax error files: {err_count}")
-                if key not in error_instance:
-                    error_instance.append(key)
-                json.dump(error_instance, open('error_instance_gumtree_node.json', 'w'))
-                continue
-            self.keys.append(key)
-            self.ast_types.extend(
-                [nx_g.nodes[node]['ntype'] for node in nx_g.nodes()
-                 if nx_g.nodes[node]['graph'] == 'ast'])
-            self.active_idxs.append(i)
-
-            self.ast_etypes.extend(
-                [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
-                 if nx_g.nodes[u]['graph'] == 'ast' and
-                 nx_g.nodes[v]['graph'] == 'ast'])
-        self.ast_types = list(set(self.ast_types))
-        self.ast_etypes = list(set(self.ast_etypes))
-
-    def save(self):
-        os.makedirs(self.save_dir, exist_ok=True)
-        # gs is saved somewhere else
-        pkl.dump(
-            {
-                'keys': self.keys,
-                'active_idxs': self.active_idxs,
-                'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes},
-            open(self.info_path, 'wb'))
-
-    def load(self):
-        gs_label = pkl.load(open(self.info_path, 'rb'))
-        self.ast_types = gs_label['ast_types']
-        self.ast_etypes = gs_label['ast_etypes']
-        self.keys = gs_label['keys']
-        self.active_idxs = gs_label['active_idxs']
-
-    def has_cache(self):
-        return os.path.exists(self.info_path)
 
 
 class CodeflawsGumtreeDGLNodeDataset(DGLDataset):
