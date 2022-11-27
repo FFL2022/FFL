@@ -7,6 +7,7 @@ from codeflaws.data_utils import all_codeflaws_keys,\
     get_nx_ast_stmt_annt_gumtree
 from utils.gumtree_utils import GumtreeASTUtils
 from utils.nx_graph_builder import augment_with_reverse_edge_cat
+from utils.data_utils import AstNxDataset
 import os
 import random
 import pickle as pkl
@@ -15,183 +16,30 @@ import torch
 import tqdm
 
 from json import JSONDecodeError
+from utils.data_utils import NxDataset
+
+class CodeflawsGumtreeNxStatementDataset(AstNxDataset):
+    def __init__(self,  save_dir=ConfigClass.preprocess_dir_codeflaws):
+        super().__init__(
+                all_entries=all_codeflaws_keys,
+                process_func=get_nx_ast_stmt_annt_gumtree,
+                save_dir=save_dir,
+                name='gumtree_stmt',
+                special_attrs=[('stmt_nodes', 
+                    lambda nx_g: nodes_where(
+            nx_g, lambda x: GumtreeASTUtils.check_is_stmt_cpp(nx_g.nodes[x]['ntype'], graph='ast')
+            ))]
 
 
-class CodeflawsGumtreeNxStatementDataset(object):
-    def __init__(self, raw_dataset_dir=ConfigClass.codeflaws_data_path,
+class CodeflawsGumtreeNxNodeDataset(AstNxDataset):
+    def __init__(self,
                  save_dir=ConfigClass.preprocess_dir_codeflaws):
-        self.save_dir = save_dir
-        self.info_path = os.path.join(
-            save_dir, 'nx_new_gumtree_stmt_dataset_info.pkl')
-        if self.has_cache():
-            self.load()
-        else:
-            self.process()
-            self.save()
-
-
-    def __len__(self):
-        return len(self.active_idxs)
-
-    def __getitem__(self, i):
-        try:
-            nx_g = pkl.load(open(
-                f'{self.save_dir}/nx_new_gumtree_stmt_{self.active_idxs[i]}.pkl', 'rb'))
-        except UnicodeDecodeError:
-            nx_g = get_nx_ast_stmt_annt_gumtree(all_codeflaws_keys[self.active_idxs[i]])
-            pkl.dump(nx_g,
-                     open(
-                         f'{self.save_dir}/nx_new_gumtree_stmt_{self.active_idxs[i]}.pkl', 'wb')
-                    )
-        return nx_g, self.stmt_nodes[i]
-
-    def process(self):
-        self.ast_types = []
-        self.ast_etypes = []
-        self.stmt_nodes = []
-        self.keys = []
-        self.err_idxs = []
-        self.active_idxs = []
-
-        bar = tqdm.tqdm(list(all_codeflaws_keys))
-        bar.set_description('Loading Nx Data with gumtree')
-        for i, key in enumerate(bar):
-
-            try:
-                if not os.path.exists(f'{self.save_dir}/nx_new_gumtree_stmt_{i}.pkl'):
-                    nx_g = get_nx_ast_stmt_annt_gumtree(key)
-                    pkl.dump(nx_g, open(
-                        f'{self.save_dir}/nx_new_gumtree_stmt_{i}.pkl', 'wb')
-                    )
-                else:
-                    nx_g = pkl.load(open(
-                        f'{self.save_dir}/nx_new_gumtree_stmt_{i}.pkl', 'rb')
-                    )
-            except JSONDecodeError:
-                self.err_idxs.append(i)
-                count = len(self.err_idxs)
-                print(f"Total syntax error files: {count}")
-                continue
-            self.active_idxs.append(i)
-            self.keys.append(key)
-            self.ast_types.extend(
-                [nx_g.nodes[node]['ntype'] for node in nx_g.nodes()
-                 if nx_g.nodes[node]['graph'] == 'ast'])
-            self.ast_etypes.extend(
-                [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
-                 if nx_g.nodes[u]['graph'] == 'ast' and
-                 nx_g.nodes[v]['graph'] == 'ast'])
-            self.stmt_nodes.append(list(
-                [n for n in nx_g.nodes() if
-                 nx_g.nodes[n]['graph'] == 'ast'
-                 and GumtreeASTUtils.check_is_stmt_cpp(nx_g.nodes[n]['ntype'])]
-            ))
-
-        self.ast_types = list(set(self.ast_types))
-        self.ast_etypes = list(set(self.ast_etypes))
-
-    def save(self):
-        os.makedirs(self.save_dir, exist_ok=True)
-        # gs is saved somewhere else
-        pkl.dump(
-            {
-                'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes,
-                'keys': self.keys, 'err_idxs': self.err_idxs,
-                'stmt_nodes': self.stmt_nodes,
-                'active_idxs': self.active_idxs
-            },
-            open(self.info_path, 'wb'))
-
-    def load(self):
-        info_dict = pkl.load(open(self.info_path, 'rb'))
-        self.ast_types = info_dict['ast_types']
-        self.ast_etypes = info_dict['ast_etypes']
-        self.keys = info_dict['keys']
-        self.err_idxs = info_dict['err_idxs']
-        self.stmt_nodes = info_dict['stmt_nodes']
-        self.active_idxs = info_dict['active_idxs']
-
-    def has_cache(self):
-        return os.path.exists(self.info_path)
-
-
-class CodeflawsGumtreeNxNodeDataset(object):
-    def __init__(self, raw_dataset_dir=ConfigClass.codeflaws_data_path,
-                 save_dir=ConfigClass.preprocess_dir_codeflaws):
-        self.save_dir = save_dir
-        self.info_path = os.path.join(
-            save_dir, 'nx_gumtree_node_dataset_info.pkl')
-        if self.has_cache():
-            self.load()
-        else:
-            self.process()
-            self.save()
-
-        self.active_idxs = list(range(len(self.ast_lbs)))
-
-    def __len__(self):
-        return len(self.active_idxs)
-
-    def __getitem__(self, i):
-        return pkl.load(open(
-            f'{self.save_dir}/nx_gumtree_node_{self.active_idxs[i]}', 'rb')),\
-            self.stmt_nodes[self.active_idxs[i]]
-
-    def process(self):
-        self.ast_types = []
-        self.ast_etypes = []
-        self.stmt_nodes = []
-        self.keys = []
-        self.err_idxs = []
-        bar = tqdm.tqdm(list(enumerate(all_codeflaws_keys)))
-        bar.set_description('Loading Nx Data Node level with gumtree')
-        for i, key in bar:
-            try:
-                nx_g = get_nx_ast_stmt_annt_gumtree(key)
-                pkl.dump(nx_g, open(
-                    f'{self.save_dir}/nx_gumtree_node_{i}.pkl', 'wb')
-                )
-            except JSONDecodeError:
-                self.err_idxs.append(i)
-                count = len(self.err_idxs)
-                print(f"Total syntax error files: {count}")
-                continue
-            self.keys.append(key)
-            self.ast_types.extend(
-                [nx_g.nodes[node]['ntype'] for node in nx_g.nodes()
-                 if nx_g.nodes[node]['graph'] == 'ast'])
-            self.ast_etypes.extend(
-                [e['label'] for u, v, k, e in nx_g.edges(keys=True, data=True)
-                 if nx_g.nodes[u]['graph'] == 'ast' and
-                 nx_g.nodes[v]['graph'] == 'ast'])
-            self.stmt_nodes.append(list(
-                [n for n in nx_g.nodes() if
-                 nx_g.nodes[n]['graph'] == 'ast'
-                 and GumtreeASTUtils.check_is_stmt_cpp(nx_g.nodes[n]['ntype'])]
-            ))
-
-        self.ast_types = list(set(self.ast_types))
-        self.ast_etypes = list(set(self.ast_etypes))
-
-    def save(self):
-        os.makedirs(self.save_dir, exist_ok=True)
-        # gs is saved somewhere else
-        pkl.dump(
-            {
-                'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes,
-                'keys': self.keys, 'err_idxs': self.err_idxs
-            },
-            open(self.info_path, 'wb'))
-
-    def load(self):
-        info_dict = pkl.load(open(self.info_dict, 'rb'))
-        self.ast_types = info_dict['ast_types']
-        self.ast_etypes = info_dict['ast_etypes']
-        self.keys = info_dict['keys']
-        self.err_idxs = info_dict['err_idxs']
-
-    def has_cache(self):
-        return os.path.exists(self.info_path)
+        super().__init__(
+                all_entries=all_codeflaws_keys,
+                process_func=get_nx_ast_node_annt_gumtree,
+                save_dir=save_dir,
+                name='gumtree_node',
+                special_attrs=[]
 
 
 class CodeflawsGumtreeDGLStatementDataset(DGLDataset):
