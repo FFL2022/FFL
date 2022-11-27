@@ -6,6 +6,7 @@ from codeflaws.data_utils import get_cfg_ast_cov, all_codeflaws_keys
 from utils.nx_graph_builder import augment_with_reverse_edge_cat
 from graph_algos.nx_shortcuts import nodes_where, where_node_not, \
         edges_where, where_node
+from utils.data_utils import AstNxDataset, del_all_status
 import os
 import random
 import pickle as pkl
@@ -21,109 +22,19 @@ errorneous_keys = json.load(open('error_instance.json', 'r'))
 non_err_keys = [k for k in all_codeflaws_keys if k not in errorneous_keys]
 
 
-class CodeflawsNxDataset(object):
-    def __init__(self, raw_dataset_dir=ConfigClass.codeflaws_data_path,
-                 save_dir=ConfigClass.preprocess_dir_codeflaws):
-        self.save_dir = save_dir
-        self.info_path = os.path.join(
-            save_dir, 'nx_key_only_info.pkl')
+class CodeflawsNxDataset(AstNxDataset):
+    def __init__(self, save_dir=ConfigClass.preprocess_dir_codeflaws):
+        super().__init__(
+                all_entries=all_codeflaws_keys,
+                process_func=lambda k: get_cfg_ast_cov(k)[-1],
+                save_dir=save_dir, name='key_only',
+                special_attrs=[
+                    'ast_lb_d': lambda nx_g: nodes_where(nx_g, graph='ast', status=1),
+                    'ast_lb_i': lambda nx_g: nodes_where(nx_g, graph='ast', status=2),
+                    'cfg_lb': lambda nx_g: nodes_where(nx_g, graph='cfg', status=1)], post_process_func=del_all_status)
         self.cfg_etypes = ['parent_child', 'next', 'ref', 'func_call']
-        if self.has_cache():
-            self.load()
-        else:
-            self.process()
-            self.save()
 
-    def __len__(self):
-        return len(self.active_idxs)
-
-    def __getitem__(self, i):
-        idx = self.active_idxs[i]
-        try:
-            nx_g = pkl.load(open(f'{self.save_dir}/nx_keyonly_{idx}', 'rb'))
-        except:
-            _, _, _, _, _, nx_g = get_cfg_ast_cov(all_codeflaws_keys[idx])
-            ast_lb_d = nodes_where(nx_g, graph='ast', status=1)
-            ast_lb_i = nodes_where(nx_g, graph='ast', status=2)
-            cfg_lb = nodes_where(nx_g, graph='cfg', status=1)
-            n_asts, n_cfgs = nodes_where(nx_g, graph='ast'), nodes_where(nx_g, graph='cfg')
-            for n in n_asts:
-                del nx_g.nodes[n]['status']
-            for n in n_cfgs:
-                del nx_g.nodes[n]['status']
-            pkl.dump(nx_g, open(f"{self.save_dir}/nx_keyonly_{idx}", 'wb'))
-        return nx_g, self.ast_lbs_d[i], self.ast_lbs_i[i], self.cfg_lbs[i]
-
-    def process(self):
-        self.ast_types = []
-        self.ast_etypes = []
-        self.ast_lbs_i = []
-        self.ast_lbs_d = []
-        self.cfg_lbs = []
-        self.keys = []
-        self.active_idxs = []
-        error_instance = []
-        bar = tqdm.tqdm(enumerate(all_codeflaws_keys))
-        bar.set_description('Loading Nx Data')
-        err_count = 0
-        for i, key in bar:
-            try:
-                if os.path.exists(f'{self.save_dir}/nx_keyonly_{i}'):
-                    nx_g = pkl.load(open(f'{self.save_dir}/nx_keyonly_{i}',
-                                         'rb'))
-                else:
-                    _, _, _, _, _, nx_g = get_cfg_ast_cov(key)
-                ast_lb_d = nodes_where(nx_g, graph='ast', status=1)
-                ast_lb_i = nodes_where(nx_g, graph='ast', status=2)
-                for n in nodes_where(nx_g, graph='ast'):
-                    del nx_g.nodes[n]['status']
-                cfg_lb = nodes_where(nx_g, graph='cfg', status=1)
-                for n in nodes_where(nx_g, graph='cfg'):
-                    del nx_g.nodes[n]['status']
-                pkl.dump(nx_g, open(f"{self.save_dir}/nx_keyonly_{i}", 'wb'))
-            except ParseError:
-                err_count += 1
-                print(f"Total syntax error files: {err_count}")
-                if key not in error_instance:
-                    error_instance.append(key)
-                json.dump(error_instance, open('error_instance.json', 'w'))
-                continue
-            self.keys.append(key)
-            self.ast_types.extend(nodes_where(nx_g, graph='ast'))
-            self.active_idxs.append(i)
-            self.ast_lbs_i.append(ast_lb_i)
-            self.ast_lbs_d.append(ast_lb_d)
-            self.cfg_lbs.append(cfg_lb)
-
-            self.ast_etypes.extend(
-                [x[-1]['label'] for x in edges_where(nx_g, where_node(graph='ast'), graph='ast')])
-        self.ast_types = list(set(self.ast_types))
-        self.ast_etypes = list(set(self.ast_etypes))
-
-    def save(self):
-        os.makedirs(self.save_dir, exist_ok=True)
-        # gs is saved somewhere else
-        pkl.dump(
-            {'ast_lb_d': self.ast_lbs_d, 'ast_lb_i': self.ast_lbs_i,
-             'cfg_lb': self.cfg_lbs, 'keys': self.keys,
-             'active_idxs': self.active_idxs, 'ast_types': self.ast_types,
-             'ast_etypes': self.ast_etypes},
-            open(self.info_path, 'wb'))
-
-    def load(self):
-        gs_label = pkl.load(open(self.info_path, 'rb'))
-        self.ast_types = gs_label['ast_types']
-        self.ast_etypes = gs_label['ast_etypes']
-        self.ast_lbs_d = gs_label['ast_lb_d']
-        self.ast_lbs_i = gs_label['ast_lb_i']
-        self.cfg_lbs = gs_label['cfg_lb']
-        self.keys = gs_label['keys']
-        self.active_idxs = gs_label['active_idxs']
-
-    def has_cache(self):
-        return os.path.exists(self.info_path)
-
-
+    
 class CodeflawsFullDGLDataset(DGLDataset):
     def __init__(self, raw_dir=ConfigClass.codeflaws_data_path,
                  save_dir=ConfigClass.preprocess_dir_codeflaws):

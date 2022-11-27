@@ -34,13 +34,15 @@ class NxDataset(Sequence):
 
 class AstNxDataset(NxDataset):
     def __init__(self, all_entries, process_func, save_dir, name,
-            special_attrs: List[Tuple[str, Callable[[nx.Graph], None]]]):
+            special_attrs: List[Tuple[str, Callable[[nx.Graph], None]]],
+            post_process_func=None):
         self.save_dir = save_dir
         self.info_path = f"{save_dir}/nx_{name}_info.pkl"
         self.name = name
         self.process_func = process_func
         self.all_entries = all_entries
         self.special_attrs = special_attrs
+        self.post_process_func=post_process_func
         for k, _ in self.special_attrs:
             setattr(self, k, [])
         super().__init__()
@@ -57,6 +59,9 @@ class AstNxDataset(NxDataset):
                 f'{self.save_dir}/nx_{self.name}_{self.active_idxs[i]}.pkl', 'rb'))
         except UnicodeDecodeError:
             nx_g = self.process_func(self.all_entries[self.active_idxs[i])
+            if self.post_process_func:
+                nx_g = post_process_func(nx_g)
+                
             pkl.dump(
                 nx_g,
                 open(f'{self.save_dir}/nx_{self.name}_{self.active_idxs[i]}.pkl',
@@ -100,13 +105,8 @@ class AstNxDataset(NxDataset):
 
     def load(self):
         info_dict = pkl.load(open(self.info_path, 'rb'))
-        self.ast_types = info_dict['ast_types']
-        self.ast_etypes = info_dict['ast_etypes']
-        self.keys = info_dict['keys']
-        self.err_idxs = info_dict['err_idxs']
-        self.active_idxs = info_dict['active_idxs']
-        for k, _ in self.special_attrs:
-            setattr(self, k, info_dict[k])
+        for k, v in info_dict.items():
+            setattr(self, k, v)
 
     def save(self):
         os.makedirs(self.save_dir, exist_ok=True)
@@ -157,3 +157,13 @@ def split_nx_dataset(nx_dataset: NxDataset,
         return out
     return NxDataloader(nx_dataset, idxs[:int(ratio*N)]),\
         NxDataloader(nx_dataset, idxs[int(N*ratio):])
+
+
+def del_all_status(nx_g):
+    n_asts, n_cfgs = nodes_where(nx_g, graph='ast'), nodes_where(nx_g, graph='cfg')
+    for n in n_asts:
+        del nx_g.nodes[n]['status']
+    for n in n_cfgs:
+        del nx_g.nodes[n]['status']
+    return nx_g
+

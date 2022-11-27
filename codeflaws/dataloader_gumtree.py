@@ -22,8 +22,7 @@ from json import JSONDecodeError
 from utils.data_utils import NxDataset
 
 class CodeflawsGumtreeNxStatementDataset(AstNxDataset):
-    def __init__(self, save_dir=ConfigClass.preprocess_dir_codeflaws):
-        super().__init__(
+    def __init__(self, save_dir=ConfigClass.preprocess_dir_codeflaws): super().__init__(
                 all_entries=all_codeflaws_keys,
                 process_func=get_nx_ast_stmt_annt_gumtree,
                 save_dir=save_dir,
