@@ -8,21 +8,16 @@ import os
 import pickle as pkl
 import tqdm
 from pycparser.plyparser import ParseError
-from utils.data_utils import NxDataset
+from utils.data_utils import AstNxDataset
 
 
-class CodeflawsCFLNxStatementDataset(NxDataset):
-    def __init__(self, raw_dataset_dir=ConfigClass.codeflaws_data_path,
-                 save_dir=ConfigClass.preprocess_dir_codeflaws):
-        self.save_dir = save_dir
-        self.info_path = f"{save_dir}/nx_cfl_stmt_dataset_info.pkl"
-        self.name = 'cfl_stmt'
-        self.process_func = get_nx_ast_stmt_annt_cfl
-        self.special_attrs = ('stmt_nodes', nodes_where(
+class CodeflawsCFLNxStatementDataset(AstNxDataset):
+    def __init__(self, save_dir=ConfigClass.preprocess_dir_codeflaws):
+        super().__init__(all_codeflaws_keys, get_nx_ast_stmt_annt_cfl,
+                save_dir, 'cfl_stmt', [('stmt_nodes', nodes_where(
                     nx_g,
                     lambda x: cfl_check_is_stmt_cpp(nx_g.nodes[x]),
-                    graph='ast')
-        super().__init__()
+                    graph='ast')]
 
        
 class CodeflawsCFLStatementGraphMetadata(object):
