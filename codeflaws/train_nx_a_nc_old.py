@@ -25,27 +25,16 @@ def train(model, dataloader, n_epochs, start_epoch=0):
     # mean_acc = AverageMeter()
     mean_ast_loss = AverageMeter()
     mean_ast_acc = AverageMeter()
-
-    top_1_meter = AverageMeter()
-    top_3_meter = AverageMeter()
-    top_5_meter = AverageMeter()
-    top_10_meter = AverageMeter()
-
+    tops = {
+        t: AverageMeter() for t in ['top_1', 'top_3',
+                                    'top_5', 'top_10']}
     f1_meter = KFullMeter(3)
     best_f1 = 0.0
     # model.load_state_dict(torch.load("trained/model_27.pth"))
     # eval(model, dataloader)
     for epoch in range(n_epochs):
-        dataloader.train()
-        # mean_loss.reset()
-        mean_ast_loss.reset()
-        mean_ast_acc.reset()
-        # mean_acc.reset()
-        f1_meter.reset()
-        top_10_meter.reset()
-        top_5_meter.reset()
-        top_3_meter.reset()
-        top_1_meter.reset()
+        for m in list(tops.values()) + [mean_ast_acc, mean_ast_loss, f1_meter]:
+            m.reset()
 
         model.train()
         bar = tqdm.trange(len(dataloader))
@@ -54,24 +43,14 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             g = dataloader[i]
             if g is None:
                 continue
-            # LB will be preprocessed to have
-            # lb = g.nodes['cfg'].data['tgt']
-
-            # non_zeros_lbs = torch.nonzero(lb)
 
             g = g.to(device)
             ast_lb = g.nodes['ast'].data['tgt']
-            # lb = lb.to(device)
             g = model(g)
-
             non_zeros_ast_lbs = torch.nonzero(ast_lb).detach()
             ast_lbidxs = torch.flatten(
                 non_zeros_ast_lbs).detach().cpu().tolist()
-            # 2 scenario:
-            # not using master node
-            # logits = g.nodes['cfg'].data['logits']
-            # using master node, TODO: To be implemented
-            # cfg_loss = F.cross_entropy(logits, lb)
+            
             ast_loss = F.cross_entropy(g.nodes['ast'].data['logits'], ast_lb)
             loss = ast_loss
             opt.zero_grad()
@@ -80,10 +59,6 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             ast_lb = ast_lb.detach().cpu()
 
             if non_zeros_ast_lbs.shape[0] == 0:
-                '''
-                del g
-                torch.cuda.empty_cache()
-                '''
                 continue
             # loss = cfg_loss + 0.5 * ast_loss
 
@@ -94,64 +69,31 @@ def train(model, dataloader, n_epochs, start_epoch=0):
 
             # ALl bugs vs not bugs count
             preds = - g.nodes['ast'].data['pred'][:, 0].detach().cpu()
-            k = min(g.number_of_nodes('ast'), 10)
-            _, indices = torch.topk(preds, k)
-            top_10_val = indices[:k].tolist()
-            top_10_meter.update(
-                int(any([idx in ast_lbidxs for idx in top_10_val])), 1)
+            for k, meter in [(k, f'top_{k}') for k in [10, 5, 3, 1]]:
+                k = min(stmt_nodes.shape[0], k)
+                _, indices = torch.topk(preds, k)
+                topk_val = indices[:k].tolist()
+                tops[k].update(int(any([i in ast_lbidxs for i in topk_val])), 1)
 
-            k = min(g.number_of_nodes('ast'), 5)
-            top_5_val = indices[:k].tolist()
-            top_5_meter.update(
-                int(any([idx in ast_lbidxs for idx in top_5_val])), 1)
-
-            k = min(g.number_of_nodes('ast'), 3)
-            top_3_val = indices[:k].tolist()
-            top_3_meter.update(
-                int(any([idx in ast_lbidxs for idx in top_3_val])), 1)
-
-            k = min(g.number_of_nodes('ast'), 1)
-            top_1_val = indices[:k].tolist()
-            top_1_meter.update(int(top_1_val[0] in ast_lbidxs), 1)
 
             # mean_loss.update(cfg_loss.item(), g.number_of_nodes('ast'))
             mean_ast_loss.update(ast_loss.item(), g.number_of_nodes('ast'))
-            '''
-            mean_acc.update(
-                torch.sum(cal == lb).item()/g.number_of_nodes('ast'),
-                g.number_of_nodes('ast'))
-            '''
             mean_ast_acc.update(
                 torch.sum(ast_cal == ast_lb).item()/g.number_of_nodes('ast'),
                 g.number_of_nodes('ast'))
             f1_meter.update(ast_cal, ast_lb)
-            '''
-            del g
-            torch.cuda.empty_cache()
-            '''
-
             bar.set_postfix(ast_loss=ast_loss.item(), acc=mean_ast_acc.avg)
 
         if epoch % ConfigClass.print_rate == 0:
-            out_dict = {}
-            out_dict['top_1'] = top_1_meter.avg
-            out_dict['top_3'] = top_3_meter.avg
-            out_dict['top_5'] = top_5_meter.avg
-            out_dict['top_10'] = top_10_meter.avg
-            out_dict['mean_acc'] = mean_ast_acc.avg
-            out_dict['mean_loss'] = mean_ast_loss.avg
-            out_dict['mean_ast_acc'] = mean_ast_acc.avg
-            out_dict['mean_ast_loss'] = mean_ast_loss.avg
-            out_dict['f1'] = f1_meter.get()
+            out_dict = {
+            'mean_acc': avg_acc.avg, 'mean_loss': avg_loss.avg,
+            'mean_ast_acc': avg_acc.avg, 'mean_ast_loss': avg_loss.avg,
+            **tops,
+            'f1': f1_meter.get()
             with open(ConfigClass.result_dir_codeflaws +
                       '/training_dict_e{}.json'.format(epoch), 'w') as f:
                 json.dump(out_dict, f, indent=2)
-            print(f"loss: {mean_ast_loss.avg}, acc: {mean_ast_acc.avg}, " +
-                  f"top 10 acc: {top_10_meter.avg}, " +
-                  f"top 5 acc: {top_5_meter.avg}, " +
-                  f"top 3 acc {top_3_meter.avg}" +
-                  f"top 1 acc {top_1_meter.avg}")
-            print(f1_meter.get())
+            print(out_dict)
         if epoch % ConfigClass.save_rate == 0:
             l_eval, acc_eval, f1_eval = eval(model, dataloader, epoch)
             if f1_eval != "unk":
@@ -205,10 +147,10 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw=False):
 
     os.makedirs(f'images_{epoch}', exist_ok=True)
     f1_meter = BinFullMeter()
-    top_1_meter = AverageMeter()
-    top_3_meter = AverageMeter()
-    top_5_meter = AverageMeter()
-    top_10_meter = AverageMeter()
+    tops = {
+        t: AverageMeter() for t in ['top_1', 'top_3',
+                                    'top_5', 'top_10']}
+
     model.eval()
     out_dict = {}
     line_mapping = {}
@@ -216,10 +158,8 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw=False):
         line_mapping = pkl.load(open('preprocessed/codeflaws_line_mapping.pkl', 'rb'))
     # Line mapping: index -> ast['line']
     f1_meter.reset()
-    top_1_meter.reset()
-    top_3_meter.reset()
-    top_5_meter.reset()
-    top_10_meter.reset()
+    for v in tops.values():
+        v.reset()
     line_mapping_changed = False
     for i in tqdm.trange(len(dataloader)):
         real_idx = dataloader.active_idxs[i]
@@ -280,29 +220,15 @@ def eval_by_line(model, dataloader, epoch, mode='val', draw=False):
         if non_zeros_lbs.shape[0] == 0:
             continue
         lbidxs = torch.flatten(non_zeros_lbs).tolist()
-        k = min(len(all_lines), 10)
-        _, indices = torch.topk(line_score_tensor, k)
-        top_10_val = indices[:k].tolist()
-        top_10_meter.update(int(any([idx in lbidxs
-                                     for idx in top_10_val])), 1)
-
-        k = min(len(all_lines), 5)
-        top_5_val = indices[:k].tolist()
-        top_5_meter.update(int(any([idx in lbidxs for idx in top_5_val])), 1)
-
-        k = min(len(all_lines), 2)
-        top_3_val = indices[:k].tolist()
-        top_3_meter.update(int(any([idx in lbidxs for idx in top_3_val])), 1)
-
-        k = min(len(all_lines), 1)
-        top_1_val = indices[:k].tolist()
-        top_1_meter.update(int(top_1_val[0] in lbidxs), 1)
+        for k, meter in [(k, f'top_{k}') for k in [10, 5, 3, 1]]:
+            k = min(stmt_nodes.shape[0], k)
+            _, indices = torch.topk(line_score_tensor, k)
+            topk_val = indices[:k].tolist()
+            tops[k].update(int(any([i in ast_lbidxs for i in topk_val])), 1)
         f1_meter.update(line_pred_tensor, line_tgt_tensor)
 
-    out_dict['top_1'] = top_1_meter.avg
-    out_dict['top_3'] = top_3_meter.avg
-    out_dict['top_5'] = top_5_meter.avg
-    out_dict['top_10'] = top_10_meter.avg
+    for k, v in tops:
+        out_dict[k] = v.avg()
     out_dict['f1'] = f1_meter.get()
     print(out_dict)
     with open(ConfigClass.result_dir_codeflaws +
@@ -324,10 +250,9 @@ def eval(model, dataloader, epoch, mode='val'):
     mean_ast_loss = AverageMeter()
     mean_ast_acc = AverageMeter()
     f1_meter = KFullMeter(3)
-    top_1_meter = AverageMeter()
-    top_3_meter = AverageMeter()
-    top_5_meter = AverageMeter()
-    top_10_meter = AverageMeter()
+    tops = {t: AverageMeter()
+            for t in ['top_1', 'top_3', 'top_5', 'top_10']}
+
     model.eval()
     out_dict = {}
     for i in tqdm.trange(len(dataloader)):

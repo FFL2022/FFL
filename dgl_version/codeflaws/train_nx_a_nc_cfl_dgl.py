@@ -33,7 +33,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
     for epoch in range(n_epochs):
         dataloader.train()
         model.train()
-        for m in tops.values()::
+        for m in list(tops.values()) + [mean_ast_acc, mean_ast_loss, f1_rec]:
             m.reset()
 
         bar = tqdm.trange(len(dataloader))
