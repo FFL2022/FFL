@@ -21,7 +21,8 @@ class CodeflawsASTDGLDataset(CodeDGLDataset):
                  mode, 
                  save_dir=ConfigClass.preprocess_dir_codeflaws):
         self.name = f"{mode}_codeflaws_dgl_ast"
-        super().__init__(dataloader, meta_data, self.name, save_dir)
+        super().__init__(dataloader, meta_data, self.name, save_dir,
+                convert_arg_func=lambda x: embedding_model, *x)
         self.cfg_content_dim = self.gs[0].nodes['cfg'].data['content'].shape[-1]
         self.ast_content_dim = self.gs[0].nodes['ast'].data['content'].shape[-1]
 
@@ -52,30 +53,14 @@ class CodeflawsASTDGLDataset(CodeDGLDataset):
 
         return g
 
-    def process(self):
-        self.meta_graph = self.meta_data.meta_graph
-        self.gs = []
-        bar = tqdm.tqdm(enumerate(self.dataloader))
-        bar.set_description("Converting NX to DGL")
-        for i, (nx_g, ast_lb_d, ast_lb_i, cfg_lb) in bar:
-            g = self.convert_from_nx_to_dgl(embedding_model, nx_g, ast_lb_d,
-                                            ast_lb_i, cfg_lb)
-            self.gs.append(g)
-
 
 class CodeflawsFullDGLDataset(CodeDGLDataset):
     def __init__(self, dataloader, meta_data, mode, save_dir=ConfigClass.preprocess_dir_codeflaws):
         self.name = f'{mode}_cf_full_dgl'
-        super().__init__(dataloader, meta_data, self.name, save_dir)
+        super().__init__(dataloader, meta_data, self.name, save_dir,
+                convert_arg_func=lambda x: embedding_model, *x)
         self.cfg_content_dim = self.gs[0].nodes['cfg'].data['content'].shape[-1]
         self.ast_content_dim = self.gs[0].nodes['ast'].data['content'].shape[-1]
-
-    def load(self):
-        self.gs = load_graphs(self.graph_save_path)[0]
-        self.meta_graph = self.meta_data.meta_graph()
-        info_dict = pkl.load(open(self.info_path, 'rb'))
-        for k, v in info_dict.items():
-            setattr(self, k, v)
 
     def convert_from_nx_to_dgl(self, embedding_model, nx_g, ast_lb_d,
                                ast_lb_i, cfg_lb):
@@ -110,14 +95,3 @@ class CodeflawsFullDGLDataset(CodeDGLDataset):
         tgts[list(map(lambda x: cfg2id[x], cfg_lb))] = 1
         g.nodes['cfg'].data['tgt'] = tgts
         return g
-
-    def process(self):
-        self.meta_graph = self.meta_data.meta_graph()
-        self.gs = []
-        bar = tqdm.tqdm(enumerate(self.dataloader))
-        bar.set_description("Converting NX to DGL")
-        for i, (nx_g, ast_lb_d, ast_lb_i, cfg_lb) in bar:
-            g = self.convert_from_nx_to_dgl(
-                    embedding_model, nx_g, ast_lb_d,
-                    ast_lb_i, cfg_lb)
-            self.gs.append(g)
