@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from codeflaws.dataloader_key_only import CodeflawsFullDGLDataset
 from codeflaws.dataloader_gumtree_node import CodeflawsGumtreeDGLNodeDataset
 from graph_algos.nx_shortcuts import nodes_where
-from model import GCN_A_L_T_1
+from dgl_version.model import GCN_A_L_T_1
 from utils.utils import ConfigClass
 from utils.draw_utils import ast_to_agraph
 import tqdm

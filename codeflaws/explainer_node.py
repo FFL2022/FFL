@@ -1,6 +1,6 @@
 from codeflaws.dataloader_gumtree_node import CodeflawsGumtreeDGLNodeDataset
 from utils.explain_utils import map_explain_with_nx
-from model import GCN_A_L_T_1
+from dgl_version.model import GCN_A_L_T_1
 from utils.draw_utils import ast_to_agraph
 
 import torch.nn.functional as F

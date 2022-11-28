@@ -4,7 +4,7 @@ import os
 import torch.nn.functional as F
 from codeflaws.dataloader_key_only import (
     CodeflawsFullDGLDataset, non_err_keys)
-from model import GCN_A_L_T_1
+from dgl_version.model import GCN_A_L_T_1
 from utils.utils import ConfigClass
 from graph_algos.nx_shortcuts import nodes_where
 from codeflaws.data_utils import key2bugfile

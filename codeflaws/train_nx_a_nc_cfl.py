@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import numpy as np
 from codeflaws.dataloader_cfl import CodeflawsCFLDGLStatementDataset
 
-from model import GCN_A_L_T_1
+from dgl_version.model import GCN_A_L_T_1
 import pandas as pd
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

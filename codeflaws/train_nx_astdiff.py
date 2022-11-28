@@ -3,7 +3,7 @@ import torch
 import os
 import torch.nn.functional as F
 from codeflaws.dataloader_key_only import CodeflawsFullDGLDataset
-from model import HeteroMPNNPredictor1TestNodeType
+from dgl_version.model import HeteroMPNNPredictor1TestNodeType
 from graph_algos.nx_shortcuts import nodes_where
 from utils.utils import ConfigClass
 from utils.draw_utils import ast_to_agraph

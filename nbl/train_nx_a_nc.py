@@ -3,7 +3,7 @@ import torch
 import os
 import torch.nn.functional as F
 from nbl.dataloader_key_only import NBLFullDGLDataset
-from model import GCN_A_L_T_1
+from dgl_version.model import GCN_A_L_T_1
 from utils.utils import ConfigClass
 from utils.draw_utils import ast_to_agraph
 import tqdm

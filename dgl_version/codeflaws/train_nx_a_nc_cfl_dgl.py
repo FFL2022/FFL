@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import numpy as np
 from dgl_version.codeflaws.dataloader_cfl_dgl import CodeflawsCFLDGLStatementDataset
 
-from model import GCN_A_L_T_1
+from dgl_version.model import GCN_A_L_T_1
 import pandas as pd
 from utils.common import device
 

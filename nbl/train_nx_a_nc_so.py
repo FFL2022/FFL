@@ -4,7 +4,7 @@ import os
 import torch.nn.functional as F
 from nbl.dataloader_key_only import NBLASTDGLDataset
 from graph_algos.nx_shortcuts import nodes_where
-from model import GCN_A_L
+from dgl_version.model import GCN_A_L
 from utils.utils import ConfigClass
 from utils.draw_utils import ast_to_agraph
 import tqdm

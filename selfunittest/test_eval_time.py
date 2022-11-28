@@ -13,7 +13,7 @@ import random
 import pickle as pkl
 import torch
 import tqdm
-from model import GCN_A_L_T_1
+from dgl_version.model import GCN_A_L_T_1
 import time
 import numpy as np
 from codeflaws.dataloader_gumtree import CodeflawsGumtreeDGLStatementDataset
