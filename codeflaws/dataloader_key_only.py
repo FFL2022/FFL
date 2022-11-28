@@ -11,13 +11,12 @@ import os
 import random
 import pickle as pkl
 import json
-import fasttext
 import torch
 import tqdm
 from collections import defaultdict
 from pycparser.plyparser import ParseError
 
-embedding_model = fasttext.load_model(ConfigClass.pretrained_fastext)
+from utils.embedding_model import embedding_model
 errorneous_keys = json.load(open('error_instance.json', 'r'))
 non_err_keys = [k for k in all_codeflaws_keys if k not in errorneous_keys]
 

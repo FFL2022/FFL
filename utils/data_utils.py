@@ -167,3 +167,38 @@ def del_all_status(nx_g):
         del nx_g.nodes[n]['status']
     return nx_g
 
+
+
+class AstGraphMetadata(object):
+    def __init__(self, nx_g_dataset):
+        self.t_asts = nx_g_dataset.ast_types
+        self.ntype2id = {n: i for i, n in enumerate(self.t_asts)}
+        self.t_e_asts = nx_g_dataset.ast_etypes
+        if 'cfg_etypes' in nx_g_dataset.__dict__:
+            self.t_e_cfgs = nx_g_dataset.cfg_etypes
+        self.meta_graph = self.construct_edge_metagraph()
+
+    def construct_edge_metagraph(self):
+        self.t_e_a_a = self.t_e_asts + \
+            list(map(lambda x: f'{x}_reverse', self.t_e_asts))
+        if 't_e_cfgs' in self.__dict__:
+            self.t_e_c_c = self.t_e_cfgs  + ['c_self_loop'] + \
+                [et + '_reverse' for et in self.t_e_cfgs]
+            self.t_e_c_a = ['corresponding_ast']
+            self.t_e_a_c = ['corresponding_cfg']
+            self.t_e_c_t = ['c_pass_test', 'c_fail_test']
+            self.t_e_t_c = ['t_pass_c', 't_fail_c']
+
+        self.t_e_a_t = ['a_pass_t', 'a_fail_t']
+        self.t_e_t_a = ['t_pass_a', 't_fail_a']
+        self.t_all = (self.t_e_a_a + self.t_e_a_t + self.t_e_t_a)
+        self.srcs = ['ast'] * len(self.t_e_a_a) +\
+            ['ast'] * len(self.t_e_a_t) + ['test'] * len(self.t_e_t_a)
+        self.dsts = ['ast'] * len(self.t_e_a_a) +\
+            ['test'] * len(self.t_e_a_t) + ['ast'] * len(self.t_e_t_a)
+        if 't_e_cfgs' in self.__dict__:
+            self.t_all += (self.t_e_c_c + self.t_e_c_a + self.t_e_a_c + self.t_e_c_t + self.t_e_t_c)
+            self.srcs += ['cfg', 'cfg', 'ast', 'cfg', 'test']
+            self.dsts += ['cfg', 'ast', 'cfg', 'test', 'cfg']
+
+        return list(zip(self.srcs, self.t_all, self.dsts))

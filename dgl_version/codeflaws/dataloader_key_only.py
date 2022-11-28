@@ -28,7 +28,6 @@ class CodeflawsASTDGLDataset(CodeDGLDataset):
         
         g = dgl.heterograph(all_canon_etypes)
         g = dgl.add_self_loop(g, etype=('ast', 'a_self_loop', 'ast'))
-        # g = dgl.add_self_loop(g, etype=('cfg', 'c_self_loop', 'cfg'))
         ast_tgts = torch.zeros(len(n_asts), dtype=torch.long)
         ast_tgts[list(map(lambda n: ast2id[n], ast_lb_d))] = 1
         ast_tgts[list(map(lambda n: ast2id[n], ast_lb_i))] = 2
