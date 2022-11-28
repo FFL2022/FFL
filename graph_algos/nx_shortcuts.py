@@ -9,14 +9,14 @@ import inspect
 def where_node(*filter_funcs, **kwargs):
     if len(filter_func) == 0 and len(kwargs) == 0:
         return lambda nx_g, x: True
-    lambdas = [(lambda nx_g, x: nx_g.nodes[x][k] == v) for k, v in kwargs.items()]
+    lambdas = [(lambda nx_g, x: nx_g.nodes[x][k] == v) if not isinstance(v, list) else (lambda nx_g, x: nx_g.nodes[x][k] in v) for k, v in kwargs.items()]
     lambda_f = lambda x: all(f(x) for f in filter_funcs)
     lambda_final = lambda nx_g, x: all(l(nx_g, x) for l in lambdas) and lambda_f(x)
     return lambda_final
 
 
 def where_node_not(*filter_funcs, **kwargs):
-    lambdas = [(lambda nx_g, x: nx_g.nodes[x][k] == v) for k, v in kwargs.items()]
+    lambdas = [(lambda nx_g, x: nx_g.nodes[x][k] == v) if not isinstance(v, list) else (lambda nx_g, x: nx_g.nodes[x][k] not in v) for k, v in kwargs.items()]
     lambda_f = lambda x: not any(f(x) for f in filter_funcs)
     lambda_final = lambda nx_g, x: (not any(l(nx_g, x) for l in lambdas)) and lambda_f(x)
     return lambda_final
