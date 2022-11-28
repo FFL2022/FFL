@@ -3,8 +3,7 @@ from dgl import save_graphs, load_graphs
 import dgl
 from utils.utils import ConfigClass
 from codeflaws.data_utils import all_codeflaws_keys,\
-    get_nx_ast_node_annt_gumtree,\
-    get_nx_ast_stmt_annt_gumtree
+    get_nx_ast_node_annt_gumtree, get_nx_ast_stmt_annt_gumtree
 from utils.gumtree_utils import GumtreeASTUtils
 from utils.data_utils import AstNxDataset, AstGraphMetadata
 from graph_algos.nx_shortcuts import nodes_where, edges_where,\
