@@ -9,11 +9,12 @@ import tqdm
 import torch
 import torch.nn.functional as F
 import numpy as np
-from dgl_version.codeflaws.dataloader_cfl_dgl import CodeflawsCFLDGLStatementDataset
-
+from dgl_version.dataloader_cfl_dgl import CFLDGLStatementDataset
 from dgl_version.model import GCN_A_L_T_1
+from codeflaws.dataloader_cfl import CodeflawsCFLNxStatementDataset, AstGraphMetadata
 import pandas as pd
 from utils.common import device
+import argparse
 
 
 def train(model, dataloader, n_epochs, start_epoch=0):
@@ -23,12 +24,11 @@ def train(model, dataloader, n_epochs, start_epoch=0):
     mean_ast_acc = AverageMeter()
 
     tops = {
-        t: AverageMeter() for t in ['top_1', 'top_2',
-                                    'top_5', 'top_10']}
+        t: AverageMeter() for t in ['top_1', 'top_2', 'top_5', 'top_10']}
 
     f1_rec = BinFullMeter()
-    bests = {k: v for k, v in zip(['f1', 'top_1', 'top_2', 'top_5', 'top_10'], [0.0]*6)}
-    bests_train = {k: v for k, v in zip(['f1', 'top_1', 'top_2', 'top_5', 'top_10'], [0.0]*6)}
+    bests = {k: v for k, v in zip(['f1', *tops], [0.0]*(len(tops)+1)}
+    bests_train = {k: v for k, v in zip(['f1', *tops], [0.0]*(len(tops)+1)}
 
     for epoch in range(n_epochs):
         dataloader.train()
@@ -90,7 +90,7 @@ def train(model, dataloader, n_epochs, start_epoch=0):
             'f1': f1_meter.get()
         }
 
-        for k in ['top_1', 'top_2', 'top_5', 'top_10']:
+        for k in tops:
             bests_train[k] = max(tops[k].avg, bests_train[k].avg)
         if f1_rec.get()['aux_f1'] != 'unk':
             best_f1_train = max(best_f1_train, f1_rec.get()['aux_f1'])
@@ -197,15 +197,15 @@ if __name__ == '__main__':
     meta_graph = dataset.meta_graph
     meta_data = CodeflawsCFLStatementGraphMetadata(nx_dataset)
     train_nxs, val_nxs, test_nxs = split_nx_dataset(nx_dataset, [0.6, 0.2, 0.2])
-    train_dgl_dataset = CodeflawsCFLDGLStatementDataset(
+    train_dgl_dataset = CFLDGLStatementDataset(
         dataloader=train_nxs, meta_data=meta_data,
-        name='train_dgl_cfl_stmt')
+        name='train_codeflaws_cfl_stmt')
     val_dgl_dataset = CodeflawsCFLDGLStatementDataset(
         dataloader=val_nxs, meta_data=meta_data,
-        name='val_dgl_cfl_stmt')
+        name='train_codeflaws_cfl_stmt')
     test_dgl_dataset = CodeflawsCFLSDGLStatementDataset(
         dataloader=test_nxs, meta_data=meta_data,
-        name='test_dgl_cfl_stmt')
+        name='train_codefaws_cfl_stmt')
     model = GCN_A_L_T_1(
         128, meta_graph,
         device=device,
