@@ -1,7 +1,7 @@
 from dgl_version.codeflaws.dataloader_key_only_old import *
 
 class ASTDGLDataset(CodeDGLDataset):
-    def __init__(self, raw_dir=ConfigClass.codeflaws_data_path,
+    def __init__(self, dataloader, metadata, name,
                  save_dir=ConfigClass.preprocess_dir_codeflaws):
         self.name = f'{name}_ast_only_dgl'
         super().__init__(dataloader, meta_data, self.name, save_dir,

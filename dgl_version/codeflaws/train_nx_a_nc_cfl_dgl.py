@@ -194,7 +194,6 @@ def eval(model, dataloader, epoch):
 
 if __name__ == '__main__':
     dataset = CodeflawsCFLDGLStatementDataset()
-    meta_graph = dataset.meta_graph
     meta_data = CodeflawsCFLStatementGraphMetadata(nx_dataset)
     train_nxs, val_nxs, test_nxs = split_nx_dataset(nx_dataset, [0.6, 0.2, 0.2])
     train_dgl_dataset = CFLDGLStatementDataset(
@@ -207,7 +206,7 @@ if __name__ == '__main__':
         dataloader=test_nxs, meta_data=meta_data,
         name='train_codefaws_cfl_stmt')
     model = GCN_A_L_T_1(
-        128, meta_graph,
+        128, meta_data.meta_graph,
         device=device,
         num_ast_labels=len(dataset.nx_dataset.ast_types),
         num_classes_ast=2).to(device)
