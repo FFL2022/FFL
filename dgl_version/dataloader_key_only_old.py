@@ -14,12 +14,12 @@ from dgl_version.data_utils import numerize_graph, CodeDGLDataset
 
 embedding_model = fasttext.load_model(ConfigClass.pretrained_fastext)
 
-class ASTDGLDataset(CodeDGLDataset):
+class ASTTestDGLDataset(CodeDGLDataset):
     def __init__(self, dataloader: NxDataloader,
                  meta_data: AstGraphMetadata,
                  mode, 
                  save_dir=ConfigClass.preprocess_dir_codeflaws):
-        self.name = f"{mode}_dgl_ast_only_node"
+        self.name = f"{mode}_dgl_ast_test_node"
         super().__init__(dataloader, meta_data, self.name, save_dir,
                 convert_arg_func=lambda x: embedding_model, *x)
         self.cfg_content_dim = self.gs[0].nodes['cfg'].data['content'].shape[-1]

@@ -6,7 +6,8 @@ from nbl.dataloader_key_only import NBLNxDataset
 from codeflaws.dataloader_key_only import CodeflawsNxDataset
 from utils.data_utils import NxDataloader
 from dgl_version.dataloader_key_only import ASTDGLDataset
-from dgl_version.model import GCN_A_L_T_1
+from dgl_version.dataloader_key_only_old import ASTTestDGLDataset
+from dgl_version.model import GCN_A_L_T_1, GCN_A_L
 from utils.utils import ConfigClass
 from utils.draw_utils import ast_to_agraph
 from utils.data_utils import AstGraphMetadata
@@ -23,7 +24,7 @@ trained_dir = ConfigClass.trained_dir_nbl
 result_dir = ConfigClass.result_dir_nbl
 
 
-def train(model, dataloader, val_dataloader, n_epochs, start_epoch=0):
+def train(model, dataloader, val_dataloader, n_epochs, args, start_epoch=0):
     opt = torch.optim.Adam(model.parameters())
 
     mean_ast_loss = AverageMeter()
@@ -96,7 +97,7 @@ def train(model, dataloader, val_dataloader, n_epochs, start_epoch=0):
                 'f1': f1_meter.get()
             }
             with open(
-                    f'{result_dir}/training_dict_e{epoch}.json', 'w') as f:
+                    f'{result_dir}/training_dict_e{epoch}_{graph_type}.json', 'w') as f:
                 json.dump(out_dict, f, indent=2)
             out_dict
         if epoch % ConfigClass.save_rate == 0:
@@ -106,14 +107,14 @@ def train(model, dataloader, val_dataloader, n_epochs, start_epoch=0):
                     best_f1 = eval_dict['f1']['aux_f1']
                     torch.save(
                         model.state_dict(), os.path.join(
-                        f"{trained_dir}/model_{epoch}_best_f1.pth"))
+                        f"{trained_dir}/model_{epoch}_best_f1_{graph_type}.pth"))
             for t in tops:
                 if eval_dict[t] > bests[t]:
                     bests[t] = eval_dict[t]
                     torch.save(model.state_dict(),
-                            f"{trained_dir}/model_{epoch}_best_{t}.pth")
+                            f"{trained_dir}/model_{epoch}_best_{t}_{graph_type}.pth")
         print("Best_result: ", bests)
-        torch.save(model.state_dict(), f"{trained_dir}/model_last.pth")
+        torch.save(model.state_dict(), f"{trained_dir}/model_last_{args.graph_type}.pth")
 
 
 def get_line_mapping(dataloader, real_idx):
@@ -124,7 +125,7 @@ def get_line_mapping(dataloader, real_idx):
     return line
 
 
-def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts):
+def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts, args):
     nx_g, _, _, _ = dataloader.nx_dataset[real_idx]
     n_asts = nodes_where(nx_g, graph='ast')
     for i, n in enumerate(n_asts):
@@ -146,18 +147,18 @@ def map_from_predict_to_node(dataloader, real_idx, node_preds, tgts):
     return nx_g.subgraph(n_asts)
 
 
-def eval_by_line(model, dataloader, epoch=-1, mode='val', draw = False):
+def eval_by_line(model, dataloader, args, epoch=-1, mode='val', draw=False):
     if mode == 'val':
         dataloader.val()
 
-    os.makedirs(f'images_nbl_{epoch}', exist_ok=True)
+    os.makedirs(f'images_{args.dataset}_{epoch}', exist_ok=True)
     f1_meter = BinFullMeter()
     tops = {f'top_{k}': AverageMeter() for k in [1, 3, 5, 10]}
     model.eval()
     out_dict = {}
     line_mapping = {}
-    if os.path.exists('preprocessed/nbl/line_mapping.pkl'):
-        line_mapping = pkl.load(open('preprocessed/nbl/line_mapping.pkl', 'rb'))
+    if os.path.exists(f'preprocessed/{args.dataset}/line_mapping_{args.graph_type}.pkl'):
+        line_mapping = pkl.load(open(f'preprocessed/{args.dataset}/line_mapping_{args.graph_type}.pkl', 'rb'))
     # Line mapping: index -> ast['line']
     f1_meter.reset()
     for m in tops.values:
@@ -193,7 +194,7 @@ def eval_by_line(model, dataloader, epoch=-1, mode='val', draw = False):
         if nx_g.number_of_nodes() > 1000 and not draw:
             continue
         try:
-            ast_to_agraph(nx_g, f'images_nbl_{epoch}/{real_idx}.png',
+            ast_to_agraph(nx_g, f'images_{args.dataset}_{epoch}/{args.graph_type}_{real_idx}.png',
                           take_content=False)
         except:
             continue
@@ -232,15 +233,15 @@ def eval_by_line(model, dataloader, epoch=-1, mode='val', draw = False):
 
     out_dict = {**tops, 'f1': f1_meter.get()}
     print(out_dict)
-    with open(f"{trained_dir}/eval_dict_by_line_e{epoch}.json", 'w') as f:
+    with open(f"{trained_dir}/eval_dict_by_line_e{epoch}_{args.graph_type}.json", 'w') as f:
         json.dump(out_dict, f, indent=2)
 
     if line_mapping_changed:
-        pkl.dump(line_mapping, open('preprocessed/nbl/line_mapping.pkl', 'wb'))
+        pkl.dump(line_mapping, open('preprocessed/{args.dataset}/line_mapping_{args.graph_type}.pkl', 'wb'))
     return out_dict
 
 
-def eval(model, dataloader, epoch=-1, mode='val'):
+def eval(model, dataloader, args, epoch=-1, mode='val'):
     if mode == 'val':
         dataloader.val()
     mean_ast_loss = AverageMeter()
@@ -293,7 +294,8 @@ def eval(model, dataloader, epoch=-1, mode='val'):
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', default='nbl')
+    parser.add_argument('--dataset', type=str, default='nbl')
+    parser.add_argument('--graph_type', type=str, default='ast')
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -304,24 +306,27 @@ if __name__ == '__main__':
     meta_graph = dataset.meta_graph
     trained_dir = ConfigClass.trained_dir_nbl if args.dataset == 'nbl' else ConfigClass.trained_dir_codeflaws
     result_dir = ConfigClass.result_dir_nbl if args.dataset == 'nbl' else ConfigClass.result_dir_codeflaws
+    DGLDatasetClasses = {'ast': ASTDGLDataset, 'ast_test': ASTTestDGLDataset}
+    DGLDatasetClass = DGLDatasetClasses[args.graph_type]
     train_dgl_dataset = ASTDGLDataset(
         dataloader=train_nxs, meta_data=meta_data,
-        name='train_{args.dataset}_cfl_ast_node',
+        name='train_{args.dataset}',
         save_dir=result_dir)
     val_dgl_dataset = ASTDGLDataset(
         dataloader=val_nxs, meta_data=meta_data,
-        name='val_{args.dataset}_cfl_ast_node',
+        name='val_{args.dataset}',
         save_dir=result_dir)
     test_dgl_dataset = ASTDGLDataset(
         dataloader=test_nxs, meta_data=meta_data,
-        name='test_{args.dataset}_cfl_ast_node',
+        name='test_{args.dataset}',
         save_dir=result_dir)
 
-    model = GCN_A_L_T_1(
+    ModelClass = GCN_A_L_T_1 if args.graph_type == 'ast_test' else GCN_A_L
+    model = ModelClass(
         128, meta_graph,
         device=device, num_ast_labels=len(dataset.nx_dataset.ast_types),
         num_classes_ast=3).to(device)
 
-    train(model, train_dgl_dataset, 50, 0)
+    train(model, train_dgl_dataset, val_dgl_dataset, 50, args,  0)
     dataset.val()
-    eval_by_line(model, test_dgl_dataset)
+    eval_by_line(model, test_dgl_dataset, args)
