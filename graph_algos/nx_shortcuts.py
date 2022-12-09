@@ -221,4 +221,4 @@ def combine_multi(vs: List, merge_nodes=False, node2int=None,
             out_nx_g = new_v
         else:
             out_nx_g = nx.compose(out_nx_g, new_v)
-    return out_nx_g, np.array(batch)
+  return out_nx_g, np.array(batch)
