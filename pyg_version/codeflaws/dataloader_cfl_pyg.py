@@ -14,7 +14,9 @@ import torch.utils.data
 
 
 class CodeflawsCFLPyGStatementDataset(Dataset):
-    def __init__(self, dataloader: NxDataloader,
+
+    def __init__(self,
+                 dataloader: NxDataloader,
                  meta_data: CodeflawsCFLStatementGraphMetadata,
                  ast_enc=None,
                  save_dir=ConfigClass.preprocess_dir_codeflaws,
@@ -23,8 +25,9 @@ class CodeflawsCFLPyGStatementDataset(Dataset):
         self.meta_data = meta_data if meta_data else\
             CodeflawsCFLStatementGraphMetadata(dataloader.get_dataset())
         self.save_dir = save_dir
-        self.vocab_dict = dict(tuple(line.split()) for line in open(
-            'preprocess/codeflaws_vocab.txt', 'r'))
+        self.vocab_dict = dict(
+            tuple(line.split())
+            for line in open('preprocess/codeflaws_vocab.txt', 'r'))
         self.name = name
         self.graph_save_path = f"{save_dir}/{name}.pkl"
         self.info_path = f"{save_dir}/{name}_info.pkl"
@@ -46,8 +49,7 @@ class CodeflawsCFLPyGStatementDataset(Dataset):
         return self.gs[i], self.gs_stmt_nodes[i].long()
 
     def convert_from_nx_to_pyg(self, nx_g, stmt_nodes):
-        nx_g = augment_with_reverse_edge_cat(nx_g, self.meta_data.t_e_asts,
-                                                [])
+        nx_g = augment_with_reverse_edge_cat(nx_g, self.meta_data.t_e_asts, [])
         ori_ns = list(nx_g.nodes())[:]
         nx_g = nx.convert_node_labels_to_integers(nx_g)
         new_ns = list(nx_g.nodes())[:]
@@ -60,13 +62,13 @@ class CodeflawsCFLPyGStatementDataset(Dataset):
         ess = [add_self_loops(torch.tensor(es).long())[0] for es in ess]
         data = Data(ess=ess)
         n_asts = nodes_where(nx_g, graph='ast')
-        l_a = torch.tensor(
-            [self.meta_data.ntype2id[nx_g.nodes[n]['ntype']]
-                for n in n_asts]).long()
+        l_a = torch.tensor([
+            self.meta_data.ntype2id[nx_g.nodes[n]['ntype']] for n in n_asts
+        ]).long()
         if self.ast_enc is not None:
             data.c_a = torch.tensor([
-                self.ast_enc(nx_g.nodes[n]['token']) for n in n_asts]
-            ).float()
+                self.ast_enc(nx_g.nodes[n]['token']) for n in n_asts
+            ]).float()
         # for cfg, it will be text
         data.lbl = torch.tensor([nx_g.nodes[n]['status'] for n in n_asts])
         ts = torch.tensor([0] * (len(nx_g.nodes()) - len(n_asts)))
