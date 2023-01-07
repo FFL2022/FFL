@@ -12,13 +12,15 @@ from utils.data_utils import AstNxDataset, AstGraphMetadata
 
 
 class CodeflawsCFLNxStatementDataset(AstNxDataset):
+
     def __init__(self, save_dir=ConfigClass.preprocess_dir_codeflaws):
         super().__init__(all_codeflaws_keys, get_nx_ast_stmt_annt_cfl,
-                save_dir, 'cfl_stmt', [('stmt_nodes', nodes_where(
-                    nx_g,
-                    lambda x: cfl_check_is_stmt_cpp(nx_g.nodes[x]),
-                    graph='ast'))])
+                         save_dir, 'cfl_stmt',
+                         [('stmt_nodes', lambda nx_g: nodes_where(
+                             nx_g,
+                             lambda x: cfl_check_is_stmt_cpp(nx_g.nodes[x]),
+                             graph='ast'))])
 
-       
+
 CodeflawsAstGraphMetadata = AstGraphMetadata
 CodeflawsCFLStatementGraphMetadata = AstGraphMetadata

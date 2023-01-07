@@ -22,8 +22,9 @@ def train(model, dataloader, n_epochs, eval_func, start_epoch=0):
     opt = torch.optim.Adam(model.parameters())
     avg_loss, avg_acc = AverageMeter(), AverageMeter()
 
-    top_1_rec, top_2_rec, top_5_rec, top_10_rec = [AverageMeter()
-                                                   for _ in range(4)]
+    top_1_rec, top_2_rec, top_5_rec, top_10_rec = [
+        AverageMeter() for _ in range(4)
+    ]
     f1_meter = BinFullMeter()
     best_f1, best_top1, best_top2, best_top5, best_top10 = [0.0] * 5
     best_f1_train, best_top1_train, best_top2_train, best_top5_train, \
@@ -31,8 +32,10 @@ def train(model, dataloader, n_epochs, eval_func, start_epoch=0):
 
     for epoch in range(n_epochs):
         model.train()
-        for meter in [avg_loss, avg_acc, f1_meter, top_10_rec, top_5_rec,
-                      top_2_rec, top_1_rec]:
+        for meter in [
+                avg_loss, avg_acc, f1_meter, top_10_rec, top_5_rec, top_2_rec,
+                top_1_rec
+        ]:
             meter.reset()
 
         bar = tqdm.trange(len(dataloader))
@@ -64,16 +67,20 @@ def train(model, dataloader, n_epochs, eval_func, start_epoch=0):
                 meter.update(int(any([i in ast_lbidxs for i in topk_val])), 1)
             avg_loss.update(loss.item(), stmt_nodes.shape[0])
             avg_acc.update(
-                torch.sum(ast_cal.cpu() == ast_lb.cpu()).item()/stmt_nodes.shape[0],
-                stmt_nodes.shape[0])
+                torch.sum(ast_cal.cpu() == ast_lb.cpu()).item() /
+                stmt_nodes.shape[0], stmt_nodes.shape[0])
             f1_meter.update(ast_cal, ast_lb)
             bar.set_postfix(ast_loss=loss.item(), acc=avg_acc.avg)
 
         out_dict = {
-            'top_1': top_1_rec.avg, 'top_2': top_2_rec.avg,
-            'top_5': top_5_rec.avg, 'top_10': top_10_rec.avg,
-            'mean_acc': avg_acc.avg, 'mean_loss': avg_loss.avg,
-            'mean_ast_acc': avg_acc.avg, 'mean_ast_loss': avg_loss.avg,
+            'top_1': top_1_rec.avg,
+            'top_2': top_2_rec.avg,
+            'top_5': top_5_rec.avg,
+            'top_10': top_10_rec.avg,
+            'mean_acc': avg_acc.avg,
+            'mean_loss': avg_loss.avg,
+            'mean_ast_acc': avg_acc.avg,
+            'mean_ast_loss': avg_loss.avg,
             'f1': f1_meter.get()
         }
 
@@ -92,10 +99,10 @@ def train(model, dataloader, n_epochs, eval_func, start_epoch=0):
         print(f1_meter.get())
         if epoch % ConfigClass.save_rate == 0:
             torch.save(
-                model.state_dict(),
-                f"{ConfigClass.trained_dir_codeflaws}/" +
+                model.state_dict(), f"{ConfigClass.trained_dir_codeflaws}/" +
                 f"training_model_cfl_stmt_e{epoch}.pth")
             edict = eval_func((model, epoch))
+
 
 def eval(model, dataloader, epoch):
     avg_loss, avg_acc = AverageMeter(), AverageMeter()
@@ -108,8 +115,9 @@ def eval(model, dataloader, epoch):
     bar = tqdm.trange(len(dataloader))
     bar.set_description(f'Eval epoch {epoch}')
 
-    top_1_rec, top_2_rec, top_5_rec, top_10_rec = [AverageMeter()
-                                                   for _ in range(4)]
+    top_1_rec, top_2_rec, top_5_rec, top_10_rec = [
+        AverageMeter() for _ in range(4)
+    ]
     for i in bar:
         g, stmt_nodes = dataloader[i]
         if g is None:
@@ -136,22 +144,26 @@ def eval(model, dataloader, epoch):
             meter.update(int(any([i in ast_lbidxs for i in topk_val])), 1)
         avg_loss.update(loss.item(), stmt_nodes.shape[0])
         avg_acc.update(
-            torch.sum(ast_cal.cpu() == ast_lb.cpu()).item()/stmt_nodes.shape[0],
-            stmt_nodes.shape[0])
+            torch.sum(ast_cal.cpu() == ast_lb.cpu()).item() /
+            stmt_nodes.shape[0], stmt_nodes.shape[0])
         f1_meter.update(ast_cal, ast_lb)
         bar.set_postfix(ast_loss=loss.item(), acc=avg_acc.avg)
 
     out_dict = {
-        'top_1': top_1_rec.avg, 'top_2': top_2_rec.avg,
-        'top_5': top_5_rec.avg, 'top_10': top_10_rec.avg,
-        'mean_acc': avg_acc.avg, 'mean_loss': avg_loss.avg,
-        'mean_ast_acc': avg_acc.avg, 'mean_ast_loss': avg_loss.avg,
+        'top_1': top_1_rec.avg,
+        'top_2': top_2_rec.avg,
+        'top_5': top_5_rec.avg,
+        'top_10': top_10_rec.avg,
+        'mean_acc': avg_acc.avg,
+        'mean_loss': avg_loss.avg,
+        'mean_ast_acc': avg_acc.avg,
+        'mean_ast_loss': avg_loss.avg,
         'f1': f1_meter.get()['aux_f1']
     }
     with open(
-        f"{ConfigClass.trained_dir_codeflaws}/" +
-        f"eval_dict_cfl_stmt_e{epoch}.json", 'w') as f:
-            json.dump(out_dict, f, indent=2)
+            f"{ConfigClass.trained_dir_codeflaws}/" +
+            f"eval_dict_cfl_stmt_e{epoch}.json", 'w') as f:
+        json.dump(out_dict, f, indent=2)
     print(json.dumps(out_dict, indent=2))
     print(f1_meter.get())
     return out_dict
@@ -160,23 +172,30 @@ def eval(model, dataloader, epoch):
 if __name__ == '__main__':
     nx_dataset = CodeflawsCFLNxStatementDataset()
     meta_data = CodeflawsCFLStatementGraphMetadata(nx_dataset)
-    train_nxs, val_nxs, test_nxs = split_nx_dataset(nx_dataset, [0.6, 0.2, 0.2])
+    train_nxs, val_nxs, test_nxs = split_nx_dataset(nx_dataset,
+                                                    [0.6, 0.2, 0.2])
     train_pyg_dataset = CodeflawsCFLPyGStatementDataset(
-        dataloader=train_nxs, meta_data=meta_data, ast_enc=None,
+        dataloader=train_nxs,
+        meta_data=meta_data,
+        ast_enc=None,
         name='train_pyg_cfl_stmt')
-    val_pyg_dataset = CodeflawsCFLPyGStatementDataset(
-        dataloader=val_nxs, meta_data=meta_data, ast_enc=None,
-        name='val_pyg_cfl_stmt')
+    val_pyg_dataset = CodeflawsCFLPyGStatementDataset(dataloader=val_nxs,
+                                                      meta_data=meta_data,
+                                                      ast_enc=None,
+                                                      name='val_pyg_cfl_stmt')
     test_pyg_dataset = CodeflawsCFLPyGStatementDataset(
-        dataloader=test_nxs, meta_data=meta_data, ast_enc=None,
+        dataloader=test_nxs,
+        meta_data=meta_data,
+        ast_enc=None,
         name='test_pyg_cfl_stmt')
     t2id = {'ast': 0, 'test': 1}
-    model = MPNNModel_A_T_L(
-        dim_h=64, netypes=len(meta_data.meta_graph),
-        t_srcs=[t2id[e[0]] for e in meta_data.meta_graph],
-        t_tgts=[t2id[e[2]] for e in meta_data.meta_graph],
-        n_al=len(meta_data.t_asts), n_layers=5,
-        n_classes=2).to(device)
+    model = MPNNModel_A_T_L(dim_h=64,
+                            netypes=len(meta_data.meta_graph),
+                            t_srcs=[t2id[e[0]] for e in meta_data.meta_graph],
+                            t_tgts=[t2id[e[2]] for e in meta_data.meta_graph],
+                            n_al=len(meta_data.t_asts),
+                            n_layers=5,
+                            n_classes=2).to(device)
 
     train(model, train_pyg_dataset, 100,
           lambda x: eval(x[0], val_pyg_dataset, x[1]), 0)
