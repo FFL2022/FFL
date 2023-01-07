@@ -122,7 +122,7 @@ def get_coverage_graph_cfg_ast(key: str, nx_cfg_ast, nline_removed):
         t_n = nx_cat.number_of_nodes()
         nx_cat.add_node(t_n, name=f'test_{i}', ntype='test', graph='test')
         link_type = 'fail' if 'neg' in covfile else 'pass'
-        for c_n in nodes_where(nx_cat, graph='cfg')
+        for c_n in nodes_where(nx_cat, graph='cfg'):
             # Get corresponding lines
             start = nx_cat.nodes[c_n]['start_line']
             end = nx_cat.nodes[c_n]['end_line']
