@@ -7,6 +7,7 @@ from pyg_version.explainer.common import EdgeWeights, NodeWeights
 # Todo: use edge weight and feature weight balanced
 import torch
 import networkx as nx
+import os
 
 def target_node_loss(perturbed_pred, orig_pred, _, instance):
     # Perturbed pred is of size N x class
@@ -98,24 +99,24 @@ class TopKStatmentExplainer(Explainer):
 def from_data_to_nx(data, perturber: StatementGraphPerturber, metadata: CodeflawsCFLStatementGraphMetadata):
     g = nx.MultiDiGraph()
     for i, x in enumerate(data.xs):
+        x = x.reshape(-1)
         if i == 0:
+            # Then the node graph is ast
+            for j, node in enumerate(x):
+                g.add_node(f"ast_{j}", ntype=metadata.t_asts[int(x[j].item())], explain_weight=perturber.xs_weights[i][j].item())
+        elif i == 1:
+            # Then the node graph is test
+            for j, node in enumerate(x):
+                g.add_node(f"test_{j}", ntype=metadata.t_tests[int(x[j].item())], explain_weight=perturber.xs_weights[i][j].item())
         # each row of x is a data of a node
-        g.add_nodes_from(range(x.shape[0]))
-        # add node features
-        for i in range(x.shape[0]):
-            g.nodes[i].update({f'x_{j}': x[i, j] for j in range(x.shape[1])})
     # Translate from each edge type to the corresponding edge
-    for i, e in enumerate(data.ess):
-        g.add_edges_from(e, type=i)
-    for i, x in enumerate(data.xs):
-        for j in range(x.shape[0]):
-            g.nodes[j]['type'] = i
-    for i, x in enumerate(data.xs):
-        for j in range(x.shape[0]):
-            g.nodes[j]['explain_weight'] = perturber.xs_weights[i][j]
-    for i, e in enumerate(data.ess):
-        for j in range(e.shape[0]):
-            g.edges[j]['explain_weight'] = perturber.ess_weights[i][j]
+    for i, es in enumerate(data.ess):
+        # i is the ith etype
+        src_type, etype, dst_type = metadata.meta_graph
+        for j in range(es.shape[1]):
+            src_node = f"{src_type}_{es[0, j].item()}"
+            dst_node = f"{dst_type}_{es[1, j].item()}"
+            g.add_edge(src_node, dst_node, etype=etype[i], explain_weight=perturber.ess_weights[i][j].item())
     return g
 
 if __name__ == '__main__':
@@ -124,7 +125,10 @@ if __name__ == '__main__':
     graph_metadata = CodeflawsCFLStatementGraphMetadata()
     model = MPNNModel_A_T_L(graph_metadata, 2)
     explainer = TopKStatmentExplainer(model, target_statement_loss, 'test', pyg_dataset, 5, 'cpu')
-    sav
+    save_dir = "explain_pyg_codeflaws_pyc_cfl_stmt_level"
+    os.makedirs(save_dir, exist_ok=True)
     for perturber in explainer.explain():
         data = perturber.get_data()
         g = from_data_to_nx(data, perturber)
+        # Dump this g
+        nx.write_gpickle(g, os.path.join(save_dir, f"{data.id}.gpickle"))
