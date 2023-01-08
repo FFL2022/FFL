@@ -135,8 +135,8 @@ class AstNxDataset(NxDataset):
                 'ast_etypes': self.ast_etypes,
                 'keys': self.keys,
                 'err_idxs': self.err_idxs,
-                'active_idxs': self.active_idxs**
-                {k: self.__dict__[k]
+                'active_idxs': self.active_idxs,
+                **{k: self.__dict__[k]
                  for k, _ in self.special_attrs}
             }, open(self.info_path, 'wb'))
 
