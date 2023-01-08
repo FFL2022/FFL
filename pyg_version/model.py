@@ -137,9 +137,11 @@ class MPNNModel_A_T_L(nn.Module):
         else:
             self.last_act = nn.Sigmoid()
 
-    def forward(self, xs, ess, weights=None):
+    def forward(self, xs, ess, node_weights=None, weights=None):
         '''xs: al, t'''
         xs = [self.enc_al(xs[0].int()), self.emb_test(xs[1].int())]
+        if node_weights:
+            xs = [x * node_weight for x, node_weight in zip(xs, node_weights)]
         for i in range(self.n_layers):
             out = [0, 0]
             for j, (es, t_src, t_tgt) in enumerate(

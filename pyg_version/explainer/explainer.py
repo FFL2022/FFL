@@ -17,8 +17,7 @@ def data_forward(model, data):
 
 
 class Explainer(object):
-    def __init__(self, model, loss_func, save_dir, epochs=5000):
-        self.save_dir = save_dir
+    def __init__(self, model, loss_func, epochs=5000):
         self.model = model
         self.loss = loss_func
         self.epochs = epochs

@@ -27,9 +27,7 @@ def train(model, dataloader, n_epochs, eval_func, start_epoch=0):
     ]
     f1_meter = BinFullMeter()
     best_f1, best_top1, best_top2, best_top5, best_top10 = [0.0] * 5
-    best_f1_train, best_top1_train, best_top2_train, best_top5_train, \
-        best_top10_train = [0.0] * 5
-
+    best_f1_train, best_top1_train, best_top2_train, best_top5_train, \ best_top10_train = [0.0] * 5
     for epoch in range(n_epochs):
         model.train()
         for meter in [
