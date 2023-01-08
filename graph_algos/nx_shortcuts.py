@@ -7,7 +7,7 @@ import inspect
 
 
 def where_node(*filter_funcs, **kwargs):
-    if len(filter_func) == 0 and len(kwargs) == 0:
+    if len(filter_funcs) == 0 and len(kwargs) == 0:
         return lambda nx_g, x: True
     lambdas = [(lambda nx_g, x: nx_g.nodes[x][k] == v) if not isinstance(v, list) else (lambda nx_g, x: nx_g.nodes[x][k] in v) for k, v in kwargs.items()]
     lambda_f = lambda x: all(f(x) for f in filter_funcs)
