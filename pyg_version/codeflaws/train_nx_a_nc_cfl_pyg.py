@@ -146,7 +146,7 @@ def eval(model, dataloader, epoch):
         avg_acc.update(
             torch.sum(ast_cal.cpu() == ast_lb.cpu()).item() /
             stmt_nodes.shape[0], stmt_nodes.shape[0])
-        f1_meter.update(ast_cal, ast_lb)
+        f1_meter.update(ast_cal.cpu(), ast_lb.cpu())
         bar.set_postfix(ast_loss=loss.item(), acc=avg_acc.avg)
 
     out_dict = {
