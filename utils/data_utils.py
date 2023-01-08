@@ -72,7 +72,7 @@ class AstNxDataset(NxDataset):
                 nx_g,
                 open(f'{self.save_dir}/nx_{self.name}_{self.active_idxs[i]}.pkl',
                      'wb'))
-        return nx_g, *[self.__dict__[k][i] for k, _ in self.special_attrs]
+        return [nx_g] + [self.__dict__[k][i] for k, _ in self.special_attrs]
 
     def process(self):
         self.ast_types = set()
