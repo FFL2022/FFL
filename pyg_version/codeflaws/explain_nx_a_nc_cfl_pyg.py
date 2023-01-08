@@ -132,3 +132,5 @@ if __name__ == '__main__':
         g = from_data_to_nx(data, perturber)
         # Dump this g
         nx.write_gpickle(g, os.path.join(save_dir, f"{data.id}.gpickle"))
+        # Visualize with dot
+        nx.drawing.nx_pydot.write_dot(g, os.path.join(save_dir, f"{data.id}.dot"))
