@@ -5,6 +5,9 @@ from itertools import accumulate, Callable
 import networkx as nx
 from utils.nprocs import nprocs
 from utils.multiprocessing import multi_process_data, Queue
+import pickle as pkl
+import os
+import tqdm
 
 
 class NxDataset(Sequence):
@@ -60,9 +63,9 @@ class AstNxDataset(NxDataset):
             nx_g = pkl.load(open(
                 f'{self.save_dir}/nx_{self.name}_{self.active_idxs[i]}.pkl', 'rb'))
         except UnicodeDecodeError:
-            nx_g = self.process_func(self.all_entries[self.active_idxs[i])
+            nx_g = self.process_func(self.all_entries[self.active_idxs[i]])
             if self.post_process_func:
-                nx_g = post_process_func(nx_g)
+                nx_g = self.post_process_func(nx_g)
                 
             pkl.dump(
                 nx_g,
@@ -77,7 +80,7 @@ class AstNxDataset(NxDataset):
         self.err_idxs = []
         self.active_idxs = []
 
-        bar = tqdm.tqdm(list(all_codeflaws_keys))
+        bar = tqdm.tqdm(list(self.all_entries))
         bar.set_description(f'Loading Nx Data {self.name}')
         for i, key in enumerate(bar):
             try:
