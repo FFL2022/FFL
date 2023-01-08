@@ -6,13 +6,14 @@ from typing import Callable
 import networkx as nx
 from utils.nprocs import nprocs
 from utils.multiprocessing import multi_process_data, Queue
-from graph_algos.nx_shortcuts import nodes_where, where_node
+from graph_algos.nx_shortcuts import nodes_where, where_node, edges_where
 import pickle as pkl
 import os
 import tqdm
 
 
 class NxDataset(Sequence):
+
     def __init__(self):
         if self.has_cache():
             self.load()
@@ -40,16 +41,21 @@ class NxDataset(Sequence):
 
 
 class AstNxDataset(NxDataset):
-    def __init__(self, all_entries, process_func, save_dir, name,
-            special_attrs: List[Tuple[str, Callable[[nx.Graph], None]]],
-            post_process_func=None):
+
+    def __init__(self,
+                 all_entries,
+                 process_func,
+                 save_dir,
+                 name,
+                 special_attrs: List[Tuple[str, Callable[[nx.Graph], None]]],
+                 post_process_func=None):
         self.save_dir = save_dir
         self.info_path = f"{save_dir}/nx_{name}_info.pkl"
         self.name = name
         self.process_func = process_func
         self.all_entries = all_entries
         self.special_attrs = special_attrs
-        self.post_process_func=post_process_func
+        self.post_process_func = post_process_func
         for k, _ in self.special_attrs:
             setattr(self, k, [])
         super().__init__()
@@ -62,17 +68,20 @@ class AstNxDataset(NxDataset):
 
     def __getitem__(self, i):
         try:
-            nx_g = pkl.load(open(
-                f'{self.save_dir}/nx_{self.name}_{self.active_idxs[i]}.pkl', 'rb'))
+            nx_g = pkl.load(
+                open(
+                    f'{self.save_dir}/nx_{self.name}_{self.active_idxs[i]}.pkl',
+                    'rb'))
         except UnicodeDecodeError:
             nx_g = self.process_func(self.all_entries[self.active_idxs[i]])
             if self.post_process_func:
                 nx_g = self.post_process_func(nx_g)
-                
+
             pkl.dump(
                 nx_g,
-                open(f'{self.save_dir}/nx_{self.name}_{self.active_idxs[i]}.pkl',
-                     'wb'))
+                open(
+                    f'{self.save_dir}/nx_{self.name}_{self.active_idxs[i]}.pkl',
+                    'wb'))
         return [nx_g] + [self.__dict__[k][i] for k, _ in self.special_attrs]
 
     def process(self):
@@ -86,16 +95,15 @@ class AstNxDataset(NxDataset):
         bar.set_description(f'Loading Nx Data {self.name}')
         for i, key in enumerate(bar):
             try:
-                if not os.path.exists(f'{self.save_dir}/nx_{self.name}_{i}.pkl'):
+                if not os.path.exists(
+                        f'{self.save_dir}/nx_{self.name}_{i}.pkl'):
                     nx_g = self.process_func(key)
                     pkl.dump(
                         nx_g,
-                        open(f'{self.save_dir}/nx_{self.name}_{i}.pkl', 'wb')
-                    )
+                        open(f'{self.save_dir}/nx_{self.name}_{i}.pkl', 'wb'))
                 else:
-                    nx_g = pkl.load(open(
-                        f'{self.save_dir}/nx_{self.name}_{i}.pkl', 'rb')
-                    )
+                    nx_g = pkl.load(
+                        open(f'{self.save_dir}/nx_{self.name}_{i}.pkl', 'rb'))
             except:
                 self.err_idxs.append(i)
                 count = len(self.err_idxs)
@@ -103,10 +111,13 @@ class AstNxDataset(NxDataset):
                 continue
             self.active_idxs.append(i)
             self.keys.append(key)
-            self.ast_types = self.ast_types.union(
-                [nx_g.nodes[n]['ntype'] for n in nodes_where(nx_g, graph='ast')])
+            self.ast_types = self.ast_types.union([
+                nx_g.nodes[n]['ntype'] for n in nodes_where(nx_g, graph='ast')
+            ])
             self.ast_etypes = self.ast_etypes.union(
-                x[-1]['label'] for x in edges_where(nx_g, where_node(graph='ast'), where_node(graph='ast')))
+                x[-1]['label']
+                for x in edges_where(nx_g, where_node(
+                    graph='ast'), where_node(graph='ast')))
             for k, f in self.special_attrs:
                 self.__dict__[k].append(f(nx_g))
 
@@ -120,15 +131,18 @@ class AstNxDataset(NxDataset):
         # gs is saved somewhere else
         pkl.dump(
             {
-                'ast_types': self.ast_types, 'ast_etypes': self.ast_etypes,
-                'keys': self.keys, 'err_idxs': self.err_idxs,
-                'active_idxs': self.active_idxs
-                **{k: self.__dict__[k] for k, _ in self.special_attrs}
-            },
-            open(self.info_path, 'wb'))
+                'ast_types': self.ast_types,
+                'ast_etypes': self.ast_etypes,
+                'keys': self.keys,
+                'err_idxs': self.err_idxs,
+                'active_idxs': self.active_idxs**
+                {k: self.__dict__[k]
+                 for k, _ in self.special_attrs}
+            }, open(self.info_path, 'wb'))
 
 
 class NxDataloader(Sequence):
+
     def __init__(self, nx_dataset: NxDataset, idxs):
         self.idxs = idxs
         self.nx_dataset = nx_dataset
@@ -144,7 +158,7 @@ class NxDataloader(Sequence):
 
 
 def split_nx_dataset(nx_dataset: NxDataset,
-                     ratio: Union[int, List[int]]=0.8,
+                     ratio: Union[int, List[int]] = 0.8,
                      shuffle=True) -> Tuple[NxDataset, NxDataset]:
     N = len(nx_dataset)
     idxs = list(range(N))
@@ -157,17 +171,19 @@ def split_nx_dataset(nx_dataset: NxDataset,
         out = []
         for i, c in enumerate(cumsum):
             if i:
-                out.append(NxDataloader(
-                    nx_dataset, idxs[int(cumsum[i-1]*N):int(c*N)]))
+                out.append(
+                    NxDataloader(nx_dataset,
+                                 idxs[int(cumsum[i - 1] * N):int(c * N)]))
             else:
-                out.append(NxDataloader(nx_dataset, idxs[:int(c*N)]))
+                out.append(NxDataloader(nx_dataset, idxs[:int(c * N)]))
         return out
     return NxDataloader(nx_dataset, idxs[:int(ratio*N)]),\
         NxDataloader(nx_dataset, idxs[int(N*ratio):])
 
 
 def del_all_status(nx_g):
-    n_asts, n_cfgs = nodes_where(nx_g, graph='ast'), nodes_where(nx_g, graph='cfg')
+    n_asts, n_cfgs = nodes_where(nx_g, graph='ast'), nodes_where(nx_g,
+                                                                 graph='cfg')
     for n in n_asts:
         del nx_g.nodes[n]['status']
     for n in n_cfgs:
@@ -175,8 +191,8 @@ def del_all_status(nx_g):
     return nx_g
 
 
-
 class AstGraphMetadata(object):
+
     def __init__(self, nx_g_dataset):
         self.t_asts = nx_g_dataset.ast_types
         self.ntype2id = {n: i for i, n in enumerate(self.t_asts)}
@@ -204,7 +220,8 @@ class AstGraphMetadata(object):
         self.dsts = ['ast'] * len(self.t_e_a_a) +\
             ['test'] * len(self.t_e_a_t) + ['ast'] * len(self.t_e_t_a)
         if 't_e_cfgs' in self.__dict__:
-            self.t_all += (self.t_e_c_c + self.t_e_c_a + self.t_e_a_c + self.t_e_c_t + self.t_e_t_c)
+            self.t_all += (self.t_e_c_c + self.t_e_c_a + self.t_e_a_c +
+                           self.t_e_c_t + self.t_e_t_c)
             self.srcs += ['cfg', 'cfg', 'ast', 'cfg', 'test']
             self.dsts += ['cfg', 'ast', 'cfg', 'test', 'cfg']
 
