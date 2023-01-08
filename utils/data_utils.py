@@ -203,7 +203,7 @@ class AstGraphMetadata(object):
 
     def construct_edge_metagraph(self):
         self.t_e_a_a = self.t_e_asts + \
-            list(map(lambda x: f'{x}_reverse', self.t_e_asts))
+            list(map(lambda x: f'{x}_reverse', list(sorted(self.t_e_asts))))
         if 't_e_cfgs' in self.__dict__:
             self.t_e_c_c = self.t_e_cfgs  + ['c_self_loop'] + \
                 [et + '_reverse' for et in self.t_e_cfgs]
