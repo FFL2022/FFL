@@ -1,7 +1,8 @@
 from typing import Tuple, List, Union
 import random
 from collections import Sequence
-from itertools import accumulate, Callable
+from itertools import accumulate
+from typing import Callable
 import networkx as nx
 from utils.nprocs import nprocs
 from utils.multiprocessing import multi_process_data, Queue
