@@ -113,10 +113,12 @@ class StatementGraphPerturber(torch.nn.Module):
     def get_node_weights(self):
         # stack all self weights
         node_weights = [weight for weight in self.xs_weights]
+        print(list(weight.requires_grad for weight in node_weights))
         return torch.cat(node_weights, dim=0)
 
     def get_edge_weights(self):
         edge_weights = [weight for weight in self.ess_weights]
+        print(list(weight.requires_grad for weight in edge_weights))
         return torch.cat(edge_weights, dim=0)
 
     def forward(self, data):
