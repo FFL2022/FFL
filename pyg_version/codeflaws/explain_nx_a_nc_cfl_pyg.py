@@ -140,7 +140,7 @@ class TopKStatmentExplainer(Explainer):
         return data.xs, data.ess
 
     def get_perturber(self, data) -> torch.nn.Module:
-        perturber = StatementGraphPerturber(data).to(device)
+        perturber = StatementGraphPerturber(data[0]).to(device)
         perturber.train()
         return perturber
 
