@@ -27,7 +27,6 @@ class MPNN(MessagePassing):
         else:
             output = (self.lin_tgt(x_i) + self.lin_src(x_j) + self.emb_self_edge((edge_index[1] == edge_index[0]).long()))
             output_weighted = weights * output
-            print(weights.requires_grad, output_weighted.requires_grad)
             return output_weighted
 
 
