@@ -149,7 +149,7 @@ def get_args():
     parser.add_argument("--save_path", type=str, default="explain_pyg_codeflaws_pyc_cfl_stmt_level")
     parser.add_argument("--k", type=int, default=10)
     parser.add_argument("--loss_func", type=str, default="total_loss_size_stmt_entropy")
-    parser.add_argument("--device", type=str, default='')
+    parser.add_argument("--device", type=str, default='cuda')
     return parser.parse_args()
 
 if __name__ == '__main__':
