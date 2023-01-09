@@ -35,6 +35,7 @@ class Explainer(object):
         raise NotImplementedError
 
     def prepare(self, perturber: torch.nn.Module):
+        perturber.train()
         self.opt = torch.optim.AdamW(perturber.parameters())
 
     def explain_instance(self, instance) -> torch.nn.Module:
