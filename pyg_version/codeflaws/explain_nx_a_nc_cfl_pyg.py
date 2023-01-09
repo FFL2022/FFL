@@ -92,8 +92,8 @@ class StatementGraphPerturber(torch.nn.Module):
     def __init__(self, graph):
         super().__init__()
         self.graph = graph
-        self.xs_weights = list([torch.nn.Parameter(torch.ones(x.shape[0], 1)) for x in graph.xs])
-        self.ess_weights = list([torch.nn.Parameter(torch.ones(e.shape[1], 1)) for e in graph.ess])
+        self.xs_weights = torch.nn.ParameterList([torch.nn.Parameter(torch.ones(x.shape[0], 1)) for x in graph.xs])
+        self.ess_weights = torch.nn.ParameterList([torch.nn.Parameter(torch.ones(e.shape[1], 1)) for e in graph.ess])
 
     def get_node_weights(self):
         # stack all self weights
