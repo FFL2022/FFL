@@ -156,8 +156,12 @@ if __name__ == '__main__':
     args = get_args()
     device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
     nx_dataset = CodeflawsCFLNxStatementDataset()
-    pyg_dataset = CodeflawsCFLPyGStatementDataset()
-    meta_data = CodeflawsCFLStatementGraphMetadata()
+    meta_data = CodeflawsCFLStatementGraphMetadata(nx_dataset)
+    pyg_dataset = CodeflawsCFLPyGStatementDataset(
+        dataloader=nx_dataset,
+        meta_data=meta_data,
+        ast_enc=None,
+        name='train_pyg_cfl_stmt')
     t2id = {'ast': 0, 'test': 1}
     exec(f"loss_func = {args.loss_func}", globals(), locals())
     infl_extractor = InflExtractor(where_node(), where_edge(where_node(), where_node()), 0.1, 0.3)
