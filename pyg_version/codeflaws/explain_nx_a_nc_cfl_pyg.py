@@ -43,7 +43,7 @@ def target_statement_loss(perturbed_pred, orig_pred, _, instance):
         perturbed_pred_stmt, orig_pred_stmt)
 
 
-def total_loss_size_stmt_entropy(perturbed_pred, orig_pred, _, instance):
+def total_loss_size_stmt_entropy(perturbed_pred, orig_pred, perturber, instance):
     # Perturbed pred is of size N x class
     # orig_pred is of size N x class
     # instance is a tuple of (data, target)
@@ -51,7 +51,7 @@ def total_loss_size_stmt_entropy(perturbed_pred, orig_pred, _, instance):
     # target is an integer of line number
     (data, stmt_nodes), target = instance
     # target is the target statement
-    stmt_loss = target_statement_loss(perturbed_pred, orig_pred, _, instance)
+    stmt_loss = target_statement_loss(perturbed_pred, orig_pred, perturber, instance)
     size_loss_val = size_loss(perturber.get_node_weights(),
                               perturber.get_edge_weights(),
                               coeff_n=0.002,
