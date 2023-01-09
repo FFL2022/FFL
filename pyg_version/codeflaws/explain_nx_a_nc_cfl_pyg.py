@@ -22,8 +22,8 @@ def target_node_loss(perturbed_pred, orig_pred, _, instance):
 
     # Get the target node
     target_node = instance[1]
-    perturbed_pred = perturbed_pred[target_node]
-    orig_pred = orig_pred[target_node]
+    perturbed_pred = perturbed_pred[1][target_node]
+    orig_pred = orig_pred[1][target_node]
     return torch.nn.functional.binary_cross_entropy_with_logits(perturbed_pred, orig_pred)
 
 
@@ -77,8 +77,8 @@ class TopKStatementIterator(object):
         with torch.no_grad():
             for data, stmt_nodes in self.dataset:
                 data = data.to(self.device)
-                output = self.model(data.xs, data.ess)
-                output = output.cpu()
+                output = self.model(data.xs, data.ess)[0]
+                output = output[1][stmt_nodes].cpu()
                 topk = output.topk(self.k, dim=0)
                 for i in topk.indices:
                     yield data, i
