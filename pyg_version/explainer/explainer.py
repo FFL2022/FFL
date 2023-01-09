@@ -54,7 +54,7 @@ class Explainer(object):
         return perturber
 
     def explain(self, instance_iterator) -> Iterable[torch.nn.Module]:
-        for i, instance in instance_iterator:
+        for instance in instance_iterator:
             yield instance, self.explain_instance(instance)
 
 

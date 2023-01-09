@@ -49,9 +49,9 @@ def total_loss_size_stmt_entropy(perturbed_pred, orig_pred, _, instance):
     (data, stmt_nodes), target = instance
     # target is the target statement
     stmt_loss = target_statement_loss(perturbed_pred, orig_pred, _, instance)
-    size_loss = size_loss(perturber.get_node_weights(), perturber.get_edge_weights(), coeff_n=0.002, coeff_e=0.005)
+    size_loss_val = size_loss(perturber.get_node_weights(), perturber.get_edge_weights(), coeff_n=0.002, coeff_e=0.005)
     entropy_loss = entropy_loss_mask(perturber.get_node_weights(), perturber.get_edge_weights(), coeff_n=0.1, coeff_e=0.3)
-    return stmt_loss + size_loss + entropy_loss
+    return stmt_loss + size_loss_val + entropy_loss
 
 
 
@@ -126,7 +126,7 @@ class TopKStatmentExplainer(Explainer):
         return data.xs, data.ess
 
     def get_perturber(self, data) -> torch.nn.Module:
-        return StatementGraphPerturber(data[0]).to(device)
+        return StatementGraphPerturber(data).to(device)
 
     def explain(self):
         return super().explain(self.iterator)
