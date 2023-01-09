@@ -122,6 +122,7 @@ class StatementGraphPerturber(torch.nn.Module):
         return torch.cat(edge_weights, dim=0)
 
     def forward(self, data):
+        print(data.xs.requires_grad, data.ess.requires_grad, self.xs_weights[0].requires_grad, self.ess_weights[0].requires_grad)
         return data.xs, data.ess, self.xs_weights, self.ess_weights
 
 
