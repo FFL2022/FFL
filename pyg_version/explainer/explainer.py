@@ -49,7 +49,7 @@ class Explainer(object):
 
     def explain(self, instance_iterator) -> Iterable[torch.nn.Module]:
         for i, instance in instance_iterator:
-            yield self.explain_instance(self, instance)
+            yield instance, self.explain_instance(self, instance)
 
 
 class InflExtractor(object):
