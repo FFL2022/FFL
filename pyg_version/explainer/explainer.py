@@ -49,7 +49,7 @@ class Explainer(object):
             loss = self.loss(perturbed_pred, orig_pred, perturber, instance)
             bar.set_postfix(loss=loss.item())
             self.opt.zero_grad()
-            loss.backward()
+            loss.backward(allow_unreachable=True)
             self.opt.step()
         return perturber
 
