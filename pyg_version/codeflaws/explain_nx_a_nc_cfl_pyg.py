@@ -100,24 +100,28 @@ class TopKStatementIterator(object):
 
 
 class StatementGraphPerturber(torch.nn.Module):
-
     def __init__(self, graph):
         super().__init__()
         self.graph = graph
         self.xs_weights = torch.nn.ParameterList(
-            [torch.nn.Parameter(torch.ones(x.shape[0], 1)) for x in graph.xs])
+            [torch.nn.Parameter(torch.ones(x.shape[0], 1)) for x in graph.xs]
+        )
         self.ess_weights = torch.nn.ParameterList(
-            [torch.nn.Parameter(torch.ones(e.shape[1], 1)) for e in graph.ess])
+            [torch.nn.Parameter(torch.ones(e.shape[1], 1)) for e in graph.ess]
+        )
 
     def get_node_weights(self):
         # stack all self weights
-        return torch.cat(self.xs_weights, dim=0)
+        node_weights = [weight for weight in self.xs_weights]
+        return torch.cat(node_weights, dim=0)
 
     def get_edge_weights(self):
-        return torch.cat(self.ess_weights, dim=0)
+        edge_weights = [weight for weight in self.ess_weights]
+        return torch.cat(edge_weights, dim=0)
 
     def forward(self, data):
         return data.xs, data.ess, self.xs_weights, self.ess_weights
+
 
 
 class TopKStatmentExplainer(Explainer):
