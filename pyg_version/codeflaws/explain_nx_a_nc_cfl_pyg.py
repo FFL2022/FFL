@@ -62,6 +62,7 @@ class TopKStatementIterator(object):
         self.k = k
         self.len_data = self.calc_len()
         self.device = device
+        self.model = self.model.to(device)
 
     def calc_len(self):
         # loop through the dataset and check how many statements
