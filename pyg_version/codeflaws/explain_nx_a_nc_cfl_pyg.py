@@ -60,7 +60,8 @@ def total_loss_size_stmt_entropy(perturbed_pred, orig_pred, perturber, instance)
                                      perturber.get_edge_weights(),
                                      coeff_n=0.1,
                                      coeff_e=0.3)
-    return stmt_loss + size_loss_val + entropy_loss
+    return stmt_loss
+    # return stmt_loss + size_loss_val + entropy_loss
 
 
 class TopKStatementIterator(object):
