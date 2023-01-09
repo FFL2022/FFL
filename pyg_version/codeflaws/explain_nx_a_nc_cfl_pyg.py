@@ -62,7 +62,7 @@ class TopKStatementIterator(object):
         self.k = k
         self.len_data = self.calc_len()
         self.device = device
-        self.model = self.model.to(device)
+        self.model = self.model
 
     def calc_len(self):
         # loop through the dataset and check how many statements
@@ -185,7 +185,7 @@ if __name__ == '__main__':
                             n_al=len(meta_data.t_asts),
                             n_layers=5,
                             n_classes=2).to(device)
-    model.load_state_dict(torch.load(args.model_path))
+    model.load_state_dict(torch.load(args.model_path, map_location=device))
     explainer = TopKStatmentExplainer(model, loss_func, pyg_dataset, args.k, args.device)
     save_dir = args.save_path
     os.makedirs(save_dir, exist_ok=True)
