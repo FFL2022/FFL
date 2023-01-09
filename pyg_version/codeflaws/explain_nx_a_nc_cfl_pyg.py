@@ -50,8 +50,6 @@ def total_loss_size_stmt_entropy(perturbed_pred, orig_pred, perturber, instance)
     # data is Data object, where xs is of size N x F, and ess is of size [L x 2 x E], L is the number of edge type, determined via the graph metadata
     # target is an integer of line number
     (data, stmt_nodes), target = instance
-    print("Perturbed pred 0: ", perturbed_pred[0].requires_grad)
-    print("Orig pred 0: ", orig_pred[0].requires_grad)
     # target is the target statement
     stmt_loss = target_statement_loss(perturbed_pred, orig_pred, perturber, instance)
     size_loss_val = size_loss(perturber.get_node_weights(),
