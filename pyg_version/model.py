@@ -25,8 +25,8 @@ class MPNN(MessagePassing):
         if weights is None:
             return self.lin_tgt(x_i) + self.lin_src(x_j) + self.emb_self_edge((edge_index[1] == edge_index[0]).long())
         else:
-            print(weights.shape, (self.lin_tgt(x_i) + self.lin_src(x_j) + self.emb_self_edge((edge_index[1] == edge_index[0]).long())).shape)
             output = (self.lin_tgt(x_i) + self.lin_src(x_j) + self.emb_self_edge((edge_index[1] == edge_index[0]).long())) * weights
+            print(weights.shape, (self.lin_tgt(x_i) + self.lin_src(x_j) + self.emb_self_edge((edge_index[1] == edge_index[0]).long())).shape, weights.requires_grad, output.requires_grad )
             return output
 
 
