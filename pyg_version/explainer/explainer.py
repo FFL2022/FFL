@@ -28,6 +28,12 @@ class Explainer(object):
     def get_perturber(self, data) -> torch.nn.Module:
         raise NotImplementedError
 
+    def data_to_model(self, data):
+        raise NotImplementedError
+
+    def data_to_perturber(self, data):
+        raise NotImplementedError
+
     def prepare(self, perturber: torch.nn.Module):
         self.opt = torch.optim.AdamW(perturber.parameters())
 
@@ -35,10 +41,10 @@ class Explainer(object):
         data = self.get_data(instance)
         perturber = self.get_perturber(data)
         self.prepare(perturber)
-        orig_pred = self.model(*data)
+        orig_pred = self.model(self.data_to_model(data))
         bar = tqdm.trange(self.epochs)
         for i in bar:
-            perturbed_data = data_forward(perturber, data)
+            perturbed_data = data_forward(perturber, self.data_to_perturber(data))
             perturbed_pred = data_forward(self.model, perturbed_data)
             loss = self.loss(perturbed_pred, orig_pred, perturber, instance)
             bar.set_postfix(loss=loss.item())
