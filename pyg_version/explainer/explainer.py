@@ -44,6 +44,7 @@ class Explainer(object):
         with torch.no_grad():
             orig_pred = self.model(*self.data_to_model(data))
         bar = tqdm.trange(self.epochs)
+        self.model.eval()
         for i in bar:
             perturbed_data = data_forward(perturber, self.data_to_perturber(data))
             perturbed_pred = data_forward(self.model, perturbed_data)
