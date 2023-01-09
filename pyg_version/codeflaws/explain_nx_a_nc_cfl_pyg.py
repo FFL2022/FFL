@@ -78,10 +78,11 @@ class TopKStatementIterator(object):
             for data, stmt_nodes in self.dataset:
                 data = data.to(self.device)
                 output = self.model(data.xs, data.ess)[0]
-                output = output[stmt_nodes].cpu()
+                output = output[stmt_nodes, 1].cpu()
                 k = min(len(stmt_nodes), self.k)
-                topk = output.topk(k, dim=0)
-                for i in topk.indices:
+                topk = output.topk(k, dim=0)[1]
+                for i in topk:
+                    print(data, i)
                     yield data, i
 
     def __len__(self):
@@ -118,6 +119,7 @@ class TopKStatmentExplainer(Explainer):
         self.iterator = TopKStatementIterator(model, dataset, k, device)
 
     def get_data(self, instance):
+        print(instance)
         return instance[0]
 
     def data_to_model(self, data):
