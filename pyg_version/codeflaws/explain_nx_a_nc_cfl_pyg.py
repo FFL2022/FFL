@@ -107,7 +107,7 @@ class StatementGraphPerturber(torch.nn.Module):
 
 class TopKStatmentExplainer(Explainer):
     def __init__(self, model, loss_func, dataset: CodeflawsCFLPyGStatementDataset, k, device):
-        super(TopKStatmentExplainer, self).__init__(model, loss_func, dataset, device)
+        super(TopKStatmentExplainer, self).__init__(model, loss_func, device)
         self.iterator = TopKStatementIterator(model, dataset, k, device)
 
     def get_data(self, instance):
