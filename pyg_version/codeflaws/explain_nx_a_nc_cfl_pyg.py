@@ -60,8 +60,7 @@ def total_loss_size_stmt_entropy(perturbed_pred, orig_pred, perturber, instance)
                                      perturber.get_edge_weights(),
                                      coeff_n=0.1,
                                      coeff_e=0.3)
-    return stmt_loss
-    # return stmt_loss + size_loss_val + entropy_loss
+    return stmt_loss + size_loss_val + entropy_loss
 
 
 class TopKStatementIterator(object):
@@ -105,10 +104,10 @@ class StatementGraphPerturber(torch.nn.Module):
         super().__init__()
         self.graph = graph
         self.xs_weights = torch.nn.ParameterList(
-            [torch.nn.Parameter(torch.ones(x.shape[0], 1)) for x in graph.xs]
+            [torch.nn.Parameter(torch.ones(x.shape[0], 1, requires_grad=True)) for x in graph.xs]
         )
         self.ess_weights = torch.nn.ParameterList(
-            [torch.nn.Parameter(torch.ones(e.shape[1], 1)) for e in graph.ess]
+            [torch.nn.Parameter(torch.ones(e.shape[1], 1, requires_grad=True)) for e in graph.ess]
         )
 
     def get_node_weights(self):
