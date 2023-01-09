@@ -137,7 +137,7 @@ class TopKStatmentExplainer(Explainer):
         return instance[0]
 
     def data_to_model(self, data):
-        return data.xs, data.ess
+        return data[0].xs, data[0].ess
 
     def get_perturber(self, data) -> torch.nn.Module:
         perturber = StatementGraphPerturber(data[0]).to(device)
