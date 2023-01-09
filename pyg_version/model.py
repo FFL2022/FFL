@@ -22,6 +22,7 @@ class MPNN(MessagePassing):
                               weights=weights))
 
     def message(self, x_i, x_j, edge_index, weights=None):
+        print(weights)
         if weights is None:
             return self.lin_tgt(x_i) + self.lin_src(x_j) + self.emb_self_edge((edge_index[1] == edge_index[0]).long())
         else:
