@@ -46,14 +46,15 @@ class Explainer(object):
             orig_pred = self.model(*self.data_to_model(data))
         bar = tqdm.trange(self.epochs)
         self.model.eval()
-        for i in bar:
-            perturbed_data = data_forward(perturber, self.data_to_perturber(data))
-            perturbed_pred = data_forward(self.model, perturbed_data)
-            loss = self.loss(perturbed_pred, orig_pred, perturber, instance)
-            bar.set_postfix(loss=loss.item())
-            self.opt.zero_grad()
-            loss.backward()
-            self.opt.step()
+        with torch.enable_grad():
+            for i in bar:
+                perturbed_data = data_forward(perturber, self.data_to_perturber(data))
+                perturbed_pred = data_forward(self.model, perturbed_data)
+                loss = self.loss(perturbed_pred, orig_pred, perturber, instance)
+                bar.set_postfix(loss=loss.item())
+                self.opt.zero_grad()
+                loss.backward()
+                self.opt.step()
         return perturber
 
     def explain(self, instance_iterator) -> Iterable[torch.nn.Module]:
