@@ -87,15 +87,13 @@ class TopKStatementIterator(object):
         self.model.eval()
         with torch.no_grad():
             for data, stmt_nodes in self.dataset:
-                new_data = data
-                new_data.xs = [x.to(self.device) for x in data.xs]
-                new_data.ess = [es.to(self.device) for es in data.ess]
-                output = self.model(new_data.xs, new_data.ess)[0]
+                data = data.to(device)
+                output = self.model(data.xs, data.ess)[0]
                 output = output[stmt_nodes, 1].cpu()
                 k = min(len(stmt_nodes), self.k)
                 topk = output.topk(k, dim=0)[1]
                 for i in topk:
-                    yield (new_data, stmt_nodes.to(device)), i
+                    yield (data, stmt_nodes.to(device)), i
 
     def __len__(self):
         return self.len_data
