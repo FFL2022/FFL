@@ -151,6 +151,7 @@ class MPNNModel_A_T_L(nn.Module):
                     zip(ess, self.t_srcs, self.t_tgts)):
                 out[t_tgt] += self.mpnns[i][j](xs[t_src], xs[t_tgt], es,
                                      weights[j] if weights else None)
+                print(out[t_tgt].requires_grad)
             xs = [self.relu(out[0]), self.relu(out[1])]
         last = self.decode(xs[0])
         return last, self.last_act(last)

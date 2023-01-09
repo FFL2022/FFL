@@ -47,7 +47,6 @@ class Explainer(object):
         for i in bar:
             perturbed_data = data_forward(perturber, self.data_to_perturber(data))
             perturbed_pred = data_forward(self.model, perturbed_data)
-            print("perturbed pred: ", perturbed_pred[0].requires_grad)
             loss = self.loss(perturbed_pred, orig_pred, perturber, instance)
             bar.set_postfix(loss=loss.item())
             self.opt.zero_grad()
