@@ -116,12 +116,6 @@ class StatementGraphPerturber(torch.nn.Module):
     def get_edge_weights(self):
         return torch.cat(self.ess_weights, dim=0)
 
-    def data_to_model(self, data):
-        return data[0].xs, data[0].ess
-
-    def data_to_perturber(self, data):
-        return data[0]
-
     def forward(self, data):
         return data.xs, data.ess, self.xs_weights, self.ess_weights
 
@@ -146,6 +140,9 @@ class TopKStatmentExplainer(Explainer):
 
     def explain(self):
         return super().explain(self.iterator)
+
+    def data_to_perturber(self, data):
+        return data[0]
 
 
 def from_data_to_nx(graph, perturber: StatementGraphPerturber,
