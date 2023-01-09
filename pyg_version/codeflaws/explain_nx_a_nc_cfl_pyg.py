@@ -87,7 +87,7 @@ class TopKStatementIterator(object):
         self.model.eval()
         with torch.no_grad():
             for data, stmt_nodes in self.dataset:
-                new_data = data.copy()
+                new_data = data
                 new_data.xs = [x.to(self.device) for x in data.xs]
                 new_data.ess = [es.to(self.device) for es in data.ess]
                 output = self.model(new_data.xs, new_data.ess)[0]
@@ -95,7 +95,7 @@ class TopKStatementIterator(object):
                 k = min(len(stmt_nodes), self.k)
                 topk = output.topk(k, dim=0)[1]
                 for i in topk:
-                    yield new_data, i
+                    yield (new_data, stmt_nodes.to(device)), i
 
     def __len__(self):
         return self.len_data
@@ -119,10 +119,10 @@ class StatementGraphPerturber(torch.nn.Module):
         return torch.cat(self.ess_weights, dim=0)
 
     def data_to_model(self, data):
-        return data.xs, data.ess
+        return data[0].xs, data[0].ess
 
     def data_to_perturber(self, data):
-        return data
+        return data[0]
 
     def forward(self, data):
         return data.xs, data.ess, self.xs_weights, self.ess_weights
