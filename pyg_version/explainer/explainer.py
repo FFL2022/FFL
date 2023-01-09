@@ -41,7 +41,7 @@ class Explainer(object):
         data = self.get_data(instance)
         perturber = self.get_perturber(data)
         self.prepare(perturber)
-        orig_pred = self.model(self.data_to_model(data))
+        orig_pred = self.model(*self.data_to_model(data))
         bar = tqdm.trange(self.epochs)
         for i in bar:
             perturbed_data = data_forward(perturber, self.data_to_perturber(data))
