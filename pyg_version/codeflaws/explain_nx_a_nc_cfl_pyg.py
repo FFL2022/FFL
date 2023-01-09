@@ -3,7 +3,7 @@ from codeflaws.dataloader_cfl import CodeflawsCFLNxStatementDataset, \
 from pyg_version.codeflaws.dataloader_cfl_pyg import CodeflawsCFLPyGStatementDataset, CodeflawsCFLStatementGraphMetadata
 from pyg_version.model import MPNNModel_A_T_L
 from pyg_version.explainer.explainer import Explainer, InflExtractor
-from pyg_version.explainer.common import EdgeWeights, NodeWeights, entropy_loss_mask, size_loss
+from pyg_version.explainer.common import entropy_loss_mask, size_loss
 from graph_algos.nx_shortcuts import where_node, where_edge
 # Todo: use edge weight and feature weight balanced
 import torch
