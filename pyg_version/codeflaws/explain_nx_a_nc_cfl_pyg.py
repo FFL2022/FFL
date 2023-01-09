@@ -60,7 +60,9 @@ def total_loss_size_stmt_entropy(perturbed_pred, orig_pred, perturber, instance)
                                      perturber.get_edge_weights(),
                                      coeff_n=0.1,
                                      coeff_e=0.3)
-    print(entropy_loss.requires_grad)
+    print("stmt loss: ", stmt_loss.requires_grad)
+    print("Entropy loss: ", entropy_loss.requires_grad)
+    print("size loss: ", size_loss_val.requires_grad)
     return stmt_loss + size_loss_val + entropy_loss
 
 
