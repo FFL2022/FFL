@@ -60,6 +60,7 @@ def total_loss_size_stmt_entropy(perturbed_pred, orig_pred, perturber, instance)
                                      perturber.get_edge_weights(),
                                      coeff_n=0.1,
                                      coeff_e=0.3)
+    print(entropy_loss.requires_grad)
     return stmt_loss + size_loss_val + entropy_loss
 
 
@@ -109,8 +110,6 @@ class StatementGraphPerturber(torch.nn.Module):
         self.ess_weights = torch.nn.ParameterList(
             [torch.nn.Parameter(torch.ones(e.shape[1], 1, requires_grad=True)) for e in graph.ess]
         )
-        print(list(weight.requires_grad for weight in self.xs_weights))
-        print(list(weight.requires_grad for weight in self.ess_weights))
 
     def get_node_weights(self):
         # stack all self weights
