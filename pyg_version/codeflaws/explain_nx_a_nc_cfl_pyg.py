@@ -37,8 +37,8 @@ def target_statement_loss(perturbed_pred, orig_pred, _, instance):
     # target is an integer of line number
     (data, stmt_nodes), target = instance
     # target is the target statement
-    orig_pred_stmt = orig_pred[1][stmt_nodes, 1].detach().cpu()
-    perturbed_pred_stmt = perturbed_pred[1][stmt_nodes, 1].detach().cpu()
+    orig_pred_stmt = orig_pred[1][stmt_nodes, 1]
+    perturbed_pred_stmt = perturbed_pred[1][stmt_nodes, 1]
     return torch.nn.functional.binary_cross_entropy_with_logits(
         perturbed_pred_stmt, orig_pred_stmt)
 
