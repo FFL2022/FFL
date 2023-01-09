@@ -25,9 +25,7 @@ class MPNN(MessagePassing):
         if weights is None:
             return self.lin_tgt(x_i) + self.lin_src(x_j) + self.emb_self_edge((edge_index[1] == edge_index[0]).long())
         else:
-            orig_output = torch.autograd.Variable((self.lin_tgt(x_i) + self.lin_src(x_j) + self.emb_self_edge((edge_index[1] == edge_index[0]).long())), requires_grad=False)
-            output = weights * orig_output
-            print(weights.requires_grad, output.requires_grad)
+            output = weights * (self.lin_tgt(x_i) + self.lin_src(x_j) + self.emb_self_edge((edge_index[1] == edge_index[0]).long())) 
             return output
 
 
