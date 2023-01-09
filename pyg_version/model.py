@@ -143,6 +143,7 @@ class MPNNModel_A_T_L(nn.Module):
     def forward(self, xs, ess, node_weights=None, weights=None):
         '''xs: al, t'''
         xs = [self.enc_al(xs[0].int()), self.emb_test(xs[1].int())]
+        print(xs[0].requires_grad)
         if node_weights:
             xs = [x * node_weight for x, node_weight in zip(xs, node_weights)]
         for i in range(self.n_layers):
@@ -151,7 +152,6 @@ class MPNNModel_A_T_L(nn.Module):
                     zip(ess, self.t_srcs, self.t_tgts)):
                 out[t_tgt] += self.mpnns[i][j](xs[t_src], xs[t_tgt], es,
                                      weights[j] if weights else None)
-                print(out[t_tgt].requires_grad)
             xs = [self.relu(out[0]), self.relu(out[1])]
         last = self.decode(xs[0])
         return last, self.last_act(last)
