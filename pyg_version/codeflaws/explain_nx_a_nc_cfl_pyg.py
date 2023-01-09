@@ -82,7 +82,6 @@ class TopKStatementIterator(object):
                 k = min(len(stmt_nodes), self.k)
                 topk = output.topk(k, dim=0)[1]
                 for i in topk:
-                    print(data, i)
                     yield data, i
 
     def __len__(self):
@@ -93,8 +92,8 @@ class StatementGraphPerturber(torch.nn.Module):
     def __init__(self, graph):
         super().__init__()
         self.graph = graph
-        self.xs_weights = list([torch.nn.Parameter(torch.ones(x.shape[0], x.shape[1])) for x in graph.xs])
-        self.ess_weights = list([torch.nn.Parameter(torch.ones(e.shape[0], e.shape[1])) for e in graph.ess])
+        self.xs_weights = list([torch.nn.Parameter(torch.ones(x.shape[0], 1)) for x in graph.xs])
+        self.ess_weights = list([torch.nn.Parameter(torch.ones(e.shape[1], 1)) for e in graph.ess])
 
     def get_node_weights(self):
         # stack all self weights
@@ -119,14 +118,15 @@ class TopKStatmentExplainer(Explainer):
         self.iterator = TopKStatementIterator(model, dataset, k, device)
 
     def get_data(self, instance):
-        print(instance)
         return instance[0]
 
     def data_to_model(self, data):
         return data.xs, data.ess
 
     def get_perturber(self, data) -> torch.nn.Module:
-        return StatementGraphPerturber(data).to(device)
+        perturber = StatementGraphPerturber(data).to(device)
+        perturber.train()
+        return perturber
 
     def explain(self):
         return super().explain(self.iterator)
