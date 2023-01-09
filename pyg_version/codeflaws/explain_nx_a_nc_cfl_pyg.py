@@ -78,7 +78,7 @@ class TopKStatementIterator(object):
             for data, stmt_nodes in self.dataset:
                 data = data.to(self.device)
                 output = self.model(data.xs, data.ess)[0]
-                output = output[1][stmt_nodes].cpu()
+                output = output[stmt_nodes].cpu()
                 k = min(len(stmt_nodes), self.k)
                 topk = output.topk(k, dim=0)
                 for i in topk.indices:
