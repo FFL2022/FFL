@@ -110,7 +110,7 @@ class StatementGraphPerturber(torch.nn.Module):
             [torch.nn.Parameter(torch.ones(e.shape[1], 1, requires_grad=True)) for e in graph.ess]
         )
         print(list(weight.requires_grad for weight in self.xs_weights))
-        print(list(weight.requires_grad for weight in self.edge_weights))
+        print(list(weight.requires_grad for weight in self.ess_weights))
 
     def get_node_weights(self):
         # stack all self weights
