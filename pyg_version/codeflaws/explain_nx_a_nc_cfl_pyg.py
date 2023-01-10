@@ -210,7 +210,7 @@ if __name__ == '__main__':
     exec(f"loss_func = {args.loss_func}", globals(), locals())
     infl_extractor = InflExtractor(where_node(),
                                    where_edge(where_node(), where_node()), 0.1,
-                                   0.3)
+                                   0.1)
     model = MPNNModel_A_T_L(dim_h=64,
                             netypes=len(meta_data.meta_graph),
                             t_srcs=[t2id[e[0]] for e in meta_data.meta_graph],
