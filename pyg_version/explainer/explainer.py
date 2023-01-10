@@ -70,7 +70,7 @@ class InflExtractor(object):
         self.thres_e = thres_e
 
     def extract_infl_structure(self, nx_g, target_node):
-        es = [(u, v, k, e) for u, v, k, e in nx_g.edges()
+        es = [(u, v, k, e) for u, v, k, e in nx_g.edges(keys=True, data=True)
               if e['explain_weight'] >= self.thres_e and
               self.where_e(nx_g, (u, v, k, e))]
         ns = list(n for n in nx_g.nodes() if self.where_n(nx_g, n) and
