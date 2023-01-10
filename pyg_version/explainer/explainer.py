@@ -75,7 +75,8 @@ class InflExtractor(object):
               self.where_e(nx_g, (u, v, k, e))]
         ns = list(n for n in nx_g.nodes() if self.where_n(nx_g, n) and
                   nx_g.nodes[n]['explain_weight'] >= self.thres_n)
-        kept_n = set(ns).union(set(sum([u, v] for u, v, _, _ in es)))
+        # concatenate this with all the node in es
+        kept_n = set(ns).union(set(u for u, _, _, _ in es).union(set(v for _, v, _, _ in es)))
         kept_n.add(target_node)
         kept_n.remove(target_node)
         n2i = {n: i for i, n in enumerate(kept_n)}
