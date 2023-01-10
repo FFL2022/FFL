@@ -53,12 +53,12 @@ def total_loss_size_stmt_entropy(perturbed_pred, orig_pred, perturber, instance)
     (data, stmt_nodes), target = instance
     # target is the target statement
     stmt_loss = target_statement_loss(perturbed_pred, orig_pred, perturber, instance)
-    size_loss_val = size_loss(perturber.get_node_weights(),
-                              perturber.get_edge_weights(),
+    size_loss_val = size_loss(torch.sigmoid(perturber.get_node_weights()),
+                              torch.sigmoid(perturber.get_edge_weights()),
                               coeff_n=0.002,
                               coeff_e=0.005)
-    entropy_loss = entropy_loss_mask(perturber.get_node_weights(),
-                                     perturber.get_edge_weights(),
+    entropy_loss = entropy_loss_mask(torch.sigmoid(perturber.get_node_weights()),
+                                     torch.sigmoid(perturber.get_edge_weights()),
                                      coeff_n=0.1,
                                      coeff_e=0.3)
     return stmt_loss + size_loss_val + entropy_loss
