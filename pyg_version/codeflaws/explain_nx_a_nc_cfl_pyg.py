@@ -48,7 +48,8 @@ def total_loss_size_stmt_entropy(perturbed_pred, orig_pred, perturber, instance)
     # Perturbed pred is of size N x class
     # orig_pred is of size N x class
     # instance is a tuple of (data, target)
-    # data is Data object, where xs is of size N x F, and ess is of size [L x 2 x E], L is the number of edge type, determined via the graph metadata
+    # data is Data object, where xs is of size N x F, and ess is of size [L x 2 x E],
+    # L is the number of edge type, determined via the graph metadata
     # target is an integer of line number
     (data, stmt_nodes), target = instance
     # target is the target statement
@@ -177,7 +178,7 @@ def from_data_to_nx(graph, perturber: StatementGraphPerturber,
             dst_node = f"{dst_type}_{es[1, j].item()}"
             g.add_edge(src_node,
                        dst_node,
-                       etype=etype[i],
+                       etype=etype,
                        explain_weight=perturber.ess_weights[i][j].item())
     return g
 
