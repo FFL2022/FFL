@@ -158,7 +158,7 @@ def from_data_to_nx(graph, perturber: StatementGraphPerturber,
             # Then the node graph is ast
             for j, node in enumerate(x):
                 g.add_node(f"ast_{j}",
-                           ntype=metadata.t_asts[int(x[j].item())],
+                           ntype=metadata.id2ntype[int(x[j].item())],
                            explain_weight=perturber.xs_weights[i][j].item())
         elif i == 1:
             # Then the node graph is test
