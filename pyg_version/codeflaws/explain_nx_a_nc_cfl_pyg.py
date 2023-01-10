@@ -38,6 +38,7 @@ def target_statement_loss(perturbed_pred, orig_pred, _, instance):
     (data, stmt_nodes), target = instance
     # target is the target statement
     orig_pred_stmt = orig_pred[1][stmt_nodes, 1]
+    # get the max index
     perturbed_pred_stmt = perturbed_pred[1][stmt_nodes, 1]
     return torch.nn.functional.binary_cross_entropy_with_logits(
         perturbed_pred_stmt, orig_pred_stmt)
@@ -170,7 +171,7 @@ def from_data_to_nx(graph, perturber: StatementGraphPerturber,
     # Translate from each edge type to the corresponding edge
     for i, es in enumerate(graph.ess):
         # i is the ith etype
-        src_type, etype, dst_type = metadata.meta_graph
+        src_type, etype, dst_type = metadata.meta_graph[i]
         for j in range(es.shape[1]):
             src_node = f"{src_type}_{es[0, j].item()}"
             dst_node = f"{dst_type}_{es[1, j].item()}"
