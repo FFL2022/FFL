@@ -183,8 +183,8 @@ class TopKStatmentExplainer(Explainer):
 
     def __init__(self, model, loss_func,
                  dataset: CodeflawsCFLPyGStatementDataset, k, device):
-        super(TopKStatmentExplainer, self).__init__(model, loss_func, 3000)
-        self.iterator = TopKStatementIterator(model, dataset, k, 3000)
+        super(TopKStatmentExplainer, self).__init__(model, loss_func, 1500)
+        self.iterator = TopKStatementIterator(model, dataset, k, device)
 
     def get_data(self, instance):
         return instance[0]
@@ -312,8 +312,10 @@ if __name__ == '__main__':
             perturber) in enumerate(explainer.explain()):
         target_node = f"ast_{stmt_nodes[target_stmt_idx].item()}"
         g = from_data_to_nx(graph, perturber, meta_data)
+        # Dump this g for later inspection
+        nx.write_gpickle(g, os.path.join(save_dir, f"{i}.gpickle"))
         infls = infl_extractor.extract_infl_structure(g, target_node)
-        # Dump this g
+        # Dump this infl
         nx.write_gpickle(infls, os.path.join(save_dir, f"{i}.gpickle"))
         # Visualize with dot
         nx.drawing.nx_pydot.write_dot(infls,
