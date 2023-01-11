@@ -130,8 +130,8 @@ class TopKStatmentExplainer(Explainer):
 
     def __init__(self, model, loss_func,
                  dataset: CodeflawsCFLPyGStatementDataset, k, device):
-        super(TopKStatmentExplainer, self).__init__(model, loss_func, 5000)
-        self.iterator = TopKStatementIterator(model, dataset, k, 5000)
+        super(TopKStatmentExplainer, self).__init__(model, loss_func, 3000)
+        self.iterator = TopKStatementIterator(model, dataset, k, 3000)
 
     def get_data(self, instance):
         return instance[0]

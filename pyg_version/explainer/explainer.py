@@ -36,7 +36,7 @@ class Explainer(object):
 
     def prepare(self, perturber: torch.nn.Module):
         perturber.train()
-        self.opt = torch.optim.AdamW(perturber.parameters())
+        self.opt = torch.optim.AdamW(perturber.parameters(), lr=0.01, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
 
     def explain_instance(self, instance) -> torch.nn.Module:
         data = self.get_data(instance)
@@ -69,7 +69,7 @@ class InflExtractor(object):
 
     def extract_infl_structure(self, nx_g, target_node):
         es = set([(u, v) for u, v, k, e in nx_g.edges(keys=True, data=True)
-              if e['explain_weight'] >= self.thres_e])
+              if e['explain_weight'] >= self.thres_e and u != v])
         ns = list(n for n in nx_g.nodes() if nx_g.nodes[n]['explain_weight'] >= self.thres_n)
         # concatenate this with all the node in es
         kept_n = set(ns).union(set(u for u, _ in es).union(set(v for _, v in es)))
@@ -88,4 +88,7 @@ class InflExtractor(object):
         substruct = nx.relabel_nodes(substruct, n2i)
         update_nodes(substruct, is_target=0)
         substruct.nodes['y']['is_target'] = 1
+        # Fill the target node color with red for dot visualization, add style filled
+        substruct.nodes['y']['color'] = 'red'
+        substruct.nodes['y']['style'] = 'filled'
         return substruct
