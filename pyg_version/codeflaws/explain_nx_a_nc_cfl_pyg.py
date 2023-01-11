@@ -240,14 +240,14 @@ def from_data_to_nx(graph, perturber: StatementGraphPerturber,
                 g.add_node(f"ast_{j}",
                            ntype=metadata.id2ntype[int(x[j].item())],
                            label=metadata.id2ntype[int(x[j].item())],
-                           explain_weight=perturber.xs_weights[i][j].item() if perturber.xs_weights else 0)
+                           explain_weight=torch.sigmoid(perturber.xs_weights[i][j]).item() if perturber.xs_weights else 0)
         elif i == 1:
             # Then the node graph is test
             for j, node in enumerate(x):
                 g.add_node(f"test_{j}",
                            ntype=metadata.t_tests[int(x[j].item())],
                            label=metadata.id2ntype[int(x[j].item())],
-                           explain_weight=perturber.xs_weights[i][j].item() if perturber.xs_weights else 0)
+                           explain_weight=torch.sigmoid(perturber.xs_weights[i][j]).item() if perturber.xs_weights else 0)
         # each row of x is a data of a node
     # Translate from each edge type to the corresponding edge
     for i, es in enumerate(graph.ess):
@@ -260,7 +260,7 @@ def from_data_to_nx(graph, perturber: StatementGraphPerturber,
                        dst_node,
                        etype=etype,
                        label=etype,
-                       explain_weight=perturber.ess_weights[i][j].item())
+                       explain_weight=torch.sigmoid(perturber.ess_weights[i][j]).item())
     return g
 
 
@@ -274,7 +274,8 @@ def get_args():
     # parser.add_argument("--loss_func",
     #                     type=str,
     #                     default="total_loss_size_stmt_entropy")
-
+    parser.add_argument("--node_weights", type=bool, default=False)
+    parser.add_argument("--edge_weights", type=bool, default=True)
     parser.add_argument("--loss_func",
                         type=str,
                         default="total_loss_size_stmt_entropy_edge_only")
