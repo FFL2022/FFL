@@ -64,19 +64,15 @@ class Explainer(object):
 
 class InflExtractor(object):
     def __init__(self, where_n, where_e, thres_n, thres_e):
-        self.where_e = where_e
-        self.where_n = where_n
         self.thres_n = thres_n
         self.thres_e = thres_e
 
     def extract_infl_structure(self, nx_g, target_node):
-        es = [(u, v, k, e) for u, v, k, e in nx_g.edges(keys=True, data=True)
-              if e['explain_weight'] >= self.thres_e and
-              self.where_e(nx_g, (u, v, k, e))]
-        ns = list(n for n in nx_g.nodes() if self.where_n(nx_g, n) and
-                  nx_g.nodes[n]['explain_weight'] >= self.thres_n)
+        es = set([(u, v) for u, v, k, e in nx_g.edges(keys=True, data=True)
+              if e['explain_weight'] >= self.thres_e])
+        ns = list(n for n in nx_g.nodes() if nx_g.nodes[n]['explain_weight'] >= self.thres_n)
         # concatenate this with all the node in es
-        kept_n = set(ns).union(set(u for u, _, _, _ in es).union(set(v for _, v, _, _ in es)))
+        kept_n = set(ns).union(set(u for u, _ in es).union(set(v for _, v in es)))
         kept_n.add(target_node)
         kept_n.remove(target_node)
         n2i = {n: i for i, n in enumerate(kept_n)}

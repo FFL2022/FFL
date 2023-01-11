@@ -161,12 +161,14 @@ def from_data_to_nx(graph, perturber: StatementGraphPerturber,
             for j, node in enumerate(x):
                 g.add_node(f"ast_{j}",
                            ntype=metadata.id2ntype[int(x[j].item())],
+                           label=metadata.id2ntype[int(x[j].item())],
                            explain_weight=perturber.xs_weights[i][j].item())
         elif i == 1:
             # Then the node graph is test
             for j, node in enumerate(x):
                 g.add_node(f"test_{j}",
                            ntype=metadata.t_tests[int(x[j].item())],
+                           label=metadata.id2ntype[int(x[j].item())],
                            explain_weight=perturber.xs_weights[i][j].item())
         # each row of x is a data of a node
     # Translate from each edge type to the corresponding edge
@@ -179,6 +181,7 @@ def from_data_to_nx(graph, perturber: StatementGraphPerturber,
             g.add_edge(src_node,
                        dst_node,
                        etype=etype,
+                       label=etype,
                        explain_weight=perturber.ess_weights[i][j].item())
     return g
 
@@ -209,7 +212,7 @@ if __name__ == '__main__':
     t2id = {'ast': 0, 'test': 1}
     exec(f"loss_func = {args.loss_func}", globals(), locals())
     infl_extractor = InflExtractor(where_node(),
-                                   where_edge(where_node(), where_node()), 0.1,
+                                   where_edge(where_node(), where_node()), 0.3,
                                    0.1)
     model = MPNNModel_A_T_L(dim_h=64,
                             netypes=len(meta_data.meta_graph),
