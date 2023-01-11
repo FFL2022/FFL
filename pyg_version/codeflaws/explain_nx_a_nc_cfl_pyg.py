@@ -65,6 +65,28 @@ def total_loss_size_stmt_entropy(perturbed_pred, orig_pred, perturber, instance)
     return stmt_loss + size_loss_val + entropy_loss
 
 
+
+def total_loss_size_stmt_entropy_edge_only(perturbed_pred, orig_pred, perturber, instance):
+    # Perturbed pred is of size N x class
+    # orig_pred is of size N x class
+    # instance is a tuple of (data, target)
+    # data is Data object, where xs is of size N x F, and ess is of size [L x 2 x E],
+    # L is the number of edge type, determined via the graph metadata
+    # target is an integer of line number
+    (data, stmt_nodes), target = instance
+    # target is the target statement
+    stmt_loss = target_statement_loss(perturbed_pred, orig_pred, perturber, instance)
+    size_loss_val = size_loss(torch.sigmoid(perturber.get_edge_weights()),
+                              torch.sigmoid(perturber.get_edge_weights()),
+                              coeff_n=0.002,
+                              coeff_e=0.005)
+    entropy_loss = entropy_loss_mask(torch.sigmoid(perturber.get_edge_weights()),
+                                     torch.sigmoid(perturber.get_edge_weights()),
+                                     coeff_n=0.1,
+                                     coeff_e=0.3)
+    return stmt_loss + size_loss_val + entropy_loss
+
+
 class TopKStatementIterator(object):
 
     def __init__(self, model, dataset: CodeflawsCFLPyGStatementDataset, k,
@@ -125,6 +147,26 @@ class StatementGraphPerturber(torch.nn.Module):
         return data.xs, data.ess, self.xs_weights, self.ess_weights
 
 
+class StatementGraphPerturberEdgeOnly(torch.nn.Module):
+    def __init__(self, graph):
+        super().__init__()
+        self.graph = graph
+        self.xs_weights = None
+        self.ess_weights = torch.nn.ParameterList(
+            [torch.nn.Parameter(torch.ones(e.shape[1], 1, requires_grad=True)) for e in graph.ess]
+        )
+        self.nnodes = sum([x.shape[0] for x in graph.xs])
+
+    def get_node_weights(self):
+        # Return 0
+        return torch.zeros(self.nnodes, 1)
+
+    def get_edge_weights(self):
+        edge_weights = [weight for weight in self.ess_weights]
+        return torch.cat(edge_weights, dim=0)
+
+    def forward(self, data):
+        return data.xs, data.ess, None, self.ess_weights
 
 class TopKStatmentExplainer(Explainer):
 
@@ -150,6 +192,31 @@ class TopKStatmentExplainer(Explainer):
     def data_to_perturber(self, data):
         return data[0]
 
+
+
+class TopKStatmentExplainerEdge(Explainer):
+
+    def __init__(self, model, loss_func,
+                 dataset: CodeflawsCFLPyGStatementDataset, k, device):
+        super(TopKStatmentExplainer, self).__init__(model, loss_func, 3000)
+        self.iterator = TopKStatementIterator(model, dataset, k, 3000)
+
+    def get_data(self, instance):
+        return instance[0]
+
+    def data_to_model(self, data):
+        return data[0].xs, data[0].ess
+
+    def get_perturber(self, data) -> torch.nn.Module:
+        perturber = StatementGraphPerturberEdgeOnly(data[0]).to(device)
+        perturber.train()
+        return perturber
+
+    def explain(self):
+        return super().explain(self.iterator)
+
+    def data_to_perturber(self, data):
+        return data[0]
 
 def from_data_to_nx(graph, perturber: StatementGraphPerturber,
                     metadata: CodeflawsCFLStatementGraphMetadata):
@@ -193,9 +260,13 @@ def get_args():
                         type=str,
                         default="explain_pyg_codeflaws_pyc_cfl_stmt_level")
     parser.add_argument("--k", type=int, default=10)
+    # parser.add_argument("--loss_func",
+    #                     type=str,
+    #                     default="total_loss_size_stmt_entropy")
+
     parser.add_argument("--loss_func",
                         type=str,
-                        default="total_loss_size_stmt_entropy")
+                        default="total_loss_size_stmt_entropy_edge_only")
     parser.add_argument("--device", type=str, default='cuda')
     return parser.parse_args()
 
@@ -222,7 +293,7 @@ if __name__ == '__main__':
                             n_layers=5,
                             n_classes=2).to(device)
     model.load_state_dict(torch.load(args.model_path, map_location=device))
-    explainer = TopKStatmentExplainer(model, loss_func, pyg_dataset, args.k,
+    explainer = TopKStatmentExplainerEdge(model, loss_func, pyg_dataset, args.k,
                                       args.device)
     save_dir = args.save_path
     os.makedirs(save_dir, exist_ok=True)
