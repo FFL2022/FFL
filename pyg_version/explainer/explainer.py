@@ -79,6 +79,9 @@ class InflExtractor(object):
         n2i[target_node] = 'y'
         kept_n.add(target_node)
         substruct = nx_g.subgraph(kept_n).copy()
+        for u, v in list(substruct.edges()):
+            if u == v:
+                substruct.remove_edge(u, v)
         '''
         for u, v in list(substruct.edges()):
             if (u, v) not in es:
