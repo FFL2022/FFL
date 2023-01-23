@@ -19,7 +19,8 @@ def spanning_tree_filtering(nx_g, target_node):
     return nx_g.subgraph(visiteds)
 
 
-def combine_to_one_graph(subgraph_dir, kept_props_v=['target_node'],
+def combine_to_one_graph(subgraph_dir,
+                         kept_props_v=['target_node'],
                          kept_props_e=[]):
     print("Combine to one graph:")
     fps = list(glob.glob(os.path.join(subgraph_dir, "*.pkl")))
@@ -40,7 +41,8 @@ def combine_to_one_graph(subgraph_dir, kept_props_v=['target_node'],
             if 'is_target' not in nx_g.nodes[n]:
                 nx_g.nodes[n]['is_target'] = 0
         nx_g = spanning_tree_filtering(
-            nx_g, list([n for n in nx_g if nx_g.nodes[n]['is_target']])[0])
+            nx_g,
+            list([n for n in nx_g if nx_g.nodes[n]['is_target']])[0])
         for n, data in nx_g.nodes(data=True):
             for key in list(data.keys()):
                 if key not in kept_props_v:
@@ -51,7 +53,37 @@ def combine_to_one_graph(subgraph_dir, kept_props_v=['target_node'],
                     data.pop(key, None)
 
         combined_graph, _ = nx_shortcuts.combine_multi([combined_graph, nx_g],
-                                                    node2int=lambda x: x)
+                                                       node2int=lambda x: x)
+    fps_gpickle = list(glob.glob(os.path.join(subgraph_dir, "*.gpickle")))
+    for idx in tqdm(range(len(fps_gpickle))):
+        fp = fps_gpickle[idx]
+        nx_g = nx.read_gpickle(fp)
+        if isinstance(nx_g, tuple):
+            nx_g = nx_g[0]
+        if isinstance(nx_g, nx.DiGraph):
+            nx_g_new = nx.MultiDiGraph()
+            for n, ndata in nx_g.nodes(data=True):
+                nx_g_new.add_node(n, **ndata)
+            for u, v, edata in nx_g.edges(data=True):
+                nx_g_new.add_edge(u, v, **edata)
+            nx_g = nx_g_new
+        for n in nx_g.nodes():
+            if 'is_target' not in nx_g.nodes[n]:
+                nx_g.nodes[n]['is_target'] = 0
+        nx_g = spanning_tree_filtering(
+            nx_g,
+            list([n for n in nx_g if nx_g.nodes[n]['is_target']])[0])
+        for n, data in nx_g.nodes(data=True):
+            for key in list(data.keys()):
+                if key not in kept_props_v:
+                    nx_g.nodes[n].pop(key, None)
+        for u, v, data in nx_g.edges(data=True):
+            for key in list(data.keys()):
+                if key not in kept_props_e:
+                    data.pop(key, None)
+
+        combined_graph, _ = nx_shortcuts.combine_multi([combined_graph, nx_g],
+                                                       node2int=lambda x: x)
     return combined_graph
 
 
@@ -82,14 +114,14 @@ def check_equal_nx(nx1, nx2, v_attrs=[], e_attrs=[]):
 
     imap1 = {n: i for i, n in enumerate(nx1_nodes)}
     imap2 = {n: i for i, n in enumerate(nx2_nodes)}
-    nx1_edges = list(sorted(nx1.edges(keys=True, data=True),
-                            key=lambda e: tuple(
-                                [imap1[e[0]], imap1[e[1]]] +
-                                [e[3][attr] for attr in e_attrs] + [e[2]])))
-    nx2_edges = list(sorted(nx2.edges(keys=True, data=True),
-                            key=lambda e: tuple(
-                                [imap2[e[0]], imap2[e[1]]] +
-                                [e[3][attr] for attr in e_attrs] + [e[2]])))
+    nx1_edges = list(
+        sorted(nx1.edges(keys=True, data=True),
+               key=lambda e: tuple([imap1[e[0]], imap1[e[1]]] +
+                                   [e[3][attr] for attr in e_attrs] + [e[2]])))
+    nx2_edges = list(
+        sorted(nx2.edges(keys=True, data=True),
+               key=lambda e: tuple([imap2[e[0]], imap2[e[1]]] +
+                                   [e[3][attr] for attr in e_attrs] + [e[2]])))
     nx1_edges = [(e[0], e[1], e[2]) for e in nx1_edges]
     nx2_edges = [(e[0], e[1], e[2]) for e in nx2_edges]
     if len(nx1_edges) != len(nx2_edges):

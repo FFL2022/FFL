@@ -78,6 +78,7 @@ def mine(args, kept_props_v=[], kept_props_e=[]):
     return nx_out_list
 
 
+
 if __name__ == '__main__':
     args = get_args()
     if args.task == "bfs":
@@ -90,5 +91,7 @@ if __name__ == '__main__':
         mine(args, ['is_target'], [])
     elif args.task == 'dfs':
         mine(args, ['is_target'], ['etype'])
+    elif args.task == 'cpp':
+        mine(args, ['is_target', 'ntype'], ['etype'])
     else:
         raise NotImplementedError("Not implemented for this task")
