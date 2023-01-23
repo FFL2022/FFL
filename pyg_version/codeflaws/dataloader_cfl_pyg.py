@@ -48,26 +48,27 @@ class CodeflawsCFLPyGStatementDataset(Dataset):
     def __getitem__(self, i):
         return self.gs[i], self.gs_stmt_nodes[i].long()
 
-    def convert_from_nx_to_pyg(self, nx_g, stmt_nodes):
-        nx_g = augment_with_reverse_edge_cat(nx_g, self.meta_data.t_e_asts, [])
+    @classmethod
+    def nx_to_pyg(meta_data, nx_g, ast_enc, stmt_nodes):
+        nx_g = augment_with_reverse_edge_cat(nx_g, meta_data.t_e_asts, [])
         ori_ns = list(nx_g.nodes())[:]
         nx_g = nx.convert_node_labels_to_integers(nx_g)
         new_ns = list(nx_g.nodes())[:]
         map_ns = {n: i for n, i in zip(ori_ns, new_ns)}
-        ess = [[[], []] for i in range(len(self.meta_data.t_all))]
+        ess = [[[], []] for i in range(len(meta_data.t_all))]
         for u, v, e in nx_g.edges(data=True):
-            e['label'] = self.meta_data.t_all.index(e['label'])
+            e['label'] = meta_data.t_all.index(e['label'])
             ess[e['label']][0].append(u)
             ess[e['label']][1].append(v)
         ess = [add_self_loops(torch.tensor(es).long())[0] for es in ess]
         data = Data(ess=ess)
         n_asts = nodes_where(nx_g, graph='ast')
         l_a = torch.tensor([
-            self.meta_data.ntype2id[nx_g.nodes[n]['ntype']] for n in n_asts
+            meta_data.ntype2id[nx_g.nodes[n]['ntype']] for n in n_asts
         ]).long()
-        if self.ast_enc is not None:
+        if ast_enc is not None:
             data.c_a = torch.tensor([
-                self.ast_enc(nx_g.nodes[n]['token']) for n in n_asts
+                ast_enc(nx_g.nodes[n]['token']) for n in n_asts
             ]).float()
         # for cfg, it will be text
         data.lbl = torch.tensor([nx_g.nodes[n]['status'] for n in n_asts])
@@ -75,6 +76,9 @@ class CodeflawsCFLPyGStatementDataset(Dataset):
         data.xs = [l_a, ts]
         return data, \
             torch.tensor(list(map_ns[n] for n in stmt_nodes)).int()
+
+    def convert_from_nx_to_pyg(self, nx_g, stmt_nodes):
+        return self.nx_to_pyg(self.meta_data, nx_g, self.ast_enc, stmt_nodes)
 
     def process(self):
         self.gs, self.gs_stmt_nodes = [], []
