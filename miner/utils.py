@@ -57,7 +57,10 @@ def combine_to_one_graph(subgraph_dir,
     fps_gpickle = list(glob.glob(os.path.join(subgraph_dir, "*.gpickle")))
     for idx in tqdm(range(len(fps_gpickle))):
         fp = fps_gpickle[idx]
-        nx_g = nx.read_gpickle(fp)
+        try:
+            nx_g = nx.read_gpickle(fp)
+        except EOFError:
+            continue
         if isinstance(nx_g, tuple):
             nx_g = nx_g[0]
         if isinstance(nx_g, nx.DiGraph):
