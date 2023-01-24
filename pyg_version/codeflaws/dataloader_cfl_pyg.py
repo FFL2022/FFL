@@ -48,7 +48,7 @@ class CodeflawsCFLPyGStatementDataset(Dataset):
     def __getitem__(self, i):
         return self.gs[i], self.gs_stmt_nodes[i].long()
 
-    @classmethod
+    @staticmethod
     def nx_to_pyg(meta_data, nx_g, ast_enc, stmt_nodes):
         nx_g = augment_with_reverse_edge_cat(nx_g, meta_data.t_e_asts, [])
         ori_ns = list(nx_g.nodes())[:]

@@ -14,20 +14,20 @@ import argparse
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def attack(nx_g, nx_stmt_nodes, model, pattern_set):
+def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
     # 0. convert nx_g to pyg graph
     data, data_stmt_nodes = CodeflawsCFLPyGStatementDataset.nx_to_pyg(
-        nx_g, None, nx_stmt_nodes)
+        meta_data, nx_g, None, nx_stmt_nodes)
     # 1. get model's output
     model.eval()
     with torch.no_grad():
         data = data.to(device)
-        out = model(data.xs, data.ess)
+        out = model(data.xs, data.ess)[1]
     # 2. get the top-k predictions
-    topk = 10
-    topk_pred = out[data_stmt_nodes].topk(topk, dim=1)[1]
+    topk = min(10, data_stmt_nodes.shape[0])
+    topk_pred = out[data_stmt_nodes.long(), 1].topk(topk, dim=0)[1]
     # 3. Map back to the nx
-    topk_nx = set([nx_g.nodes[nx_stmt_nodes[n]] for n in topk_pred[0]])
+    topk_nx = set([nx_stmt_nodes[n] for n in topk_pred])
     orig_nx = nx_g.copy()
     # 4. Attack for each pattern
     for pattern in pattern_set:
@@ -36,7 +36,7 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set):
             # get the parent
             parent = list(nx_g.predecessors(target))[0]
             # get the relation from parent to target
-            relation = nx_g[parent][target][0]['etype']
+            relation = nx_g[parent][target][0]['label']
 
             # get the top node in the pattern
             top_node = [
@@ -45,29 +45,34 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set):
                 ) and neighbors_out(n, pattern)
             ][0]
             # 4.2. insert the pattern
-            for n in pattern.nodes:
-                nx_g.add_node(n)
+            for n, d  in pattern.nodes(data=True):
+                nx_g.add_node(n, graph='ast', **d, status=0)
             for u, v, k, e in pattern.edges(keys=True, data=True):
-                nx_g.add_edge(u, v, key=k, **e)
+                nx_g.add_edge(u, v, key=k, label=e['etype'], **e)
             # 4.3. connect the pattern to the target's parent
-            nx_g.add_edge(parent, top_node, key=0, etype=relation)
+            nx_g.add_edge(parent, top_node, key=0, label=relation)
             '''
-            nx_g.add_edge(top_node, target, key=0, etype='next_sibling')
-            nx_g.add_edge(target, top_node, key=0, etype='next_sibling_reverse')
+            nx_g.add_edge(top_node, target, key=0, label='next_sibling')
+            nx_g.add_edge(target, top_node, key=0, label='next_sibling_reverse')
             '''
             # 4.2 Get the new output
+            new_nx_stmt_nodes = nx_stmt_nodes[:] + [top_node]
             data, data_stmt_nodes = CodeflawsCFLPyGStatementDataset.nx_to_pyg(
-                nx_g, None, nx_stmt_nodes)
+                meta_data, nx_g, None, new_nx_stmt_nodes)
             model.eval()
             with torch.no_grad():
                 data = data.to(device)
-                out = model(data.xs, data.ess)
+                out = model(data.xs, data.ess)[1]
             # 4.3. Get the new top-k predictions
-            topk_pred = out[data_stmt_nodes].topk(topk, dim=1)[1]
+            # use the old topk
+            topk_pred = out[data_stmt_nodes.long(), 1].topk(topk, dim=0)[1]
             # 4.4. Map back to the nx
             new_topk_nx = set(
-                [nx_g.nodes[nx_stmt_nodes[n]] for n in topk_pred[0]])
+                [nx_stmt_nodes[n] for n in topk_pred])
             # 4.5. Check if any of the topk changed by iou
+            if new_topk_nx != topk_nx:
+                return True
+            '''
             for new_target in new_topk_nx:
                 if new_target != target:
                     print('Attack success!')
@@ -85,6 +90,7 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set):
                     print('New out:', out)
                     print('Old out:', out)
                     return True
+            '''
             # 4.3 Compare the output with the original one
     return False
 
@@ -123,10 +129,10 @@ def main():
 
     # 3. Attack and note the result
     attack_success = 0
-    bar = tqdm.tqdm(total=len(nx_dataset))
+    bar = tqdm.trange(len(nx_dataset))
     for i in bar:
         nx_g, stmt_nodes = nx_dataset[i]
-        if attack(nx_g, stmt_nodes, model, pattern_set):
+        if attack(nx_g, stmt_nodes, model, pattern_set, meta_data):
             attack_success += 1
         bar.set_description(f'Attack success rate: {attack_success / (i + 1)}')
     print('Attack success rate:', attack_success / len(nx_dataset))
