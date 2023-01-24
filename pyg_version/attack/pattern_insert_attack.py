@@ -103,7 +103,7 @@ def main():
     args = get_args()
     # 1. load the pattern set
     pattern_set = [
-        pkl.load(fp) for fp in glob.glob(
+        pkl.load(open(fp, 'r')) for fp in glob.glob(
             'experiments/result/codeflaws_pyc_cfl_stmt_pyg/influential_substructure/*.pkl'
         )
     ]
@@ -130,3 +130,7 @@ def main():
             attack_success += 1
         bar.set_description(f'Attack success rate: {attack_success / (i + 1)}')
     print('Attack success rate:', attack_success / len(nx_dataset))
+
+
+if __name__ == '__main__':
+    main()
