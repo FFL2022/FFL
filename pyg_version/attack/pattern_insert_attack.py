@@ -103,7 +103,7 @@ def main():
     args = get_args()
     # 1. load the pattern set
     pattern_set = [
-        pkl.load(open(fp, 'r')) for fp in glob.glob(
+        pkl.load(open(fp, 'rb')) for fp in glob.glob(
             'experiments/result/codeflaws_pyc_cfl_stmt_pyg/influential_substructure/*.pkl'
         )
     ]
