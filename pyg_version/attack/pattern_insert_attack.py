@@ -32,9 +32,7 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
     orig_nx = nx_g.copy()
     # 4. Attack for each pattern
 
-    top_1_rec, top_3_rec, top_5_rec, top_10_rec = [
-        AverageMeter() for _ in range(4)
-    ]
+    
     success = False
 
     ast_lb = data.lbl[data_stmt_nodes.long()]
@@ -143,7 +141,9 @@ def main():
                             n_layers=5,
                             n_classes=2).to(device)
     model.load_state_dict(torch.load(args.model_path, map_location=device))
-
+    top_1_rec, top_3_rec, top_5_rec, top_10_rec = [
+        AverageMeter() for _ in range(4)
+    ]
     # 3. Attack and note the result
     attack_success = 0
     bar = tqdm.trange(len(nx_dataset))
@@ -152,8 +152,15 @@ def main():
         success, min_recs = attack(nx_g, stmt_nodes, model, pattern_set, meta_data)
         if success:
             attack_success += 1
+        top_1_rec.update(min_recs[0])
+        top_3_rec.update(min_recs[1])
+        top_5_rec.update(min_recs[2])
+        top_10_rec.update(min_recs[3])
         bar.set_description(f'Attack success: {attack_success}/{i+1}')
-        bar.set_postfix(min_recs=min_recs)
+        bar.set_postfix(top_1=top_1_rec.avg,
+                        top_3=top_3_rec.avg,
+                        top_5=top_5_rec.avg,
+                        top_10=top_10_rec.avg)
     print('Attack success rate:', attack_success / len(nx_dataset))
 
 
