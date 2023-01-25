@@ -1,6 +1,7 @@
 import networkx as nx
 from collections import Counter, defaultdict
 from utils.data_utils import NxDataloader, AstGraphMetadata
+from utils.train_utils import BinFullMeter, AverageMeter
 from pyg_version.codeflaws.dataloader_cfl_pyg import CodeflawsCFLPyGStatementDataset, CodeflawsCFLNxStatementDataset, CodeflawsCFLStatementGraphMetadata
 
 import torch
@@ -30,6 +31,18 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
     topk_nx = set([nx_stmt_nodes[n] for n in topk_pred])
     orig_nx = nx_g.copy()
     # 4. Attack for each pattern
+
+    top_1_rec, top_3_rec, top_5_rec, top_10_rec = [
+        AverageMeter() for _ in range(4)
+    ]
+    success = False
+
+    ast_lb = data.lbl[data_stmt_nodes]
+    non_zeros_lbs = torch.nonzero(ast_lb).detach()
+    ast_lbidxs = torch.flatten(non_zeros_lbs).detach().cpu().tolist()
+    min_recs = [1] * 4
+    top_updates = [1, 3, 5, 10]
+    top_updates = [min(top_updates[i], topk) for i in range(len(top_updates))]
     for pattern in pattern_set:
         for target in topk_nx:
             nx_g = orig_nx.copy()
@@ -66,12 +79,17 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
             # 4.3. Get the new top-k predictions
             # use the old topk
             topk_pred = out[data_stmt_nodes.long(), 1].topk(topk, dim=0)[1]
+            for i, (k, curr_rec) in enumerate(zip(top_updates, min_recs)):
+                topk_val = topk_pred[:k].tolist()
+                new_rec = int(any([i in ast_lbidxs for i in topk_val]))
+                min_recs[i] = min(new_rec, curr_rec)
+
             # 4.4. Map back to the nx
             new_topk_nx = set(
                 [nx_stmt_nodes[n] for n in topk_pred])
             # 4.5. Check if any of the topk changed by iou
             if new_topk_nx != topk_nx:
-                return True
+                success = True
             '''
             for new_target in new_topk_nx:
                 if new_target != target:
@@ -91,8 +109,7 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
                     print('Old out:', out)
                     return True
             '''
-            # 4.3 Compare the output with the original one
-    return False
+    return success, min_recs
 
 
 def get_args():
@@ -132,9 +149,11 @@ def main():
     bar = tqdm.trange(len(nx_dataset))
     for i in bar:
         nx_g, stmt_nodes = nx_dataset[i]
-        if attack(nx_g, stmt_nodes, model, pattern_set, meta_data):
+        success, min_recs = attack(nx_g, stmt_nodes, model, pattern_set, meta_data)
+        if success:
             attack_success += 1
-        bar.set_description(f'Attack success rate: {attack_success / (i + 1)}')
+        bar.set_description(f'Attack success: {attack_success}/{i+1}')
+        bar.set_postfix(min_recs=min_recs)
     print('Attack success rate:', attack_success / len(nx_dataset))
 
 
