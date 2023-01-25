@@ -86,7 +86,7 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
 
             # 4.4. Map back to the nx
             new_topk_nx = set(
-                [nx_stmt_nodes[n] for n in topk_pred])
+                [new_nx_stmt_nodes[n] for n in topk_pred])
             # 4.5. Check if any of the topk changed by iou
             if new_topk_nx != topk_nx:
                 success = True
