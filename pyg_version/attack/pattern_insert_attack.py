@@ -37,7 +37,7 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
     ]
     success = False
 
-    ast_lb = data.lbl[data_stmt_nodes]
+    ast_lb = data.lbl[data_stmt_nodes.long()]
     non_zeros_lbs = torch.nonzero(ast_lb).detach()
     ast_lbidxs = torch.flatten(non_zeros_lbs).detach().cpu().tolist()
     min_recs = [1] * 4
