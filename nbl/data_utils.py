@@ -1,8 +1,8 @@
 from nbl.data_format import test_verdict
 from utils.utils import ConfigClass
 from utils.preprocess_helpers import get_coverage, remove_lib
-from utils.pyg_utils import get_coverage_graph_ast_pyg, \
-        get_nx_ast_stmt_annt_pyg
+from utils.pyc_utils import get_coverage_graph_ast_pyc, \
+        get_nx_ast_stmt_annt_pyc
 
 
 def get_nx_ast_stmt_annt_cfl_nbl(key):
@@ -17,4 +17,4 @@ def get_nx_ast_stmt_annt_cfl_nbl(key):
         cov_map = get_coverage(covfile, nline_removed1)
         cov_maps.append(cov_maps)
 
-    return get_coverage_graph_ast_pyg(get_nx_ast_stmt_annt_pyg(src_b, src_f), cov_maps, verdicts)
+    return get_coverage_graph_ast_pyc(get_nx_ast_stmt_annt_pyc(src_b, src_f), cov_maps, verdicts)
