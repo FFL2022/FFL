@@ -1,5 +1,6 @@
 from nbl.data_format import test_verdict
-from utils.utils import ConfigClass from utils.preprocess_helpers import get_coverage, remove_lib
+from utils.utils import ConfigClass
+from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.pyg_utils import get_coverage_graph_ast_pyg, \
         get_nx_ast_stmt_annt_pyg
 
