@@ -8,8 +8,7 @@ import pickle as pkl
 import tqdm
 import json
 
-from utils.utils import ConfigClass
-from utils.preprocess_helpers import get_coverage, remove_lib
+from utils.utils import ConfigClass from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.nx_graph_builder import augment_with_reverse_edge
 from graph_algos.nx_shortcuts import nodes_where, where_node, edges_where
 from nbl.utils import all_keys, eval_set, mapping_eval, most_failed_val_set
@@ -52,18 +51,18 @@ def get_cfg_ast_cov(key):
                 for a_n in DirectedVisitor(
                         nx_cat, start_n_asts,
                         lambda u, v, k, e: nx_cat.nodes[v]['graph'] == 'ast' and\
-                                           u != v and v != t_n):
+                                u != v and v != t_n):
                     nx_cat.add_edge(
                         a_n, t_n, label=f'a_{link_type}_test')
     return nx_cat
 
 
 class NBLNxDataset(AstNxDataset):
-    def __init__(self, save_dir=ConfigClass.preprocess_dir_codeflaws):
+    def __init__(self, save_dir=ConfigClass.preprocess_dir_nbl):
         super().__init__(
-                all_entries=all_codeflaws_keys,
+                all_entries=all_keys,
                 process_func=lambda k: get_cfg_ast_cov(k),
-                save_dir=save_dir, name='key_only',
+                save_dir=save_dir, name='nbl_key_only',
                 special_attrs=[
                     'ast_lb_d': lambda nx_g: nodes_where(nx_g, graph='ast', status=1),
                     'ast_lb_i': lambda nx_g: nodes_where(nx_g, graph='ast', status=2),

@@ -33,11 +33,14 @@ def combine_ast_cfg(nx_ast, nx_cfg):
     ''' Combine ast cfg by adding each corresponding edge'''
     nx_h_g, batch = combine_multi([nx_ast, nx_cfg])
     for n_cfg in nodes_where(nx_h_g, graph='cfg'):
-        s, e = nx_h_g.nodes[n_cfg]['start_line'], nx_h_g.nodes[n_cfg]['end_line']
+        s, e = nx_h_g.nodes[n_cfg]['start_line'], nx_h_g.nodes[n_cfg][
+            'end_line']
         if e - s > 0:  # This is a parent node
             continue
-        corres_n_asts = [n for n in nodes_where(nx_h_g, graph='ast') if
-                         s <= nx_h_g.nodes[n]['start_line'] <= e]
+        corres_n_asts = [
+            n for n in nodes_where(nx_h_g, graph='ast')
+            if s <= nx_h_g.nodes[n]['start_line'] <= e
+        ]
         for n_ast in corres_n_asts:
             nx_h_g.add_edge(n_cfg, n_ast, label='corresponding_ast')
     return nx_h_g
@@ -67,7 +70,6 @@ def build_nx_graph_cfg_ast(graph, code: list, full_ast=True):
     update_nodes(nx_cfg, graph='cfg')
     update_nodes(nx_ast, graph='ast')
     return nx_cfg, nx_ast, combine_ast_cfg(nx_ast, nx_cfg)
-
 
 
 def augment_with_reverse_edge(nx_g, ast_etypes, cfg_etypes):
@@ -119,6 +121,7 @@ def augment_with_reverse_edge_cat(nx_g, ast_etypes=None, cfg_etypes=None):
         elif e['label'] == 'c_fail_t':
             nx_g.add_edge(v, u, label='t_fail_c')
     return nx_g
+
 
 # TODO:
 # Tobe considered:

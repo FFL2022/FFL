@@ -31,13 +31,11 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
     topk_nx = set([nx_stmt_nodes[n] for n in topk_pred])
     orig_nx = nx_g.copy()
     # 4. Attack for each pattern
-
-    
     success = False
 
     ast_lb = data.lbl[data_stmt_nodes.long()]
     non_zeros_lbs = torch.nonzero(ast_lb).detach()
-    ast_lbidxs = torch.flatten(non_zeros_lbs).detach().cpu().tolist()
+    ast_lbidxs = set(torch.flatten(non_zeros_lbs).detach().cpu().tolist())
     min_recs = [1] * 4
     top_updates = [1, 3, 5, 10]
     top_updates = [min(top_updates[i], topk) for i in range(len(top_updates))]
