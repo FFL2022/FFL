@@ -8,7 +8,7 @@ import tqdm
 import torch
 import torch.nn.functional as F
 import numpy as np
-from pyg_version.codeflaws.dataloader_cfl_pyg import PyGStatementDataset
+from pyg_version.dataloader_cfl_pyg import PyGStatementDataset
 from pyg_version.model import MPNNModel_A_T_L
 from codeflaws.dataloader_cfl import CodeflawsCFLNxStatementDataset
 from nbl.dataloader_cfl import NBLPyGCFLNxStatementDataset
