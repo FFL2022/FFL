@@ -9,9 +9,9 @@ from utils.get_bug_localization import get_bug_localization
 from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.nx_graph_builder import build_nx_graph_cfg_ast
 from utils.gumtree_utils import GumtreeBasedAnnotation, GumtreeASTUtils
-from utils.pyg_utils import (pyg_check_is_stmt_cpp, get_nx_ast_stmt_annt_pyg,
+from utils.pyc_utils import (pyc_check_is_stmt_cpp, get_nx_ast_stmt_annt_pyc,
                              check_statement_elem_inserted,
-                             get_coverage_graph_ast_pyg)
+                             get_coverage_graph_ast_pyc)
 import pickle as pkl
 
 root = ConfigClass.codeflaws_data_path
@@ -302,7 +302,7 @@ def find_inserted_statement_gumtree(nx_ast_src, nx_ast_dst, rev_map_dict,
                                     lisrts):
     ns = [
         n for n in nx_ast_dst.nodes()
-        if pyg_check_is_stmt_cpp(nx_ast_dst.nodes[n])
+        if pyc_check_is_stmt_cpp(nx_ast_dst.nodes[n])
     ]
     inserted_stmts = []
     # First, check if the statement itself is inserted
@@ -353,5 +353,5 @@ def get_nx_ast_stmt_annt_cfl(key):
         covfile = get_gcov_file(key, test)
         cov_maps.append(get_coverage(covfile, 0))
         verdicts.append(test_list[test] > 0)
-    return get_coverage_graph_ast_pyg(
-            get_nx_ast_stmt_annt_pyg(src_b, src_f), cov_maps, verdicts)
+    return get_coverage_graph_ast_pyc(
+            get_nx_ast_stmt_annt_pyc(src_b, src_f), cov_maps, verdicts)
