@@ -1,5 +1,5 @@
 from utils.utils import ConfigClass
-from utils.pyg_utils import pyg_check_is_stmt_cpp, get_nx_ast_stmt_annt_pyg
+from utils.pyc_utils import pyc_check_is_stmt_cpp, get_nx_ast_stmt_annt_pyc
 from graph_algos.nx_shortcuts import nodes_where, edges_where,\
         where_node
 import os
@@ -16,8 +16,8 @@ class NBLPyGCFLNxStatementDataset(AstNxDataset):
 
     def __init__(self, save_dir=ConfigClass.preprocess_dir_nbl):
         super().__init__(all_keys, get_nx_ast_stmt_annt_cfl_nbl,
-                         save_dir, 'nbl_cfl_pyg_stmt',
+                         save_dir, 'nbl_cfl_pyc_stmt',
                          [('stmt_nodes', lambda nx_g: nodes_where(
                              nx_g,
-                             lambda x: pyg_check_is_stmt_cpp(nx_g.nodes[x]),
+                             lambda x: pyc_check_is_stmt_cpp(nx_g.nodes[x]),
                              graph='ast'))])
