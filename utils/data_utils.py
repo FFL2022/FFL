@@ -50,6 +50,7 @@ class AstNxDataset(NxDataset):
                  special_attrs: List[Tuple[str, Callable[[nx.Graph], None]]],
                  post_process_func=None):
         self.save_dir = save_dir
+        print(self.save_dir)
         self.info_path = f"{save_dir}/nx_{name}_info.pkl"
         self.name = name
         self.process_func = process_func
