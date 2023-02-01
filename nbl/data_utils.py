@@ -11,6 +11,7 @@ def get_nx_ast_stmt_annt_cfl_nbl(key):
     vid = key['buggy']
     test_list = list(test_verdict[pid][vid].keys())
     cov_maps, verdicts = [], []
+    nline_removed1 = remove_lib(src_b)
     for test in test_list:
         verdicts.append(test_verdict[pid][vid][test])
         covfile = f"{ConfigClass.nbl_test_path}/{pid}/{test}-{vid}.gcov"
