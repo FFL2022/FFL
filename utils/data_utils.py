@@ -104,7 +104,8 @@ class AstNxDataset(NxDataset):
                 else:
                     nx_g = pkl.load(
                         open(f'{self.save_dir}/nx_{self.name}_{i}.pkl', 'rb'))
-            except:
+            except Exception as ex:
+                print(type(ex).__name__, ex.args)
                 self.err_idxs.append(i)
                 count = len(self.err_idxs)
                 bar.set_postfix(syntax_error_files=count)
