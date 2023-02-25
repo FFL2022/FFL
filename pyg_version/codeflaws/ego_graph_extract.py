@@ -21,7 +21,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class TopKTripletStatementIterator(object):
 
-    def __init__(self, model, dataset: CodeflawsCFLPyGStatementDataset, k,
+    def __init__(self, model, dataset: PyGStatementDataset, k,
                  device):
         self.model = model
         self.dataset = dataset
