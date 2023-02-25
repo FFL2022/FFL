@@ -94,26 +94,22 @@ class AstNxDataset(NxDataset):
         bar = tqdm.tqdm(list(self.all_entries))
         bar.set_description(f'Loading Nx Data {self.name}')
         for i, key in enumerate(bar):
-            '''
             try:
-            '''
-            if not os.path.exists(
-                    f'{self.save_dir}/nx_{self.name}_{i}.pkl'):
-                nx_g = self.process_func(key)
-                pkl.dump(
-                    nx_g,
-                    open(f'{self.save_dir}/nx_{self.name}_{i}.pkl', 'wb'))
-            else:
-                nx_g = pkl.load(
-                    open(f'{self.save_dir}/nx_{self.name}_{i}.pkl', 'rb'))
-            '''
+                if not os.path.exists(
+                        f'{self.save_dir}/nx_{self.name}_{i}.pkl'):
+                    nx_g = self.process_func(key)
+                    pkl.dump(
+                        nx_g,
+                        open(f'{self.save_dir}/nx_{self.name}_{i}.pkl', 'wb'))
+                else:
+                    nx_g = pkl.load(
+                        open(f'{self.save_dir}/nx_{self.name}_{i}.pkl', 'rb'))
             except Exception as ex:
                 print(type(ex).__name__, ex.args)
                 self.err_idxs.append(i)
                 count = len(self.err_idxs)
                 bar.set_postfix(syntax_error_files=count)
                 continue
-            '''
             self.active_idxs.append(i)
             self.keys.append(key)
             self.ast_types = self.ast_types.union([

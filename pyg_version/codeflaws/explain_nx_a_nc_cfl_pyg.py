@@ -179,11 +179,11 @@ class StatementGraphPerturberEdgeOnly(torch.nn.Module):
         return data.xs, data.ess, None, self.ess_weights
 
 
-class TopKStatmentExplainer(Explainer):
+class TopKStatementExplainer(Explainer):
 
     def __init__(self, model, loss_func,
                  dataset: CodeflawsCFLPyGStatementDataset, k, device):
-        super(TopKStatmentExplainer, self).__init__(model, loss_func, 1500)
+        super(TopKStatementExplainer, self).__init__(model, loss_func, 1500)
         self.iterator = TopKStatementIterator(model, dataset, k, device)
 
     def get_data(self, instance):
@@ -204,11 +204,11 @@ class TopKStatmentExplainer(Explainer):
         return data[0]
 
 
-class TopKStatmentExplainerEdge(Explainer):
+class TopKStatementExplainerEdge(Explainer):
 
     def __init__(self, model, loss_func,
                  dataset: CodeflawsCFLPyGStatementDataset, k, device):
-        super(TopKStatmentExplainerEdge, self).__init__(model, loss_func, 1500)
+        super(TopKStatementExplainerEdge, self).__init__(model, loss_func, 1500)
         self.iterator = TopKStatementIterator(model, dataset, k, 1500)
 
     def get_data(self, instance):
@@ -229,8 +229,8 @@ class TopKStatmentExplainerEdge(Explainer):
         return data[0]
 
 
-def from_data_to_nx(graph, perturber: StatementGraphPerturber,
-                    metadata: CodeflawsCFLStatementGraphMetadata):
+def from_data_to_nx(graph, perturber: StatementGraphPerturber=None,
+                    metadata: CodeflawsCFLStatementGraphMetadata=None):
     g = nx.MultiDiGraph()
     for i, x in enumerate(graph.xs):
         x = x.reshape(-1)
@@ -242,7 +242,7 @@ def from_data_to_nx(graph, perturber: StatementGraphPerturber,
                            label=metadata.id2ntype[int(x[j].item())],
                            explain_weight=torch.sigmoid(
                                perturber.xs_weights[i][j]).item()
-                           if perturber.xs_weights else 0)
+                           if (perturber is not None and perturber.xs_weights) else 0)
         elif i == 1:
             # Then the node graph is test
             for j, node in enumerate(x):
@@ -251,7 +251,7 @@ def from_data_to_nx(graph, perturber: StatementGraphPerturber,
                            label='test',
                            explain_weight=torch.sigmoid(
                                perturber.xs_weights[i][j]).item()
-                           if perturber.xs_weights else 0)
+                           if (perturber is not None and perturber.xs_weights) else 0)
         # each row of x is a data of a node
     # Translate from each edge type to the corresponding edge
     for i, es in enumerate(graph.ess):
@@ -265,7 +265,7 @@ def from_data_to_nx(graph, perturber: StatementGraphPerturber,
                        etype=etype,
                        label=etype,
                        explain_weight=torch.sigmoid(
-                           perturber.ess_weights[i][j]).item())
+                           perturber.ess_weights[i][j]).item() if perturber is not None else 0)
     return g
 
 
@@ -310,7 +310,7 @@ if __name__ == '__main__':
                             n_layers=5,
                             n_classes=2).to(device)
     model.load_state_dict(torch.load(args.model_path, map_location=device))
-    explainer = TopKStatmentExplainerEdge(model, loss_func, pyg_dataset,
+    explainer = TopKStatementExplainerEdge(model, loss_func, pyg_dataset,
                                           args.k, args.device)
     save_dir = args.save_path
     os.makedirs(save_dir, exist_ok=True)
