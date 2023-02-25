@@ -1,6 +1,5 @@
-from codeflaws.dataloader_cfl import CodeflawsCFLNxStatementDataset, \
-    CodeflawsCFLStatementGraphMetadata
-from pyg_version.codeflaws.dataloader_cfl_pyg import CodeflawsCFLPyGStatementDataset, CodeflawsCFLStatementGraphMetadata
+from codeflaws.dataloader_cfl import CodeflawsCFLNxStatementDataset
+from pyg_version.dataloader_cfl_pyg import PyGStatementDataset, AstGraphMetadata
 from pyg_version.model import MPNNModel_A_T_L
 from pyg_version.explainer.explainer import Explainer, InflExtractor
 from pyg_version.explainer.common import entropy_loss_mask, size_loss
@@ -60,7 +59,7 @@ class TopKTripletStatementIterator(object):
 
 class EgoGraphExtractor(object):
 
-    def __init__(self, model, dataset: CodeflawsCFLPyGStatementDataset, k, hops,
+    def __init__(self, model, dataset: PyGStatementDataset, k, hops,
                  meta_data, device): 
         self.triplet_iter = TopKTripletStatementIterator(model, dataset, k, device)
         self.meta_data = meta_data
@@ -119,8 +118,13 @@ def main():
     t2id = {'ast': 0, 'test': 1}
     args = get_args()
     nx_dataset = CodeflawsCFLNxStatementDataset()
-    meta_data = CodeflawsCFLStatementGraphMetadata(nx_dataset)
-
+    meta_data = AstGraphMetadata(nx_dataset)
+    pyg_dataset = PyGStatementDataset(
+            dataloader=nx_dataset,
+            meta_data=meta_data,
+            ast_enc=None,
+            save_dir="preprocessed/codeflaws/",
+            name='train_pyg_cfl_stmt')
     model = MPNNModel_A_T_L(dim_h=64,
                             netypes=len(meta_data.meta_graph),
                             t_srcs=[t2id[e[0]] for e in meta_data.meta_graph],
@@ -133,7 +137,7 @@ def main():
     model.eval()
     save_path = args.save_path
     os.makedirs(save_path, exist_ok=True)
-    ego_graph_extractor = EgoGraphExtractor(model, nx_dataset, args.k, args.hops,
+    ego_graph_extractor = EgoGraphExtractor(model, pyg_dataset, args.k, args.hops,
                                             meta_data, device)
     for i, (pos_ego_graphs, neg_ego_graphs, uncertain_ego_graphs) in enumerate(ego_graph_extractor.extract()):
         for j, ego_graph in enumerate(pos_ego_graphs):

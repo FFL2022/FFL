@@ -1,6 +1,5 @@
-from codeflaws.dataloader_cfl import CodeflawsCFLNxStatementDataset, \
-    CodeflawsCFLStatementGraphMetadata
-from pyg_version.codeflaws.dataloader_cfl_pyg import CodeflawsCFLPyGStatementDataset, CodeflawsCFLStatementGraphMetadata
+from codeflaws.dataloader_cfl import CodeflawsCFLNxStatementDataset
+from pyg_version.dataloader_cfl_pyg import PyGStatementDataset, AstGraphMetadata
 from pyg_version.model import MPNNModel_A_T_L
 from pyg_version.explainer.explainer import Explainer, InflExtractor
 from pyg_version.explainer.common import entropy_loss_mask, size_loss
@@ -292,11 +291,13 @@ if __name__ == '__main__':
     args = get_args()
     device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
     nx_dataset = CodeflawsCFLNxStatementDataset()
-    meta_data = CodeflawsCFLStatementGraphMetadata(nx_dataset)
-    pyg_dataset = CodeflawsCFLPyGStatementDataset(dataloader=nx_dataset,
-                                                  meta_data=meta_data,
-                                                  ast_enc=None,
-                                                  name='train_pyg_cfl_stmt')
+    meta_data = AstGraphMetadata(nx_dataset)
+    pyg_dataset = PyGStatementDataset(
+            dataloader=nx_dataset,
+            meta_data=meta_data,
+            ast_enc=None,
+            save_dir="preprocessed/codeflaws/",
+            name='train_pyg_cfl_stmt')
     t2id = {'ast': 0, 'test': 1}
     exec(f"loss_func = {args.loss_func}", globals(), locals())
     infl_extractor = InflExtractor(where_node(),
