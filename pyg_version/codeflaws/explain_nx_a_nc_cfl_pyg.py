@@ -93,7 +93,7 @@ def total_loss_size_stmt_entropy_edge_only(perturbed_pred, orig_pred,
 
 class TopKStatementIterator(object):
 
-    def __init__(self, model, dataset: CodeflawsCFLPyGStatementDataset, k,
+    def __init__(self, model, dataset: PyGStatementDataset, k,
                  device):
         self.model = model
         self.dataset = dataset
@@ -181,7 +181,7 @@ class StatementGraphPerturberEdgeOnly(torch.nn.Module):
 class TopKStatementExplainer(Explainer):
 
     def __init__(self, model, loss_func,
-                 dataset: CodeflawsCFLPyGStatementDataset, k, device):
+                 dataset: PyGStatementDataset, k, device):
         super(TopKStatementExplainer, self).__init__(model, loss_func, 1500)
         self.iterator = TopKStatementIterator(model, dataset, k, device)
 
@@ -206,7 +206,7 @@ class TopKStatementExplainer(Explainer):
 class TopKStatementExplainerEdge(Explainer):
 
     def __init__(self, model, loss_func,
-                 dataset: CodeflawsCFLPyGStatementDataset, k, device):
+                 dataset: PyGStatementDataset, k, device):
         super(TopKStatementExplainerEdge, self).__init__(model, loss_func, 1500)
         self.iterator = TopKStatementIterator(model, dataset, k, 1500)
 
@@ -229,7 +229,7 @@ class TopKStatementExplainerEdge(Explainer):
 
 
 def from_data_to_nx(graph, perturber: StatementGraphPerturber=None,
-                    metadata: CodeflawsCFLStatementGraphMetadata=None):
+                    metadata: AstGraphMetadata=None):
     g = nx.MultiDiGraph()
     for i, x in enumerate(graph.xs):
         x = x.reshape(-1)
