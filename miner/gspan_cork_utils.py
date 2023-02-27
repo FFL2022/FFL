@@ -50,7 +50,7 @@ def convert_graph_attrs_to_int(graphs: List[nx.MultiDiGraph], *,
 
 def remove_self_loops(graphs: List[nx.MultiDiGraph]) -> List[nx.MultiDiGraph]:
     for graph in graphs:
-        for edge in graph.edges:
+        for edge in list(graph.edges)[:]:
             if edge[0] == edge[1]:
                 graph.remove_edge(edge[0], edge[1])
     return graphs
