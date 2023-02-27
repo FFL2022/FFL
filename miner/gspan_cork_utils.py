@@ -19,9 +19,10 @@ def load_graphs_and_labels(
     return graphs, labels
 
 
-def convert_graph_attrs_to_int(
-        graphs: List[nx.MultiDiGraph], *, node_attr_names, edge_attr_names, node_types, edge_types) -> List[nx.MultiDiGraph]:
-    
+def convert_graph_attrs_to_int(graphs: List[nx.MultiDiGraph], *,
+                               node_attr_names, edge_attr_names, node_types,
+                               edge_types) -> List[nx.MultiDiGraph]:
+
     ntype_mapping = {node_type: i for i, node_type in enumerate(node_types)}
     etype_mapping = {edge_type: i for i, edge_type in enumerate(edge_types)}
     for graph in graphs:
@@ -68,9 +69,16 @@ def to_gspan_format(converted_graphs: List[nx.MultiDiGraph],
 
 if __name__ == '__main__':
     # 1. read all the graphs
-    graphs, labels = load_graphs_and_labels('ego_pyg_codeflaws_pyc_cfl_stmt_level')
+    graphs, labels = load_graphs_and_labels(
+        'ego_pyg_codeflaws_pyc_cfl_stmt_level')
     # 2. convert to gSpan format
-    node_attr_names, edge_attr_names, node_types, edge_types = get_meta_data(graphs, ["graph", "ntype", "is_target"], ["etype"])
-    for converted_graph in zip(convert_graph_attrs_to_int(graphs, node_attr_names=node_attr_names, edge_attr_names=edge_attr_names, node_types=node_types, edge_types=edge_types), labels):
+    node_attr_names, edge_attr_names, node_types, edge_types = get_meta_data(
+        graphs, ["graph", "ntype", "is_target"], ["etype"])
+    for converted_graph in zip(
+            convert_graph_attrs_to_int(graphs,
+                                       node_attr_names=node_attr_names,
+                                       edge_attr_names=edge_attr_names,
+                                       node_types=node_types,
+                                       edge_types=edge_types), labels):
         gspan_str = to_gspan_format(converted_graph[0], converted_graph[1])
         print(gspan_str)

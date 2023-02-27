@@ -237,6 +237,7 @@ def from_data_to_nx(graph, perturber: StatementGraphPerturber=None,
             # Then the node graph is ast
             for j, node in enumerate(x):
                 g.add_node(f"ast_{j}",
+                           graph="ast",
                            ntype=metadata.id2ntype[int(x[j].item())],
                            label=metadata.id2ntype[int(x[j].item())],
                            explain_weight=torch.sigmoid(
@@ -246,6 +247,7 @@ def from_data_to_nx(graph, perturber: StatementGraphPerturber=None,
             # Then the node graph is test
             for j, node in enumerate(x):
                 g.add_node(f"test_{j}",
+                           graph="test",
                            ntype='test',
                            label='test',
                            explain_weight=torch.sigmoid(
