@@ -73,26 +73,26 @@ class EgoGraphExtractor(object):
             # 2.1 extract the top k positive nodes
             pos_ego_graphs = []
             for pos_node in stmt_nodes[k_pos]:
-                ego_graph = nx.ego_graph(graph, pos_node, self.hops, undirected=True).copy()
-                ego_graph.nodes[pos_node]['is_target'] = 1
-                ego_graph.nodes[pos_node]['color'] = 'red'
-                ego_graph.nodes[pos_node]['style'] = 'filled'
+                ego_graph = nx.ego_graph(graph, f"ast_{pos_node}", self.hops, undirected=True).copy()
+                ego_graph.nodes[f"ast_{pos_node}"]['is_target'] = 1
+                ego_graph.nodes[f"ast_{pos_node}"]['color'] = 'red'
+                ego_graph.nodes[f"ast_{pos_node}"]['style'] = 'filled'
                 pos_ego_graphs.append(ego_graph)
             # 2.2 extract the top k negative nodes
             neg_ego_graphs = []
             for neg_node in stmt_nodes[k_neg]:
-                ego_graph = nx.ego_graph(graph, neg_node, self.hops, undirected=True).copy()
-                ego_graph.nodes[neg_node]['is_target'] = 1
-                ego_graph.nodes[neg_node]['color'] = 'red'
-                ego_graph.nodes[neg_node]['style'] = 'filled'
+                ego_graph = nx.ego_graph(graph, f"ast_{neg_node}", self.hops, undirected=True).copy()
+                ego_graph.nodes[f"ast_{neg_node}"]['is_target'] = 1
+                ego_graph.nodes[f"ast_{neg_node}"]['color'] = 'red'
+                ego_graph.nodes[f"ast_{neg_node}"]['style'] = 'filled'
                 neg_ego_graphs.append(ego_graph)
             # 2.3 extract the top k uncertain nodes
             uncertain_ego_graphs = []
             for uncertain_node in stmt_nodes[k_uncertain]:
-                ego_graph = nx.ego_graph(graph, uncertain_node, self.hops, undirected=True).copy()
-                ego_graph.nodes[uncertain_node]['is_target'] = 1
-                ego_graph.nodes[uncertain_node]['color'] = 'red'
-                ego_graph.nodes[uncertain_node]['style'] = 'filled'
+                ego_graph = nx.ego_graph(graph, f"ast_{uncertain_node}", self.hops, undirected=True).copy()
+                ego_graph.nodes[f"ast_{uncertain_node}"]['is_target'] = 1
+                ego_graph.nodes[f"ast_{uncertain_node}"]['color'] = 'red'
+                ego_graph.nodes[f"ast_{uncertain_node}"]['style'] = 'filled'
                 uncertain_ego_graphs.append(ego_graph)
             # 3. yield the ego graph
             yield pos_ego_graphs, neg_ego_graphs, uncertain_ego_graphs
