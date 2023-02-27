@@ -80,6 +80,7 @@ if __name__ == '__main__':
     # 1. read all the graphs
     graphs, labels = load_graphs_and_labels(
         'ego_pyg_codeflaws_pyc_cfl_stmt_level')
+    print(labels)
     graphs = remove_self_loops(graphs)
     # 2. convert to gSpan format
     node_attr_names, edge_attr_names, node_types, edge_types = get_meta_data(
