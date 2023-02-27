@@ -67,6 +67,8 @@ class EgoGraphExtractor(object):
 
     def extract(self) -> nx.MultiDiGraph:
         for (data, stmt_nodes), output, k_pos, k_uncertain, k_neg in self.triplet_iter:
+            stmt_nodes = stmt_nodes.to("cpu")
+            data = data.to("cpu")
             # 1. convert data to nx
             graph = from_data_to_nx(data, None, self.meta_data)
             # 2. extract the ego graph from the nx
