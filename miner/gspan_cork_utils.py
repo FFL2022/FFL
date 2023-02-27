@@ -2,6 +2,7 @@ import networkx as nx
 from typings import Tuple, List
 import glob
 from numerize_graph.numerize_graph import get_meta_data, get_node_type_mapping, get_edge_type_mapping
+import pickle as pkl
 
 
 def load_graphs_and_labels(
@@ -74,6 +75,8 @@ if __name__ == '__main__':
     # 2. convert to gSpan format
     node_attr_names, edge_attr_names, node_types, edge_types = get_meta_data(
         graphs, ["graph", "ntype", "is_target"], ["etype"])
+    pkl.dump((node_attr_names, edge_attr_names, node_types, edge_types), open(
+        'ego_pyg_codeflaws_pyc_cfl_stmt_level/meta_data.pkl', 'wb'))
     for converted_graph in zip(
             convert_graph_attrs_to_int(graphs,
                                        node_attr_names=node_attr_names,
