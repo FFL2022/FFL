@@ -68,11 +68,11 @@ def to_gspan_format(converted_graphs: List[nx.MultiDiGraph],
     # ...
     out_str = ""
     for i, graph in enumerate(converted_graphs):
-        out_str += f"t # {i} {labels[i]}\r"
+        out_str += f"t # {i} {labels[i]}\n"
         for node in graph.nodes:
-            out_str += f"v {node} {graph.nodes[node]['label']}\r"
+            out_str += f"v {node} {graph.nodes[node]['label']}\n"
         for edge in graph.edges:
-            out_str += f"e {edge[0]} {edge[1]} {graph.edges[edge]['label']}\r"
+            out_str += f"e {edge[0]} {edge[1]} {graph.edges[edge]['label']}\n"
     return out_str
 
 
