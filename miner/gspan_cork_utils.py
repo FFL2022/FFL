@@ -75,13 +75,12 @@ if __name__ == '__main__':
     # 2. convert to gSpan format
     node_attr_names, edge_attr_names, node_types, edge_types = get_meta_data(
         graphs, ["graph", "ntype", "is_target"], ["etype"])
-    pkl.dump((node_attr_names, edge_attr_names, node_types, edge_types), open(
-        'ego_pyg_codeflaws_pyc_cfl_stmt_level/meta_data.pkl', 'wb'))
-    for converted_graph in zip(
-            convert_graph_attrs_to_int(graphs,
-                                       node_attr_names=node_attr_names,
-                                       edge_attr_names=edge_attr_names,
-                                       node_types=node_types,
-                                       edge_types=edge_types), labels):
-        gspan_str = to_gspan_format(converted_graph[0], converted_graph[1])
-        print(gspan_str)
+    pkl.dump((node_attr_names, edge_attr_names, node_types, edge_types),
+             open('ego_pyg_codeflaws_pyc_cfl_stmt_level/meta_data.pkl', 'wb'))
+    gspan_str = to_gspan_format(
+        convert_graph_attrs_to_int(graphs,
+                                   node_attr_names=node_attr_names,
+                                   edge_attr_names=edge_attr_names,
+                                   node_types=node_types,
+                                   edge_types=edge_types), labels)
+    print(gspan_str)
