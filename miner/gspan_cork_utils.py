@@ -48,6 +48,14 @@ def convert_graph_attrs_to_int(graphs: List[nx.MultiDiGraph], *,
         yield converted_graph
 
 
+def remove_self_loops(graphs: List[nx.MultiDiGraph]) -> List[nx.MultiDiGraph]:
+    for graph in graphs:
+        for edge in graph.edges:
+            if edge[0] == edge[1]:
+                graph.remove_edge(edge[0], edge[1])
+    return graphs
+
+
 def to_gspan_format(converted_graphs: List[nx.MultiDiGraph],
                     labels: List[int]) -> str:
     # the format is
@@ -72,6 +80,7 @@ if __name__ == '__main__':
     # 1. read all the graphs
     graphs, labels = load_graphs_and_labels(
         'ego_pyg_codeflaws_pyc_cfl_stmt_level')
+    graphs = remove_self_loops(graphs)
     # 2. convert to gSpan format
     node_attr_names, edge_attr_names, node_types, edge_types = get_meta_data(
         graphs, ["graph", "ntype", "is_target"], ["etype"])
