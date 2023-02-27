@@ -11,10 +11,11 @@ def load_graphs_and_labels(
     graphs = []
     labels = []
     label_mapping = {'pos': 1, 'neg': 0, 'uncertain': -1}
-    for file in glob.glob(load_dir + "/*.gpickle"):
-        graph = nx.read_gpickle(file)
+    for fp in glob.glob(load_dir + "/*.gpickle"):
+        graph = nx.read_gpickle(fp)
         graphs.append(graph)
-        label = label_mapping[file.split('/')[-1].split('_')[0]]
+        print(fp.split('/')[-1].split('_')[0])
+        label = label_mapping[fp.split('/')[-1].split('_')[0]]
         labels.append(label)
 
     return graphs, labels
@@ -80,7 +81,6 @@ if __name__ == '__main__':
     # 1. read all the graphs
     graphs, labels = load_graphs_and_labels(
         'ego_pyg_codeflaws_pyc_cfl_stmt_level')
-    print(labels)
     graphs = remove_self_loops(graphs)
     # 2. convert to gSpan format
     node_attr_names, edge_attr_names, node_types, edge_types = get_meta_data(
