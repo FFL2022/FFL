@@ -153,7 +153,7 @@ def main():
             nx.write_gpickle(ego_graph, os.path.join(save_path, f"neg_{i}_{j}.gpickle"))
             nx.drawing.nx_pydot.write_dot(ego_graph, os.path.join(save_path, f'neg_{i}_{j}.dot'))
         for j, ego_graph in enumerate(uncertain_ego_graphs):
-            nx.write_gpickle(ego_graph, os.path.join(save_path, f"neg_{i}_{j}.gpickle"))
+            nx.write_gpickle(ego_graph, os.path.join(save_path, f"uncertain_{i}_{j}.gpickle"))
             nx.drawing.nx_pydot.write_dot(ego_graph, os.path.join(save_path, f'uncertain_{i}_{j}.dot'))
 
 
