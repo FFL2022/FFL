@@ -1,5 +1,5 @@
 import networkx as nx
-from typings import Tuple, List
+from typing import Tuple, List
 import glob
 from numerize_graph.numerize_graph import get_meta_data, get_node_type_mapping, get_edge_type_mapping
 import pickle as pkl
