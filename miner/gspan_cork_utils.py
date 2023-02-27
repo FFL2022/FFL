@@ -33,16 +33,16 @@ def convert_graph_attrs_to_int(graphs: List[nx.MultiDiGraph], *,
                                            edge_attr_names,
                                            ["graph", "ntype", "is_target"],
                                            ["etype"])
-        for node in graph.nodes():
+        for node in graph.nodes:
             node_type = ntypes_map[node]
             converted_graph.add_node(node, label=ntype_mapping[node_type])
-        for edge in graph.edges
+        for edge in graph.edges:
             edge_type = etypes_map[edge]
             converted_graph.add_edge(edge[0],
                                      edge[1],
                                      label=etype_mapping[edge_type])
         # rename all nodes to 0, 1, 2, 3, ...
-        mapping = {node: i for i, node in enumerate(converted_graph.nodes())}
+        mapping = {node: i for i, node in enumerate(converted_graph.nodes)}
         converted_graph = nx.relabel_nodes(converted_graph, mapping)
         yield converted_graph
 
@@ -60,9 +60,9 @@ def to_gspan_format(converted_graphs: List[nx.MultiDiGraph],
     out_str = ""
     for i, graph in enumerate(converted_graphs):
         out_str += f"t # {i} {labels[i]}\r"
-        for node in graph.nodes():
+        for node in graph.nodes:
             out_str += f"v {node} {graph.nodes[node]['label']}\r"
-        for edge in graph.edges():
+        for edge in graph.edges:
             out_str += f"e {edge[0]} {edge[1]} {graph.edges[edge]['label']}\r"
     return out_str
 
