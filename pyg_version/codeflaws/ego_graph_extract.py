@@ -48,10 +48,11 @@ class TopKTripletStatementIterator(object):
                 output = output[stmt_nodes, 1].cpu()
                 k = min(len(stmt_nodes), self.k)
                 totlen = len(stmt_nodes)
+                topk = output.topk(totlen, dim=0)[1]
                 k_pos = list(range(k - max(k-totlen//2, 0)))
                 k_uncertain = list(range(k - max(k-totlen//2, 0), k + max(k-totlen//2, 0)))
-                k_neg = list(range(k + max(k-totlen//2, 0), k))
-                yield (data, stmt_nodes.to(device)), output, k_pos, k_uncertain, k_neg
+                k_neg = list(range(k + max(k-totlen//2, 0), totlen))
+                yield (data, stmt_nodes.to(device)), output, topk[k_pos], topk[k_uncertain], topk[k_neg]
 
     def __len__(self):
         return self.len_data
