@@ -11,9 +11,9 @@ def get_all_attr_names(nx_gs: List[nx.Graph]) -> Tuple[List[str], List[str]]:
     node_attr_names = set()
     edge_attr_names = set()
     for nx_g in nx_gs:
-        for node in nx_g.nodes:
+        for node in nx_g.nodes():
             node_attr_names.update(nx_g.nodes[node].keys())
-        for edge in nx_g.edges:
+        for edge in nx_g.edges():
             edge_attr_names.update(nx_g.edges[edge].keys())
     return sorted(node_attr_names), sorted(edge_attr_names)
 
@@ -65,7 +65,7 @@ def infer_node_types(nx_gs, node_attr_names, attrs=[]):
     node_types = set()
     attrs = set(attrs)
     for nx_g in nx_gs:
-        for node in nx_g.nodes:
+        for node in nx_g.nodes():
             node_attr_types = get_node_type_signature(nx_g, node,
                                                       node_attr_names, attrs)
             node_types.add(tuple(node_attr_types))
@@ -81,7 +81,7 @@ def infer_edge_types(nx_gs,
     # of attributes and the nodes' types
     edge_types = set()
     for nx_g in nx_gs:
-        for edge in nx_g.edges:
+        for edge in nx_g.edges():
             edge_type = get_edge_type_mapping_signature(
                 nx_g, edge, node_attr_names, edge_attr_names, node_attrs,
                 edge_attrs)
@@ -92,7 +92,7 @@ def infer_edge_types(nx_gs,
 def get_node_type_mapping(nx_g, node_attr_names, node_attrs):
     # Get node type mapping
     node_type_mapping = {}
-    for node in nx_g.nodes:
+    for node in nx_g.nodes():
         sig = get_node_type_signature(nx_g, node, node_attr_names, node_attrs)
         node_type_mapping[node] = sig
     return node_type_mapping
@@ -105,7 +105,7 @@ def get_edge_type_mapping(nx_g,
                           edge_attrs=[]):
     # Get edge type mapping
     edge_type_mapping = {}
-    for edge in nx_g.edges:
+    for edge in nx_g.edges():
         sig = get_edge_type_mapping_signature(nx_g, edge, node_attr_names,
                                               edge_attr_names, node_attrs,
                                               edge_attrs)
@@ -116,7 +116,7 @@ def get_edge_type_mapping(nx_g,
 def get_type_node_mapping(nx_g: nx.Graph, node_attr_names, node_attrs=[]):
     # Get type node mapping
     type_node_mapping = defaultdict(list)
-    for node in nx_g.nodes:
+    for node in nx_g.nodes():
         sig = get_node_type_signature(nx_g, node, node_attr_names, node_attrs)
         type_node_mapping[sig].append(node)
     return type_node_mapping
@@ -129,7 +129,7 @@ def get_type_edge_mapping(nx_g: nx.Graph,
                           edge_attrs=[]):
     # Get type edge mapping
     type_edge_mapping = defaultdict(list)
-    for edge in nx_g.edges:
+    for edge in nx_g.edges():
         sig = get_edge_type_mapping_signature(nx_g, edge, node_attr_names,
                                               edge_attr_names, node_attrs,
                                               edge_attrs)

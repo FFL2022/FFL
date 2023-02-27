@@ -36,7 +36,7 @@ def convert_graph_attrs_to_int(graphs: List[nx.MultiDiGraph], *,
         for node in graph.nodes():
             node_type = ntypes_map[node]
             converted_graph.add_node(node, label=ntype_mapping[node_type])
-        for edge in graph.edges():
+        for edge in graph.edges
             edge_type = etypes_map[edge]
             converted_graph.add_edge(edge[0],
                                      edge[1],
