@@ -65,7 +65,7 @@ def remove_inverse_edge(
         graphs: List[nx.MultiDiGraph]) -> List[nx.MultiDiGraph]:
     for graph in graphs:
         for edge in list(graph.edges)[:]:
-            if '_reverse' in edge['etype']:
+            if '_reverse' in graph.edges[edge]['etype']:
                 graph.remove_edge(edge[0], edge[1])
     return graphs
 
