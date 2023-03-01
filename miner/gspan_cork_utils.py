@@ -14,11 +14,11 @@ def load_graphs_and_labels(
     labels = []
     label_mapping = {'pos': 1, 'neg': 0, 'uncertain': -1}
     counts = {1: 0, 0: 0, -1: 0}
-    # threshold: 3000 graphs each
+    # threshold: 2000 graphs each
     for fp in glob.glob(load_dir + "/*.gpickle"):
         graph = nx.read_gpickle(fp)
         label = label_mapping[fp.split('/')[-1].split('_')[0]]
-        if counts[label] < 3000:
+        if counts[label] < 2000:
             graphs.append(graph)
             labels.append(label)
             counts[label] += 1
