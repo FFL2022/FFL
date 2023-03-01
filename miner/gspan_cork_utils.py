@@ -3,6 +3,8 @@ from typing import Tuple, List
 import glob
 from numerize_graph.numerize_graph import get_meta_data, get_node_type_mapping, get_edge_type_mapping
 import pickle as pkl
+import argparse
+import os
 
 
 def load_graphs_and_labels(
@@ -76,7 +78,73 @@ def to_gspan_format(converted_graphs: List[nx.MultiDiGraph],
     return out_str
 
 
-if __name__ == '__main__':
+def from_gspan_format(gspan_str: str, supports: List[int]=None) -> List[nx.MultiDiGraph]:
+    lines = gspan_str.split('\n')
+    graphs = []
+    graph = None
+    for line in lines:
+        if line.startswith('t'):
+            if graph is not None:
+                graphs.append(graph)
+            graph = nx.MultiDiGraph()
+            if supports is not None:
+                supports.append(int(line.split(' ')[-1]))
+        elif line.startswith('v'):
+            node, label = line.split(' ')[1:]
+            graph.add_node(int(node), label=int(label))
+        elif line.startswith('e'):
+            src, dst, label = line.split(' ')[1:]
+            graph.add_edge(int(src), int(dst), label=int(label))
+    return graphs
+
+
+def convert_graphs_int_to_attr(graphs, node_attr_names, edge_attr_names,
+                               node_types, edge_types):
+    ntype_mapping = {i: node_type for i, node_type in enumerate(node_types)}
+    etype_mapping = {i: edge_type for i, edge_type in enumerate(edge_types)}
+    for graph in graphs:
+        converted_graph = nx.MultiDiGraph()
+        for node in graph.nodes:
+            n_attrs = ntype_mapping[graph.nodes[node]]
+            n_attrs = {
+                attr_name: attr_val
+                for attr_name, attr_val, has_attr in n_attrs if has_attr
+            }
+            converted_graph.add_node(node, **n_attrs)
+        for edge in graph.edges:
+            e_attrs = etype_mapping[graph.edges[edge]][0]
+            e_attrs = {
+                attr_name: attr_val
+                for attr_name, attr_val, has_attr in e_attrs if has_attr
+            }
+            converted_graph.add_edge(edge[0], edge[1], **e_attrs)
+        yield converted_graph
+
+
+def nx_to_gspan(graphs: List[nx.MultiDiGraph], labels: List[int],
+                node_attr_names, edge_attr_names, node_types,
+                edge_types) -> str:
+    converted_graphs = convert_graph_attrs_to_int(
+        graphs,
+        node_attr_names=node_attr_names,
+        edge_attr_names=edge_attr_names,
+        node_types=node_types,
+        edge_types=edge_types)
+    converted_graphs = remove_self_loops(converted_graphs)
+    gspan_str = to_gspan_format(converted_graphs, labels)
+    return gspan_str
+
+
+def gspan_to_nx(gspan_str: str, node_attr_names, edge_attr_names, node_types,
+                edge_types) -> List[nx.MultiDiGraph]:
+    graphs = from_gspan_format(gspan_str)
+    graphs = convert_graphs_int_to_attr(graphs, node_attr_names,
+                                        edge_attr_names, node_types,
+                                        edge_types)
+    return graphs
+
+
+def main_nx_to_gspan():
     # 1. read all the graphs
     graphs, labels = load_graphs_and_labels(
         'ego_pyg_codeflaws_pyc_cfl_stmt_level')
@@ -93,3 +161,64 @@ if __name__ == '__main__':
                                    node_types=node_types,
                                    edge_types=edge_types), labels)
     print(gspan_str)
+
+
+def main_gspan_to_nx():
+    # 1. read all the graphs
+    gspan_str = open('ego_pyg_codeflaws_pyc_cfl_stmt_level/ego_pyg_codeflaws_pyc_cfl_stmt_level.gspan').read()
+    node_attr_names, edge_attr_names, node_types, edge_types = pkl.load(
+        open('ego_pyg_codeflaws_pyc_cfl_stmt_level/meta_data.pkl', 'rb'))
+    graphs = convert_graphs_int_to_attr(
+        from_gspan_format(gspan_str),
+        node_attr_names=node_attr_names,
+        edge_attr_names=edge_attr_names,
+        node_types=node_types,
+        edge_types=edge_types)
+    # dump all the graph to disk
+    os.makedirs('ego_pyg_codeflaws_pyc_cfl_stmt_level/mined', exist_ok=True)
+    for i, graph in enumerate(graphs): nx.write_gpickle(graph,
+                         f'ego_pyg_codeflaws_pyc_cfl_stmt_level/mined/{i}.gpickle')
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input', type=str, required=True)
+    parser.add_argument('--output', type=str, required=True)
+    parser.add_argument('--meta_data', type=str, required=True)
+    parser.add_argument('--mode', type=str, required=True)
+    args = parser.parse_args()
+    return args
+
+
+if __name__ == '__main__':
+    args = get_args()
+    if args.mode == 'nx_to_gspan':
+        # 1. read all the graphs
+        graphs, labels = load_graphs_and_labels(args.input)
+        graphs = remove_self_loops(graphs)
+        # 2. convert to gSpan format
+        node_attr_names, edge_attr_names, node_types, edge_types = get_meta_data(
+            graphs, ["graph", "ntype", "is_target"], ["etype"])
+        pkl.dump((node_attr_names, edge_attr_names, node_types, edge_types),
+                 open(args.meta_data, 'wb'))
+        gspan_str = to_gspan_format(
+            convert_graph_attrs_to_int(graphs,
+                                       node_attr_names=node_attr_names,
+                                       edge_attr_names=edge_attr_names,
+                                       node_types=node_types,
+                                       edge_types=edge_types), labels)
+        print(gspan_str)
+    elif args.mode == 'gspan_to_nx':
+        # 1. read all the graphs
+        gspan_str = open(args.input).read()
+        node_attr_names, edge_attr_names, node_types, edge_types = pkl.load(
+            open(args.meta_data, 'rb'))
+        graphs = convert_graphs_int_to_attr(
+            from_gspan_format(gspan_str),
+            node_attr_names=node_attr_names,
+            edge_attr_names=edge_attr_names,
+            node_types=node_types,
+            edge_types=edge_types)
+        # dump all the graph to disk
+        os.makedirs(args.output, exist_ok=True)
+        for i, graph in enumerate(graphs):
+            nx.write_gpickle(graph, f'{args.output}/{i}.gpickle')
