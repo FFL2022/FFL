@@ -220,7 +220,9 @@ if __name__ == '__main__':
                                        edge_attr_names=edge_attr_names,
                                        node_types=node_types,
                                        edge_types=edge_types), labels)
-        print(gspan_str)
+        # write to args.output
+        with open(args.output, 'w') as f:
+            f.write(gspan_str)
     elif args.mode == 'gspan_to_nx':
         # 1. read all the graphs
         gspan_str = open(args.input).read()
