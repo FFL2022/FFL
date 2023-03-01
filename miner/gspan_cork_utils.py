@@ -14,7 +14,7 @@ def load_graphs_and_labels(
     labels = []
     label_mapping = {'pos': 1, 'neg': 0, 'uncertain': -1}
     counts = {1: 0, 0: 0, -1: 0}
-    # threshold: 2000 graphs each
+    # threshold: 1200 graphs each
     for fp in glob.glob(load_dir + "/*.gpickle"):
         graph = nx.read_gpickle(fp)
         label = label_mapping[fp.split('/')[-1].split('_')[0]]
@@ -212,6 +212,7 @@ if __name__ == '__main__':
         # 1. read all the graphs
         graphs, labels = load_graphs_and_labels(args.input)
         graphs = remove_self_loops(graphs)
+        graphs = remove_inverse_edge(graphs)
         # 2. convert to gSpan format
         node_attr_names, edge_attr_names, node_types, edge_types = get_meta_data(
             graphs, ["graph", "ntype", "is_target"], ["etype"])
