@@ -58,6 +58,15 @@ def remove_self_loops(graphs: List[nx.MultiDiGraph]) -> List[nx.MultiDiGraph]:
     return graphs
 
 
+def remove_inverse_edge(
+        graphs: List[nx.MultiDiGraph]) -> List[nx.MultiDiGraph]:
+    for graph in graphs:
+        for edge in list(graph.edges)[:]:
+            if '_reverse' in edge['etype']:
+                graph.remove_edge(edge[0], edge[1])
+    return graphs
+
+
 def to_gspan_format(converted_graphs: List[nx.MultiDiGraph],
                     labels: List[int]) -> str:
     # the format is
@@ -78,7 +87,8 @@ def to_gspan_format(converted_graphs: List[nx.MultiDiGraph],
     return out_str
 
 
-def from_gspan_format(gspan_str: str, supports: List[int]=None) -> List[nx.MultiDiGraph]:
+def from_gspan_format(gspan_str: str,
+                      supports: List[int] = None) -> List[nx.MultiDiGraph]:
     lines = gspan_str.split('\n')
     graphs = []
     graph = None
@@ -149,6 +159,7 @@ def main_nx_to_gspan(args):
     graphs, labels = load_graphs_and_labels(
         'ego_pyg_codeflaws_pyc_cfl_stmt_level')
     graphs = remove_self_loops(graphs)
+    graphs = remove_inverse_edge(graphs)
     # 2. convert to gSpan format
     node_attr_names, edge_attr_names, node_types, edge_types = get_meta_data(
         graphs, ["graph", "ntype", "is_target"], ["etype"])
@@ -165,19 +176,22 @@ def main_nx_to_gspan(args):
 
 def main_gspan_to_nx(args):
     # 1. read all the graphs
-    gspan_str = open('ego_pyg_codeflaws_pyc_cfl_stmt_level/ego_pyg_codeflaws_pyc_cfl_stmt_level.gspan').read()
+    gspan_str = open(
+        'ego_pyg_codeflaws_pyc_cfl_stmt_level/ego_pyg_codeflaws_pyc_cfl_stmt_level.gspan'
+    ).read()
     node_attr_names, edge_attr_names, node_types, edge_types = pkl.load(
         open('ego_pyg_codeflaws_pyc_cfl_stmt_level/meta_data.pkl', 'rb'))
-    graphs = convert_graphs_int_to_attr(
-        from_gspan_format(gspan_str),
-        node_attr_names=node_attr_names,
-        edge_attr_names=edge_attr_names,
-        node_types=node_types,
-        edge_types=edge_types)
+    graphs = convert_graphs_int_to_attr(from_gspan_format(gspan_str),
+                                        node_attr_names=node_attr_names,
+                                        edge_attr_names=edge_attr_names,
+                                        node_types=node_types,
+                                        edge_types=edge_types)
     # dump all the graph to disk
     os.makedirs('ego_pyg_codeflaws_pyc_cfl_stmt_level/mined', exist_ok=True)
-    for i, graph in enumerate(graphs): nx.write_gpickle(graph,
-                         f'ego_pyg_codeflaws_pyc_cfl_stmt_level/mined/{i}.gpickle')
+    for i, graph in enumerate(graphs):
+        nx.write_gpickle(
+            graph, f'ego_pyg_codeflaws_pyc_cfl_stmt_level/mined/{i}.gpickle')
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -212,12 +226,11 @@ if __name__ == '__main__':
         gspan_str = open(args.input).read()
         node_attr_names, edge_attr_names, node_types, edge_types = pkl.load(
             open(args.meta_data, 'rb'))
-        graphs = convert_graphs_int_to_attr(
-            from_gspan_format(gspan_str),
-            node_attr_names=node_attr_names,
-            edge_attr_names=edge_attr_names,
-            node_types=node_types,
-            edge_types=edge_types)
+        graphs = convert_graphs_int_to_attr(from_gspan_format(gspan_str),
+                                            node_attr_names=node_attr_names,
+                                            edge_attr_names=edge_attr_names,
+                                            node_types=node_types,
+                                            edge_types=edge_types)
         # dump all the graph to disk
         os.makedirs(args.output, exist_ok=True)
         for i, graph in enumerate(graphs):
