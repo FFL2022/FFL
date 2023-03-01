@@ -14,7 +14,6 @@ def load_graphs_and_labels(
     for fp in glob.glob(load_dir + "/*.gpickle"):
         graph = nx.read_gpickle(fp)
         graphs.append(graph)
-        print(fp, fp.split('/')[-1].split('_')[0])
         label = label_mapping[fp.split('/')[-1].split('_')[0]]
         labels.append(label)
 
