@@ -106,14 +106,14 @@ def convert_graphs_int_to_attr(graphs, node_attr_names, edge_attr_names,
     for graph in graphs:
         converted_graph = nx.MultiDiGraph()
         for node in graph.nodes:
-            n_attrs = ntype_mapping[graph.nodes[node]]
+            n_attrs = ntype_mapping[graph.nodes[node]['label']]
             n_attrs = {
                 attr_name: attr_val
                 for attr_name, attr_val, has_attr in n_attrs if has_attr
             }
             converted_graph.add_node(node, **n_attrs)
         for edge in graph.edges:
-            e_attrs = etype_mapping[graph.edges[edge]][0]
+            e_attrs = etype_mapping[graph.edges[edge]['label']][0]
             e_attrs = {
                 attr_name: attr_val
                 for attr_name, attr_val, has_attr in e_attrs if has_attr
@@ -145,7 +145,7 @@ def gspan_to_nx(gspan_str: str, node_attr_names, edge_attr_names, node_types,
     return graphs
 
 
-def main_nx_to_gspan():
+def main_nx_to_gspan(args):
     # 1. read all the graphs
     graphs, labels = load_graphs_and_labels(
         'ego_pyg_codeflaws_pyc_cfl_stmt_level')
@@ -164,7 +164,7 @@ def main_nx_to_gspan():
     print(gspan_str)
 
 
-def main_gspan_to_nx():
+def main_gspan_to_nx(args):
     # 1. read all the graphs
     gspan_str = open('ego_pyg_codeflaws_pyc_cfl_stmt_level/ego_pyg_codeflaws_pyc_cfl_stmt_level.gspan').read()
     node_attr_names, edge_attr_names, node_types, edge_types = pkl.load(
