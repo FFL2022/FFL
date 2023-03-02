@@ -177,6 +177,7 @@ def get_args():
 
 if __name__ == '__main__':
     args = get_args()
+    os.makedirs(args.save_dir, exist_ok=True)
     nx_dataset = CodeflawsCFLNxStatementDataset(
     ) if args.dataset == 'codeflaws' else NBLPyGCFLNxStatementDataset()
     # TODO:
