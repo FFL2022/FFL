@@ -125,6 +125,7 @@ def convert_graphs_int_to_attr(graphs, node_attr_names, edge_attr_names,
             }
             converted_graph.add_node(node, **n_attrs)
         for edge in graph.edges:
+            print(graph.edges[edge]['label'])
             e_attrs = etype_mapping[graph.edges[edge]['label']][0]
             e_attrs = {
                 attr_name: attr_val
