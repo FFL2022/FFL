@@ -122,6 +122,12 @@ def main():
     args = get_args()
     print("Loading data...")
     nx_dataset = CodeflawsCFLNxStatementDataset()
+    #### TEST ####
+    os.makedirs("tmp", exist_ok=True)
+    for i, (nx_g, stmt_nodes) in enumerate(nx_dataset):
+        nx.write_gpickle(nx_g, f"tmp/{i}.gpickle")
+        nx.drawing.nx_pydot.write_dot(nx_g, f"tmp/{i}.dot")
+    #### END TEST ####
     meta_data = AstGraphMetadata(nx_dataset)
     pyg_dataset = PyGStatementDataset(
             dataloader=nx_dataset,
