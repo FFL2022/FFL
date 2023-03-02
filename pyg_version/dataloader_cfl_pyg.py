@@ -21,26 +21,24 @@ def get_node2id(nx_g, graphs=['ast', 'cfg', 'test']):
 
 def nx_to_pyg_stmt(meta_data, nx_g, ast_enc, stmt_nodes):
     nx_g = augment_with_reverse_edge_cat(nx_g, meta_data.t_e_asts, [])
-    ori_ns = list(nx_g.nodes())[:]
     n2id = get_node2id(nx_g)
     ess = [[[], []] for i in range(len(meta_data.t_all))]
     for u, v, e in nx_g.edges(data=True):
-        e['label'] = meta_data.t_all.index(e['label'].replace('test', 't'))
-        ess[e['label']][0].append(n2id[nx_g.nodes[u]['graph']][u])
-        ess[e['label']][1].append(n2id[nx_g.nodes[v]['graph']][v])
+        et_idx = meta_data.t_all.index(e['label'].replace('test', 't'))
+        ess[et_idx][0].append(n2id[nx_g.nodes[u]['graph']][u])
+        ess[et_idx][1].append(n2id[nx_g.nodes[v]['graph']][v])
     ess = [add_self_loops(torch.tensor(es).long())[0] for es in ess]
     data = Data(ess=ess)
-    n_asts = nodes_where(nx_g, graph='ast')
     l_a = torch.tensor([
-        meta_data.ntype2id[nx_g.nodes[n]['ntype']] for n in n_asts
+        meta_data.ntype2id[nx_g.nodes[n]['ntype']] for n in n2id['ast']
     ]).long()
     if ast_enc is not None:
         data.c_a = torch.tensor([
-            ast_enc(nx_g.nodes[n]['token']) for n in n_asts
+            ast_enc(nx_g.nodes[n]['token']) for n in n2id['ast']
         ]).float()
     # for cfg, it will be text
-    data.lbl = torch.tensor([nx_g.nodes[n]['status'] for n in n_asts])
-    ts = torch.tensor([0] * (len(nx_g.nodes()) - len(n_asts)))
+    data.lbl = torch.tensor([nx_g.nodes[n]['status'] for n in n2id['ast']])
+    ts = torch.tensor([0] * (len(nx_g.nodes()) - len(n2id['ast'])))
     data.xs = [l_a, ts]
     return data, \
         torch.tensor(list(n2id['ast'][n] for n in stmt_nodes)).int()
@@ -48,13 +46,13 @@ def nx_to_pyg_stmt(meta_data, nx_g, ast_enc, stmt_nodes):
 
 def nx_to_pyg_node(meta_data, nx_g, ast_enc):
     nx_g = augment_with_reverse_edge_cat(nx_g, meta_data.t_e_asts, [])
-    ori_ns = list(nx_g.nodes())[:]
     n2id = get_node2id(nx_g)
     ess = [[[], []] for i in range(len(meta_data.t_all))]
     for u, v, e in nx_g.edges(data=True):
-        e['label'] = meta_data.t_all.index(e['label'].replace('test', 't'))
-        ess[e['label']][0].append(n2id[nx_g.nodes[u]['graph']][u])
-        ess[e['label']][1].append(n2id[nx_g.nodes[v]['graph']][v])
+        et_idx = meta_data.t_all.index(e['label'].replace('test', 't'))
+        ess[et_idx][0].append(n2id[nx_g.nodes[u]['graph']][u])
+        ess[et_idx][1].append(n2id[nx_g.nodes[v]['graph']][v])
+
     ess = [add_self_loops(torch.tensor(es).long())[0] for es in ess]
     data = Data(ess=ess)
     n_asts = nodes_where(nx_g, graph='ast')

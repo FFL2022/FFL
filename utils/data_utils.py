@@ -197,7 +197,7 @@ class AstGraphMetadata(object):
     def __init__(self, nx_g_dataset):
         self.t_asts = sorted(nx_g_dataset.ast_types)
         self.ntype2id = {n: i for i, n in enumerate(sorted(self.t_asts))}
-        self.id2ntype = sorted(self.t_asts)
+        self.id2ntype = self.t_asts
         self.t_e_asts = sorted(nx_g_dataset.ast_etypes)
         if 'cfg_etypes' in nx_g_dataset.__dict__:
             self.t_e_cfgs = sorted(nx_g_dataset.cfg_etypes)
