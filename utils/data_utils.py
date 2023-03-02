@@ -211,7 +211,7 @@ class AstGraphMetadata(object):
                 [et + '_reverse' for et in self.t_e_cfgs]
             self.t_e_c_a = ['corresponding_ast']
             self.t_e_a_c = ['corresponding_cfg']
-            self.t_e_c_t = ['c_pass_test', 'c_fail_test']
+            self.t_e_c_t = ['c_pass_t', 'c_fail_t']
             self.t_e_t_c = ['t_pass_c', 't_fail_c']
 
         self.t_e_a_t = ['a_pass_t', 'a_fail_t']

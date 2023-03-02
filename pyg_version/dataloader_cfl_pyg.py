@@ -19,7 +19,7 @@ def nx_to_pyg_stmt(meta_data, nx_g, ast_enc, stmt_nodes):
     map_ns = {n: i for n, i in zip(ori_ns, new_ns)}
     ess = [[[], []] for i in range(len(meta_data.t_all))]
     for u, v, e in nx_g.edges(data=True):
-        e['label'] = meta_data.t_all.index(e['label'])
+        e['label'] = meta_data.t_all.index(e['label'].replace('test', 't'))
         ess[e['label']][0].append(u)
         ess[e['label']][1].append(v)
     ess = [add_self_loops(torch.tensor(es).long())[0] for es in ess]
@@ -48,7 +48,7 @@ def nx_to_pyg_node(meta_data, nx_g, ast_enc):
     map_ns = {n: i for n, i in zip(ori_ns, new_ns)}
     ess = [[[], []] for i in range(len(meta_data.t_all))]
     for u, v, e in nx_g.edges(data=True):
-        e['label'] = meta_data.t_all.index(e['label'])
+        e['label'] = meta_data.t_all.index(e['label'].replace('test', 't'))
         ess[e['label']][0].append(u)
         ess[e['label']][1].append(v)
     ess = [add_self_loops(torch.tensor(es).long())[0] for es in ess]
