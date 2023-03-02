@@ -24,6 +24,8 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
     model.eval()
     with torch.no_grad():
         data = data.to(device)
+            print(data.xs.shape, data.ess.max())
+            input()
         out = model(data.xs, data.ess)[1]
     # 2. get the top-k predictions
     topk = min(10, data_stmt_nodes.shape[0])
