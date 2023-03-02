@@ -71,11 +71,12 @@ class EgoGraphExtractor(object):
         self.hops = hops
 
     def extract(self) -> nx.MultiDiGraph:
-        for (data, stmt_nodes), output, k_pos, k_uncertain, k_neg in self.triplet_iter:
+        for i, (data, stmt_nodes), output, k_pos, k_uncertain, k_neg in enumerate(self.triplet_iter):
             stmt_nodes = stmt_nodes.to("cpu")
             data = data.to("cpu")
             # 1. convert data to nx
             graph = from_data_to_nx(data, None, self.meta_data)
+            nx.drawing.nx_pydot.write_dot(graph, f"tmp/{i}_mm2.dot")
             # 2. extract the ego graph from the nx
             # 2.1 extract the top k positive nodes
             pos_ego_graphs = []
@@ -122,13 +123,7 @@ def get_args():
     return parser.parse_args()
 
 
-def main():
-    t2id = {'ast': 0, 'test': 1}
-    args = get_args()
-    print("Loading data...")
-    nx_dataset = CodeflawsCFLNxStatementDataset()
-    meta_data = AstGraphMetadata(nx_dataset)
-    #### TEST ####
+def test_from_data_to_nx_nx_to_pyg_stmt(nx_dataset, meta_data):
     os.makedirs("tmp", exist_ok=True)
     for i, (nx_g, stmt_nodes) in enumerate(nx_dataset):
         nx.write_gpickle(nx_g, f"tmp/{i}.gpickle")
@@ -141,7 +136,18 @@ def main():
         nx.write_gpickle(metamorphed_nx, f"tmp/{i}_mm.gpickle")
         nx.drawing.nx_pydot.write_dot(nx_g, f"tmp/{i}.dot")
         nx.drawing.nx_pydot.write_dot(metamorphed_nx, f"tmp/{i}_mm.dot")
+
+def main():
+    t2id = {'ast': 0, 'test': 1}
+    args = get_args()
+    print("Loading data...")
+    nx_dataset = CodeflawsCFLNxStatementDataset()
+    meta_data = AstGraphMetadata(nx_dataset)
+    '''
+    #### TEST ####
+    test_from_data_to_nx_nx_to_pyg_stmt(nx_dataset, meta_data)
     #### END TEST ####
+    '''
     pyg_dataset = PyGStatementDataset(
         dataloader=nx_dataset,
         meta_data=meta_data,

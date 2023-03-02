@@ -19,6 +19,7 @@ def get_node2id(nx_g, graphs=['ast', 'cfg', 'test']):
     return n2id
 
 
+### TESTED TO WORK CORRECTLY, DO NOT TOUCH
 def nx_to_pyg_stmt(meta_data, nx_g, ast_enc, stmt_nodes):
     nx_g = augment_with_reverse_edge_cat(nx_g, meta_data.t_e_asts, [])
     n2id = get_node2id(nx_g)
