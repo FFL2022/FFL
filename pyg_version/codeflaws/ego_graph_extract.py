@@ -71,7 +71,7 @@ class EgoGraphExtractor(object):
         self.hops = hops
 
     def extract(self) -> nx.MultiDiGraph:
-        for i, (data, stmt_nodes), output, k_pos, k_uncertain, k_neg in enumerate(self.triplet_iter):
+        for i, ((data, stmt_nodes), output, k_pos, k_uncertain, k_neg) in enumerate(self.triplet_iter):
             stmt_nodes = stmt_nodes.to("cpu")
             data = data.to("cpu")
             # 1. convert data to nx
