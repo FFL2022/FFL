@@ -69,6 +69,9 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
             new_nx_stmt_nodes = nx_stmt_nodes[:] + [top_node]
             data, data_stmt_nodes = PyGStatementDataset.nx_to_pyg(
                 meta_data, nx_g, None, new_nx_stmt_nodes)
+            # print shape of data.xs and max of data.ess
+            print(data.xs.shape, data.ess.max())
+            input()
             model.eval()
             with torch.no_grad():
                 data = data.to(device)

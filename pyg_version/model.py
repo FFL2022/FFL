@@ -17,7 +17,6 @@ class MPNN(MessagePassing):
         self.relu = nn.ReLU()
 
     def forward(self, x_src, x_dst, es, weights=None):
-        print(es, x_src.size(), x_dst.size())
         return self.relu(self.propagate(es, x=(x_src, x_dst),
                               size=(x_src.size(0),x_dst.size(0)),
                               weights=weights))
