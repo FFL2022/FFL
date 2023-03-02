@@ -1,8 +1,9 @@
 import networkx as nx
+from codeflaws.dataloader_cfl import CodeflawsCFLNxStatementDataset
 from collections import Counter, defaultdict
 from utils.data_utils import NxDataloader, AstGraphMetadata
 from utils.train_utils import BinFullMeter, AverageMeter
-from pyg_version.codeflaws.dataloader_cfl_pyg import CodeflawsCFLPyGStatementDataset, CodeflawsCFLNxStatementDataset, CodeflawsCFLStatementGraphMetadata
+from pyg_version.dataloader_cfl_pyg import PyGStatementDataset, AstGraphMetadata
 
 import torch
 from graph_algos.nx_shortcuts import neighbors_out
@@ -17,7 +18,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
     # 0. convert nx_g to pyg graph
-    data, data_stmt_nodes = CodeflawsCFLPyGStatementDataset.nx_to_pyg(
+    data, data_stmt_nodes = PyGStatementDataset.nx_to_pyg(
         meta_data, nx_g, None, nx_stmt_nodes)
     # 1. get model's output
     model.eval()
@@ -66,7 +67,7 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
             '''
             # 4.2 Get the new output
             new_nx_stmt_nodes = nx_stmt_nodes[:] + [top_node]
-            data, data_stmt_nodes = CodeflawsCFLPyGStatementDataset.nx_to_pyg(
+            data, data_stmt_nodes = PyGStatementDataset.nx_to_pyg(
                 meta_data, nx_g, None, new_nx_stmt_nodes)
             model.eval()
             with torch.no_grad():
@@ -127,7 +128,7 @@ def main():
     ]
     # 2. Load meta data and dataset
     nx_dataset = CodeflawsCFLNxStatementDataset()
-    meta_data = CodeflawsCFLStatementGraphMetadata(nx_dataset)
+    meta_data = AstGraphMetadata(nx_dataset)
     t2id = {'ast': 0, 'test': 1}
     # 2. load the model
     model = MPNNModel_A_T_L(dim_h=64,
