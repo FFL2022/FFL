@@ -25,10 +25,22 @@ def nx_to_pyg_stmt(meta_data, nx_g, ast_enc, stmt_nodes):
     n2id = get_node2id(nx_g)
     ess = [[[], []] for i in range(len(meta_data.t_all))]
     for u, v, e in nx_g.edges(data=True):
-        et_idx = meta_data.t_all.index(e['label'].replace('test', 't'))
-        ess[et_idx][0].append(n2id[nx_g.nodes[u]['graph']][u])
-        ess[et_idx][1].append(n2id[nx_g.nodes[v]['graph']][v])
-    ess = [add_self_loops(torch.tensor(es).long())[0] for es in ess]
+        ugraph, vgraph = nx_g.nodes[u]['graph'], nx_g.nodes[v]['graph']
+        et_idx = meta_data.meta_graph.index(
+            (ugraph, e['label'].replace('test', 't'), vgraph))
+        uid = n2id[ugraph][u]
+        vid = n2id[vgraph][v]
+        assert meta_data.meta_graph[et_idx][0] == ugraph, f"expected {meta_data.meta_graph[et_idx]}, instead got {ugraph}"
+        assert meta_data.meta_graph[et_idx][2] == vgraph, f"expected {meta_data.meta_graph[et_idx]}, instead got {vgraph}"
+        assert uid < len(n2id[ugraph])
+        assert vid < len(n2id[vgraph])
+
+        ess[et_idx][0].append(uid)
+        ess[et_idx][1].append(vid)
+    # ADD Self loop cause troubles due to heterogeneous type
+    # ess = [add_self_loops(torch.tensor(es).long())[0] for es in ess]
+    ess = [torch.tensor(es).long() for es in ess]
+
     data = Data(ess=ess)
     l_a = torch.tensor([
         meta_data.ntype2id[nx_g.nodes[n]['ntype']] for n in n2id['ast']
@@ -54,7 +66,7 @@ def nx_to_pyg_node(meta_data, nx_g, ast_enc):
         ess[et_idx][0].append(n2id[nx_g.nodes[u]['graph']][u])
         ess[et_idx][1].append(n2id[nx_g.nodes[v]['graph']][v])
 
-    ess = [add_self_loops(torch.tensor(es).long())[0] for es in ess]
+    # ess = [add_self_loops(torch.tensor(es).long())[0] for es in ess]
     data = Data(ess=ess)
     n_asts = nodes_where(nx_g, graph='ast')
     l_a = torch.tensor([

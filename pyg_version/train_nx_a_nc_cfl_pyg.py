@@ -181,6 +181,7 @@ if __name__ == '__main__':
     ) if args.dataset == 'codeflaws' else NBLPyGCFLNxStatementDataset()
     # TODO:
     meta_data = AstGraphMetadata(nx_dataset)
+    pkl.dump(meta_data.meta_graph, open('meta_graph.pkl', 'wb'))
     train_nxs, val_nxs, test_nxs = split_nx_dataset(nx_dataset,
                                                     [0.6, 0.2, 0.2])
     train_pyg_dataset = PyGStatementDataset(
