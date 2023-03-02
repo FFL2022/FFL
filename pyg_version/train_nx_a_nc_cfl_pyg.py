@@ -187,16 +187,19 @@ if __name__ == '__main__':
         dataloader=train_nxs,
         meta_data=meta_data,
         ast_enc=None,
+        save_dir="preprocessed/codeflaws/",
         name=f'{args.dataset}_train_pyg_cfl_stmt')
     val_pyg_dataset = PyGStatementDataset(
         dataloader=val_nxs,
         meta_data=meta_data,
         ast_enc=None,
+        save_dir="preprocessed/codeflaws/",
         name=f'{args.dataset}_val_pyg_cfl_stmt')
     test_pyg_dataset = PyGStatementDataset(
         dataloader=test_nxs,
         meta_data=meta_data,
         ast_enc=None,
+        save_dir="preprocessed/codeflaws/",
         name=f'{args.dataset}_test_pyg_cfl_stmt')
     t2id = {'ast': 0, 'test': 1}
     model = MPNNModel_A_T_L(dim_h=64,
