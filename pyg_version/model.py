@@ -17,8 +17,6 @@ class MPNN(MessagePassing):
         self.relu = nn.ReLU()
 
     def forward(self, x_src, x_dst, es, weights=None):
-        if es.size(1) > 0:
-            print(torch.max(es[0]), torch.max(es[1]), x_src.size(0), x_dst.size(0))
         return self.relu(self.propagate(es, x=(x_src, x_dst),
                               size=(x_src.size(0),x_dst.size(0)),
                               weights=weights))
@@ -153,7 +151,6 @@ class MPNNModel_A_T_L(nn.Module):
             out = [0, 0]
             for j, (es, t_src, t_tgt) in enumerate(
                     zip(ess, self.t_srcs, self.t_tgts)):
-                print(j)
                 out[t_tgt] += self.mpnns[i][j](xs[t_src], xs[t_tgt], es,
                                      weights[j] if weights else None)
             xs = [self.relu(out[0]), self.relu(out[1])]
