@@ -68,6 +68,7 @@ class EgoGraphExtractor(object):
         self.triplet_iter = TopKTripletStatementIterator(
             model, dataset, k, device)
         self.meta_data = meta_data
+        self.dataset = dataset
         self.hops = hops
 
     def extract(self) -> nx.MultiDiGraph:
@@ -76,7 +77,9 @@ class EgoGraphExtractor(object):
             data = data.to("cpu")
             # 1. convert data to nx
             graph = from_data_to_nx(data, None, self.meta_data)
-            nx.drawing.nx_pydot.write_dot(graph, f"tmp/{i}_mm2.dot")
+            nx.drawing.nx_pydot.write_dot(graph, f"tmp/{i}_mm2_after.dot")
+            nx.drawing.nx_pydot.write_dot(from_data_to_nx(self.dataset[i][0], None, self.meta_data),
+                                          f"tmp/{i}_mm2_before.dot")
             # 2. extract the ego graph from the nx
             # 2.1 extract the top k positive nodes
             pos_ego_graphs = []
