@@ -110,6 +110,7 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
 
 def get_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--pattern_dir", type=str, default='experiments/result/codeflaws_pyc_cfl_stmt_pyg/influential_substructure/*.pkl')
     parser.add_argument("--model_path", type=str, required=True)
     parser.add_argument("--k", type=int, default=10)
     # parser.add_argument("--loss_func",
@@ -122,9 +123,7 @@ def main():
     args = get_args()
     # 1. load the pattern set
     pattern_set = [
-        pkl.load(open(fp, 'rb')) for fp in glob.glob(
-            'experiments/result/codeflaws_pyc_cfl_stmt_pyg/influential_substructure/*.pkl'
-        )
+        pkl.load(open(fp, 'rb')) for fp in glob.glob(args.pattern_dir)
     ]
     # 2. Load meta data and dataset
     nx_dataset = CodeflawsCFLNxStatementDataset()
