@@ -126,9 +126,11 @@ def main():
     os.makedirs("tmp", exist_ok=True)
     for i, (nx_g, stmt_nodes) in enumerate(nx_dataset):
         nx.write_gpickle(nx_g, f"tmp/{i}.gpickle")
-        # remove the name attribute
+        # remove the name attribute if there is from nodes and edges
         for node in nx_g.nodes:
-            nx_g.nodes[node].pop("name")
+            nx_g.nodes[node].pop("name", None)
+        for edge in nx_g.edges:
+            nx_g.edges[edge].pop("name", None)
         nx.drawing.nx_pydot.write_dot(nx_g, f"tmp/{i}.dot")
     #### END TEST ####
     meta_data = AstGraphMetadata(nx_dataset)
