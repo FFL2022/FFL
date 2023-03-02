@@ -1,4 +1,4 @@
-from graph_algos.nx_shortcuts import where_node, edges_where
+from graph_algos.nx_shortcuts import where_node, edges_where, nodes_where
 import dgl
 from dgl.data import DGLDataset
 from codeflaws.dataloader_cfl import CodeflawsAstGraphMetadata, \
@@ -9,7 +9,7 @@ def numerize_graph(nx_g, graphs=['ast', 'cfg', 'test']):
     n2id = {}
     for graph in graphs:
         ns = nodes_where(nx_g, graph=graph)
-        n2id[graph] = dict([n, i] for i, n in enumerate(n_asts))
+        n2id[graph] = dict([n, i] for i, n in enumerate(ns))
 
     # Create dgl test node
     # No need, will be added automatically when we update edges
