@@ -24,8 +24,6 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
     model.eval()
     with torch.no_grad():
         data = data.to(device)
-        print(data.xs.shape, data.ess.max())
-        input()
         out = model(data.xs, data.ess)[1]
     # 2. get the top-k predictions
     topk = min(10, data_stmt_nodes.shape[0])
@@ -72,8 +70,6 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
             data, data_stmt_nodes = PyGStatementDataset.nx_to_pyg(
                 meta_data, nx_g, None, new_nx_stmt_nodes)
             # print shape of data.xs and max of data.ess
-            print(data.xs.shape, data.ess.max())
-            input()
             model.eval()
             with torch.no_grad():
                 data = data.to(device)
