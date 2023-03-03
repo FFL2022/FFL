@@ -130,7 +130,12 @@ def convert_graphs_int_to_attr(graphs, node_attr_names, edge_attr_names,
                 attr_name: attr_val
                 for attr_name, attr_val, has_attr in e_attrs if has_attr
             }
-            converted_graph.add_edge(edge[0], edge[1], **e_attrs)
+            e_src_signature = ntype_mapping[graph.nodes[edge[0]]['label']]
+            true_src_signature = etype_mapping[graph.edges[edge]['label']][1]
+            if tuple(e_src_signature) != tuple(true_src_signature):
+                converted_graph.add_edge(edge[1], edge[0], **e_attrs)
+            else:
+                converted_graph.add_edge(edge[0], edge[1], **e_attrs)
         yield converted_graph
 
 
