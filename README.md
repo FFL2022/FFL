@@ -23,3 +23,5 @@ python3 -m selfunittest.test_nx_graph_build.py
 ### Download:
 Download jars file [here](https://drive.google.com/file/d/1gM1j_sJRhrpcGoJgyd2Hyot-aZqIMRdl/view?usp=sharing) and unzip to the root directory
 
+## Ego Graph Extract
+Used parameter is 3 hops
