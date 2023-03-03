@@ -4,7 +4,7 @@ from pyg_version.dataloader_cfl_pyg import (
 from pyg_version.model import MPNNModel_A_T_L
 from pyg_version.explainer.explainer import Explainer, InflExtractor
 from pyg_version.explainer.common import entropy_loss_mask, size_loss
-from graph_algos.nx_shortcuts import where_node, where_edge
+from graph_algos.nx_shortcuts import where_node, where_edge, nodes_where
 # Todo: use edge weight and feature weight balanced
 import torch
 import networkx as nx
@@ -77,9 +77,11 @@ class EgoGraphExtractor(object):
             data = data.to("cpu")
             # 1. convert data to nx
             graph = from_data_to_nx(data, None, self.meta_data)
-            nx.drawing.nx_pydot.write_dot(graph, f"tmp/{i}_mm2_after.dot")
-            nx.drawing.nx_pydot.write_dot(from_data_to_nx(self.dataset[i][0], None, self.meta_data),
-                                          f"tmp/{i}_mm2_before.dot")
+            # do this to avoid every node is connected through test cases
+            graph = graph.subgraph(nodes_where(graph, graph='ast')).copy()
+            # nx.drawing.nx_pydot.write_dot(graph, f"tmp/{i}_mm2_after.dot")
+            # nx.drawing.nx_pydot.write_dot(from_data_to_nx(self.dataset[i][0], None, self.meta_data),
+            #                               f"tmp/{i}_mm2_before.dot")
             # 2. extract the ego graph from the nx
             # 2.1 extract the top k positive nodes
             pos_ego_graphs = []
