@@ -33,12 +33,12 @@ def extract_breadth_first_rules(nx_gs: List[nx.MultiDiGraph]) -> Dict[Tuple[Tupl
     for nx_g in nx_gs:
         # assumption: previous edges added is the same as index in the list
         for u, v, data in nx_g.edges(data=True):
-            prev_siblings = list(n for n in neighbors_out(nx_g.nodes[u], nx_g) if n < v)
+            prev_siblings = list(n for n in neighbors_out(u, nx_g) if n < v)
             if not prev_siblings:
                 out_dict[((nx_g.nodes[u]['label'], -1, -1), (nx_g.nodes[u]['label'], nx_g.nodes[v]['label'], data['label']))] += 1
             else:
                 prev_sibling = max(prev_siblings)
-                out_dict[((nx_g.nodes[u]['label'], nx_g.nodes[prev_sibling]['label'], nx_g[prev_sibling][u]['label']), (nx_g.nodes[u]['label'], nx_g.nodes[v]['label'], data['label']))] += 1
+                out_dict[((nx_g.nodes[u]['label'], nx_g.nodes[prev_sibling]['label'], nx_g.edges[u, prev_sibling, 0]['label']), (nx_g.nodes[u]['label'], nx_g.nodes[v]['label'], data['label']))] += 1
     return out_dict
 
 
@@ -51,20 +51,20 @@ def extract_random_rules(nx_gs: List[nx.MultiDiGraph]) -> Dict[Tuple[Tuple[int, 
     out_dict = defaultdict(int)
     for nx_g in nx_gs:
         for u, v, data in nx_g.edges(data=True):
-            prev_siblings = list(n for n in neighbors_out(nx_g.nodes[u], nx_g) if n < v)
-            post_siblings = list(n for n in neighbors_out(nx_g.nodes[u], nx_g) if n > v)
+            prev_siblings = list(n for n in neighbors_out(u, nx_g) if n < v)
+            post_siblings = list(n for n in neighbors_out(u, nx_g) if n > v)
             if not prev_siblings and not post_siblings:
                 out_dict[((nx_g.nodes[u]['label'], -1, -1), (nx_g.nodes[u]['label'], nx_g.nodes[v]['label'], data['label']), (nx_g.nodes[u]['label'], -1, -1))] += 1
             elif not prev_siblings:
                 post_sibling = min(post_siblings)
-                out_dict[((nx_g.nodes[u]['label'], -1, -1), (nx_g.nodes[u]['label'], nx_g.nodes[v]['label'], data['label']), (nx_g.nodes[u]['label'], nx_g.nodes[post_sibling]['label'], nx_g[post_sibling][u]['label']))] += 1
+                out_dict[((nx_g.nodes[u]['label'], -1, -1), (nx_g.nodes[u]['label'], nx_g.nodes[v]['label'], data['label']), (nx_g.nodes[u]['label'], nx_g.nodes[post_sibling]['label'], nx_g.edges[u, post_sibling, 0]['label']))] += 1
             elif not post_siblings:
                 prev_sibling = max(prev_siblings)
-                out_dict[((nx_g.nodes[u]['label'], nx_g.nodes[prev_sibling]['label'], nx_g[prev_sibling][u]['label']), (nx_g.nodes[u]['label'], nx_g.nodes[v]['label'], data['label']), (nx_g.nodes[u]['label'], -1, -1))] += 1
+                out_dict[((nx_g.nodes[u]['label'], nx_g.nodes[prev_sibling]['label'], nx_g.edges[u, prev_sibling, 0]['label']), (nx_g.nodes[u]['label'], nx_g.nodes[v]['label'], data['label']), (nx_g.nodes[u]['label'], -1, -1))] += 1
             else:
                 prev_sibling = max(prev_siblings)
                 post_sibling = min(post_siblings)
-                out_dict[((nx_g.nodes[u]['label'], nx_g.nodes[prev_sibling]['label'], nx_g[prev_sibling][u]['label']), (nx_g.nodes[u]['label'], nx_g.nodes[v]['label'], data['label']), (nx_g.nodes[u]['label'], nx_g.nodes[post_sibling]['label'], nx_g[post_sibling][u]['label']))] += 1
+                out_dict[((nx_g.nodes[u]['label'], nx_g.nodes[prev_sibling]['label'], nx_g.edges[u, prev_sibling, 0]['label']), (nx_g.nodes[u]['label'], nx_g.nodes[v]['label'], data['label']), (nx_g.nodes[u]['label'], nx_g.nodes[post_sibling]['label'], nx_g.edges[u, post_sibling, 0]['label']))] += 1
     return out_dict
 
 
@@ -96,11 +96,10 @@ def test_extract_breadth_first_rules():
     assert extract_breadth_first_rules([nx_g]) == {
         ((1, -1, -1), (1, 2, 1)): 1,
         ((1, 2, 1), (1, 3, 2)): 1,
-        ((1, 3, 2), (2, 4, 3)): 1,
-        ((1, 3, 2), (2, 5, 4)): 1,
-        ((2, 4, 3), (3, 6, 5)): 1,
-        ((2, 5, 4), (3, 6, 5)): 1
-    }
+        ((2, -1, -1), (2, 4, 3)): 1,
+        ((2, 4, 3), (2, 5, 4)): 1,
+        ((3, -1, -1), (3, 6, 5)): 1,
+    }, extract_breadth_first_rules([nx_g])
 
 
 def test_extract_random_rules():
@@ -114,17 +113,12 @@ def test_extract_random_rules():
     nx_g.nodes[5]['label'] = 5
     nx_g.nodes[6]['label'] = 6
     assert extract_random_rules([nx_g]) == {
-        ((1, -1, -1), (1, 2, 1), (1, -1, -1)): 1,
-        ((1, -1, -1), (1, 3, 2), (1, 2, 1)): 1,
-        ((1, 2, 1), (1, 3, 2), (1, 2, 1)): 1,
-        ((1, 2, 1), (2, 4, 3), (1, 3, 2)): 1,
-        ((1, 2, 1), (2, 5, 4), (1, 3, 2)): 1,
-        ((1, 3, 2), (2, 4, 3), (1, 2, 1)): 1,
-        ((1, 3, 2), (2, 5, 4), (1, 2, 1)): 1,
-        ((1, 3, 2), (3, 6, 5), (1, -1, -1)): 1,
-        ((2, 4, 3), (3, 6, 5), (1, 3, 2)): 1,
-        ((2, 5, 4), (3, 6, 5), (1, 3, 2)): 1
-    }
+        ((1, -1, -1), (1, 2, 1), (1, 3, 2)): 1,
+        ((1, 2, 1), (1, 3, 2), (1, -1, -1)): 1,
+        ((2, -1, -1), (2, 4, 3), (2, 5, 4)): 1,
+        ((2, 4, 3), (2, 5, 4), (2, -1, -1)): 1,
+        ((3, -1, -1), (3, 6, 5), (3, -1, -1)): 1,
+    }, extract_random_rules([nx_g])
 
 if __name__ == '__main__':
     test_extract_parent_child_extension_rules()
