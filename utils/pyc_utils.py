@@ -171,7 +171,7 @@ def get_coverage_graph_ast_pyc(nx_ast_g, cov_maps, verdicts):
                             # Visited
                             continue
                         nx_ast_g.add_edge(
-                            node, test_node, label=f'a_{link_type}_test')
+                            node, test_node, label=f'a_{link_type}_t')
                         queue.extend(
                             neighbors_out(
                                 node, nx_ast_g,

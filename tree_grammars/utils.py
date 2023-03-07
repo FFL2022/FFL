@@ -2,6 +2,7 @@ import networkx as nx
 from typing import List, Dict, Tuple
 from collections import defaultdict
 from graph_algos.nx_shortcuts import neighbors_out
+import random
 
 # implement the following function
 # 1. extract all possible extension rules from parent to child
@@ -98,6 +99,75 @@ def extract_random_rules(
                                             nx_g.edges[u, post_sibling,
                                                        0]['label']))] += 1
     return out_dict
+
+
+class ProbabilisticTreeGrammar:
+    """
+    Probabilistic Tree grammar class
+    """
+
+    def __init__(self, nx_gs: List[nx.MultiDiGraph]):
+        """
+        :param nx_gs: list of networkx graphs
+        """
+        self.nx_gs = nx_gs
+        self.extension_rules = extract_parent_child_extension_rules(nx_gs)
+        self.breadth_first_rules = extract_breadth_first_rules(nx_gs)
+        self.random_rules = extract_random_rules(nx_gs)
+        pass
+
+    def filter_independent_rules(self, **kw_args) -> Dict:
+        label_u = kw_args.get('label_u', None)
+        label_v = kw_args.get('label_v', None)
+        label_e = kw_args.get('label_e', None)
+        filtered_extension_rules = {}
+        if label_u is not None:
+            filtered_extension_rules = {
+                k: v
+                for k, v in self.extension_rules.items() if k[0][0] == label_u
+            }
+        if label_v is not None:
+            filtered_extension_rules = {
+                k: v
+                for k, v in filtered_extension_rules.items()
+                if k[1][0] == label_v
+            }
+        if label_e is not None:
+            filtered_extension_rules = {
+                k: v
+                for k, v in filtered_extension_rules.items()
+                if k[1][2] == label_e
+            }
+        return filtered_extension_rules
+
+    def sampling_independent_rules(self,
+                                   *,
+                                   label_u=None,
+                                   label_v=None,
+                                   label_e=None,
+                                   k=None) -> Tuple[int, int, int] or None:
+        filtered_extension_rules = self.filter_independent_rules(
+            label_u=label_u, label_v=label_v, label_e=label_e)
+        if filtered_extension_rules:
+            return random.choices(list(filtered_extension_rules.keys()),
+                                  weights=list(
+                                      filtered_extension_rules.values()),
+                                  k=k)[0]
+        else:
+            return None
+
+    def sampling(nx_g, u):
+        # TODO: build an uniformed sampling based
+        # u is the parent node of the new node
+        # and return a new edge
+
+        # Build a bayesian condition
+        # How to sample a new edge?
+        # 1. Starts from sampling random_rules
+        # 2. If no random_rules, sample breadth_first_rules
+        # 3. If no breadth_first_rules, sample extension_rules
+        # if none: return None
+        pass
 
 
 ### TEST ####
