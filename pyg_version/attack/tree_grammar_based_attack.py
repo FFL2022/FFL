@@ -74,7 +74,7 @@ def attack_independent(nx_g, nx_stmt_nodes, model, tree_grammar, meta_data, tree
                 attr_name: attr_val
                 for attr_name, attr_val, has_attr in dst_ntype if has_attr
             }
-            nx_g.add_node(f"ast_{new_node}", **dst_attrs)
+            nx_g.add_node(f"ast_{new_node}", status=0, **dst_attrs)
             e_attrs = etype_mapping[elabel][0]
             e_attrs = {
                 attr_name: attr_val
