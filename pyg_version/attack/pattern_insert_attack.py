@@ -5,6 +5,7 @@ from utils.data_utils import NxDataloader, AstGraphMetadata
 from utils.train_utils import BinFullMeter, AverageMeter
 from pyg_version.dataloader_cfl_pyg import PyGStatementDataset, AstGraphMetadata
 
+from utils.data_utils import split_nx_dataset, AstGraphMetadata, NxDataloader
 import torch
 from graph_algos.nx_shortcuts import neighbors_out
 import pickle as pkl
