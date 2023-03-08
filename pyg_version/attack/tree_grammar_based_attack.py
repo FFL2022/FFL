@@ -17,7 +17,7 @@ from pyg_version.model import MPNNModel_A_T_L
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # define a named tuple
-TreeGrammarMeta = namedtuple('GrammarMetadata', ['node_attr_names', 'edge_attr_names', 'node_types', 'edge_types'])
+TreeGrammarMeta = namedtuple('TreeGrammarMeta', ['node_attr_names', 'edge_attr_names', 'node_types', 'edge_types'])
 
 
 def attack_independent(nx_g, nx_stmt_nodes, model, tree_grammar, meta_data, tree_grammar_meta: GrammarMetadata, max_attempt=4):
