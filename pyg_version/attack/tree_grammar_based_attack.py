@@ -132,6 +132,7 @@ def attack_independent(nx_g, nx_stmt_nodes, model, tree_grammar, meta_data, tree
 
 def get_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", type=str, default="codeflaws")
     parser.add_argument("--model_path", type=str, required=True)
     parser.add_argument("--k", type=int, default=10)
     parser.add_argument(

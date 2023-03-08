@@ -121,6 +121,7 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
 
 def get_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", type=str, default="codeflaws")
     parser.add_argument("--pattern_dir", type=str, default='experiments/result/codeflaws_pyc_cfl_stmt_pyg/influential_substructure/*.pkl')
     parser.add_argument("--model_path", type=str, required=True)
     parser.add_argument("--k", type=int, default=10)
