@@ -208,3 +208,7 @@ def main():
                         top_5=top_5_rec.avg,
                         top_10=top_10_rec.avg)
     print('Attack success rate:', attack_success / len(nx_dataset))
+
+
+if __name__ == '__main__':
+    main()
