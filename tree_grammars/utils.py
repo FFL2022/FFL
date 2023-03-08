@@ -138,12 +138,12 @@ class ProbabilisticTreeGrammar:
             }
         return filtered_extension_rules
 
-    def sampling_independent_rules(self,
-                                   *,
-                                   label_u=None,
-                                   label_v=None,
-                                   label_e=None,
-                                   k=None) -> Tuple[int, int, int] or None:
+    def sample_independent_rules(self,
+                                 *,
+                                 label_u=None,
+                                 label_v=None,
+                                 label_e=None,
+                                 k=None) -> Tuple[int, int, int] or None:
         filtered_extension_rules = self.filter_independent_rules(
             label_u=label_u, label_v=label_v, label_e=label_e)
         if filtered_extension_rules:
