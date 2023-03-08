@@ -7,6 +7,7 @@ import torch
 from pyg_version.dataloader_cfl_pyg import PyGStatementDataset, AstGraphMetadata
 from numerize_graph.numerize_graph import get_meta_data, get_node_type_mapping, get_edge_type_mapping
 from utils.train_utils import BinFullMeter, AverageMeter
+from collections import namedtuple
 import tqdm
 from graph_algos.nx_shortcuts import neighbors_out
 import argparse
@@ -16,7 +17,7 @@ from pyg_version.model import MPNNModel_A_T_L
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # define a named tuple
-TreeGrammarMeta = NamedTuple('GrammarMetadata', ['node_attr_names', 'edge_attr_names', 'node_types', 'edge_types'])
+TreeGrammarMeta = namedtuple('GrammarMetadata', ['node_attr_names', 'edge_attr_names', 'node_types', 'edge_types'])
 
 
 def attack_independent(nx_g, nx_stmt_nodes, model, tree_grammar, meta_data, tree_grammar_meta: GrammarMetadata, max_attempt=4):
