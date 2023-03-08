@@ -110,11 +110,9 @@ class ProbabilisticTreeGrammar:
         """
         :param nx_gs: list of networkx graphs
         """
-        self.nx_gs = nx_gs
         self.extension_rules = extract_parent_child_extension_rules(nx_gs)
         self.breadth_first_rules = extract_breadth_first_rules(nx_gs)
         self.random_rules = extract_random_rules(nx_gs)
-        pass
 
     def filter_independent_rules(self, **kw_args) -> Dict:
         label_u = kw_args.get('label_u', None)
