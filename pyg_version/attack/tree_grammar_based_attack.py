@@ -173,6 +173,8 @@ def main():
         graphs = remove_self_loops([nx_g for nx_g, _ in nx_dataset])
         node_attr_names, edge_attr_names, node_types, edge_types = get_meta_data(
             graphs, ["graph", "ntype"], ["label"])
+        tree_grammar_meta = TreeGrammarMeta(node_attr_names, edge_attr_names,
+                                            node_types, edge_types)
         pkl.dump((node_attr_names, edge_attr_names, node_types, edge_types),
                  open("tree_grammar_save/tree_grammar_meta.pkl", 'wb'))
         numerized_graphs = convert_graph_attrs_to_int(

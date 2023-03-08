@@ -5,6 +5,7 @@ from numerize_graph.numerize_graph import get_meta_data, get_node_type_mapping, 
 import pickle as pkl
 import argparse
 import os
+import tqdm
 
 
 def load_graphs_and_labels(
@@ -53,8 +54,12 @@ def convert_graph_attrs_to_int(graphs: List[nx.MultiDiGraph], *,
         yield converted_graph
 
 
-def remove_self_loops(graphs: List[nx.MultiDiGraph]) -> List[nx.MultiDiGraph]:
-    for graph in graphs:
+def remove_self_loops(graphs: List[nx.MultiDiGraph], verbose=False) -> List[nx.MultiDiGraph]:
+    bar = graphs
+    if verbose:
+        bar = tqdm.tqdm(graphs)
+        bar.set_description("Removing self loops")
+    for graph in bar:
         for edge in list(graph.edges)[:]:
             if edge[0] == edge[1]:
                 graph.remove_edge(edge[0], edge[1])
@@ -62,8 +67,12 @@ def remove_self_loops(graphs: List[nx.MultiDiGraph]) -> List[nx.MultiDiGraph]:
 
 
 def remove_inverse_edge(
-        graphs: List[nx.MultiDiGraph]) -> List[nx.MultiDiGraph]:
-    for graph in graphs:
+        graphs: List[nx.MultiDiGraph], verbose=False) -> List[nx.MultiDiGraph]:
+    bar = graphs
+    if verbose:
+        bar = tqdm.tqdm(graphs)
+        bar.set_description("Removing inverse edges")
+    for graph in bar:
         for edge in list(graph.edges)[:]:
             if '_reverse' in graph.edges[edge]['etype']:
                 graph.remove_edge(edge[0], edge[1])
