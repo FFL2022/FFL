@@ -2,7 +2,7 @@ import os
 import networkx as nx
 import pickle as pkl
 from codeflaws.dataloader_cfl import CodeflawsCFLNxStatementDataset
-import tree_grammars.util
+import tree_grammars.utils
 import torch
 from pyg_version.dataloader_cfl_pyg import PyGStatementDataset, AstGraphMetadata
 from numerize_graph.numerize_graph import get_meta_data, get_node_type_mapping, get_edge_type_mapping
@@ -181,7 +181,7 @@ def main():
             edge_attr_names=edge_attr_names,
             node_types=node_types,
             edge_types=edge_types)
-        tree_grammar = tree_grammars.util.ProbabilisticTreeGrammar(
+        tree_grammar = tree_grammars.utils.ProbabilisticTreeGrammar(
                     numerized_graphs
                 )
         pkl.dump(tree_grammar,
