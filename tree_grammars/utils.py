@@ -150,7 +150,7 @@ class ProbabilisticTreeGrammar:
             return random.choices(list(filtered_extension_rules.keys()),
                                   weights=list(
                                       filtered_extension_rules.values()),
-                                  k=k)[0]
+                                  k=k)
         else:
             return None
 
