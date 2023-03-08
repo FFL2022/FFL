@@ -197,13 +197,13 @@ if __name__ == '__main__':
         dataloader=train_nxs,
         meta_data=meta_data,
         ast_enc=None,
-        save_dir="preprocessed/{args.dataset}/",
+        save_dir=f"preprocessed/{args.dataset}/",
         name=f'{args.dataset}_train_pyg_cfl_stmt')
     val_pyg_dataset = PyGStatementDataset(
         dataloader=val_nxs,
         meta_data=meta_data,
         ast_enc=None,
-        save_dir="preprocessed/{args.dataset}/",
+        save_dir=f"preprocessed/{args.dataset}/",
         name=f'{args.dataset}_val_pyg_cfl_stmt')
     test_pyg_dataset = PyGStatementDataset(
         dataloader=test_nxs,
