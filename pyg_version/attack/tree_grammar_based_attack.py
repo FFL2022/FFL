@@ -11,7 +11,7 @@ from collections import namedtuple
 import tqdm
 from graph_algos.nx_shortcuts import neighbors_out
 import argparse
-from miner.gspan_cork_utils import remove_self_loops, remove_inverse_edge, to_gspan_format, convert_graph_attrs_to_int
+from miner.gspan_cork_utils import remove_self_loops, to_gspan_format, convert_graph_attrs_to_int
 
 from pyg_version.model import MPNNModel_A_T_L
 
@@ -171,7 +171,6 @@ def main():
                                             node_types, edge_types)
     else:
         graphs = remove_self_loops([nx_g for nx_g, _ in nx_dataset])
-        graphs = remove_inverse_edge(graphs)
         node_attr_names, edge_attr_names, node_types, edge_types = get_meta_data(
             graphs, ["graph", "ntype"], ["label"])
         pkl.dump((node_attr_names, edge_attr_names, node_types, edge_types),
@@ -181,7 +180,7 @@ def main():
             node_attr_names=node_attr_names,
             edge_attr_names=edge_attr_names,
             node_types=node_types,
-            edge_types=edge_types)
+            edge_types=edge_types,node_attrs=["graph", "ntype"], edge_attrs=["label"])
         tree_grammar = tree_grammars.utils.ProbabilisticTreeGrammar(
                     numerized_graphs
                 )
