@@ -170,7 +170,7 @@ def main():
         tree_grammar_meta = TreeGrammarMeta(node_attr_names, edge_attr_names,
                                             node_types, edge_types)
     else:
-        graphs = remove_self_loops(nx_dataset)
+        graphs = remove_self_loops([nx_g for nx_g in nx_dataset])
         graphs = remove_inverse_edge(graphs)
         node_attr_names, edge_attr_names, node_types, edge_types = get_meta_data(
             graphs, ["graph", "ntype"], ["label"])
