@@ -20,7 +20,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 TreeGrammarMeta = namedtuple('TreeGrammarMeta', ['node_attr_names', 'edge_attr_names', 'node_types', 'edge_types'])
 
 
-def attack_independent(nx_g, nx_stmt_nodes, model, tree_grammar, meta_data, tree_grammar_meta: GrammarMetadata, max_attempt=4):
+def attack_independent(nx_g, nx_stmt_nodes, model, tree_grammar, meta_data, tree_grammar_meta: TreeGrammarMeta, max_attempt=4):
     n2ntype = get_node_type_mapping(nx_g, tree_grammar_meta.node_attr_names,
                                        ["graph", "ntype", "is_target"])
     e2etype = get_edge_type_mapping(nx_g, tree_grammar_meta.node_attr_names,
