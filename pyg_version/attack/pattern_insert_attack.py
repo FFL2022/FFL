@@ -138,6 +138,7 @@ def main():
     # 2. Load meta data and dataset
     nx_dataset = CodeflawsCFLNxStatementDataset()
     meta_data = AstGraphMetadata(nx_dataset)
+    val_nxs = NxDataloader(nx_dataset, pkl.load(open(f'preprocessed/{args.dataset}/{args.dataset}_val_pyg_cfl_stmt_idxs', 'rb')))
     t2id = {'ast': 0, 'test': 1}
     # 2. load the model
     model = MPNNModel_A_T_L(dim_h=64,
@@ -153,9 +154,9 @@ def main():
     ]
     # 3. Attack and note the result
     attack_success = 0
-    bar = tqdm.trange(len(nx_dataset))
+    bar = tqdm.trange(len(val_nxs))
     for i in bar:
-        nx_g, stmt_nodes = nx_dataset[i]
+        nx_g, stmt_nodes = val_nxs[i]
         success, min_recs = attack(nx_g, stmt_nodes, model, pattern_set, meta_data)
         if success:
             attack_success += 1
@@ -168,7 +169,7 @@ def main():
                         top_3=top_3_rec.avg,
                         top_5=top_5_rec.avg,
                         top_10=top_10_rec.avg)
-    print('Attack success rate:', attack_success / len(nx_dataset))
+    print('Attack success rate:', attack_success / len(val_nxs))
 
 
 if __name__ == '__main__':
