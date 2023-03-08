@@ -49,14 +49,22 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
             relation = nx_g[parent][target][0]['label']
 
             # get the top node in the pattern
+            has_reverse_edges = [
+                neighbors_out(
+                    n, pattern, lambda u, v, k, e: '_reverse' in e['etype']) for n in pattern.nodes]
+            has_normal_edges = [
+                neighbors_out(
+                n, pattern, lambda u, v, k, e: '_reverse' not in e['etype']) for n in pattern.nodes]
             top_node = [
-                n for n in pattern.nodes if not neighbors_out(
-                    n, pattern, lambda u, v, k, e: '_reverse' not in e['etype']
-                ) and neighbors_out(n, pattern)
+                n for n, has_rev, has_norm in zip(pattern.nodes, has_reverse_edges, has_normal_edges)
+                if not has_rev and has_norm
             ][0]
             # 4.2. insert the pattern
             for n, d  in pattern.nodes(data=True):
-                nx_g.add_node(n, graph='ast', **d, status=0)
+                if 'graph' not in d:
+                    nx_g.add_node(n, graph='ast', **d, status=0)
+                else:
+                    nx_g.add_node(n, **d, status=0)
             for u, v, k, e in pattern.edges(keys=True, data=True):
                 nx_g.add_edge(u, v, key=k, label=e['etype'], **e)
             # 4.3. connect the pattern to the target's parent
