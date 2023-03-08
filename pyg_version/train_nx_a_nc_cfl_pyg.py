@@ -14,7 +14,7 @@ from codeflaws.dataloader_cfl import CodeflawsCFLNxStatementDataset
 from nbl.dataloader_cfl import NBLPyGCFLNxStatementDataset
 import pandas as pd
 from utils.common import device
-from utils.data_utils import split_nx_dataset, AstGraphMetadata
+from utils.data_utils import split_nx_dataset, AstGraphMetadata, NxDataloader
 import argparse
 
 
@@ -183,25 +183,33 @@ if __name__ == '__main__':
     # TODO:
     meta_data = AstGraphMetadata(nx_dataset)
     pkl.dump(meta_data.meta_graph, open('meta_graph.pkl', 'wb'))
-    train_nxs, val_nxs, test_nxs = split_nx_dataset(nx_dataset,
+    if os.path.exists(f'preprocessed/{args.dataset}/{args.dataset}_train_pyg_cfl_stmt_idxs') and os.path.exists(f'preprocessed/{args.dataset}/{args.dataset}_test_pyg_cfl_stmt_idxs') and os.path.exists(f'preprocessed/{args.dataset}/{args.dataset}_val_pyg_cfl_stmt_idxs'):
+        train_nxs = NxDataloader(nx_dataset, pkl.load(open(f'preprocessed/{args.dataset}/{args.dataset}_train_pyg_cfl_stmt_idxs', 'rb')))
+        val_nxs = NxDataloader(nx_dataset, pkl.load(open(f'preprocessed/{args.dataset}/{args.dataset}_val_pyg_cfl_stmt_idxs', 'rb')))
+        test_nxs = NxDataloader(nx_dataset, pkl.load(open(f'preprocessed/{args.dataset}/{args.dataset}_test_pyg_cfl_stmt_idxs', 'rb')))
+    else:
+        train_nxs, val_nxs, test_nxs = split_nx_dataset(nx_dataset,
                                                     [0.6, 0.2, 0.2])
+        pkl.dump(train_nxs.idxs, open(f'preprocessed/{args.dataset}/{args.dataset}_train_pyg_cfl_stmt_idxs', 'wb'))
+        pkl.dump(val_nxs.idxs, open(f'preprocessed/{args.dataset}/{args.dataset}_val_pyg_cfl_stmt_idxs', 'wb'))
+        pkl.dump(test_nxs.idxs, open(f'preprocessed/{args.dataset}/{args.dataset}_test_pyg_cfl_stmt_idxs', 'wb'))
     train_pyg_dataset = PyGStatementDataset(
         dataloader=train_nxs,
         meta_data=meta_data,
         ast_enc=None,
-        save_dir="preprocessed/codeflaws/",
+        save_dir="preprocessed/{args.dataset}/",
         name=f'{args.dataset}_train_pyg_cfl_stmt')
     val_pyg_dataset = PyGStatementDataset(
         dataloader=val_nxs,
         meta_data=meta_data,
         ast_enc=None,
-        save_dir="preprocessed/codeflaws/",
+        save_dir="preprocessed/{args.dataset}/",
         name=f'{args.dataset}_val_pyg_cfl_stmt')
     test_pyg_dataset = PyGStatementDataset(
         dataloader=test_nxs,
         meta_data=meta_data,
         ast_enc=None,
-        save_dir="preprocessed/codeflaws/",
+        save_dir="preprocessed/{args.dataset}/",
         name=f'{args.dataset}_test_pyg_cfl_stmt')
     t2id = {'ast': 0, 'test': 1}
     model = MPNNModel_A_T_L(dim_h=64,
