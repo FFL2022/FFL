@@ -122,19 +122,19 @@ class ProbabilisticTreeGrammar:
         if label_u is not None:
             filtered_extension_rules = {
                 k: v
-                for k, v in self.extension_rules.items() if k[0][0] == label_u
+                for k, v in self.extension_rules.items() if k[0] == label_u
             }
         if label_v is not None:
             filtered_extension_rules = {
                 k: v
                 for k, v in filtered_extension_rules.items()
-                if k[1][0] == label_v
+                if k[1] == label_v
             }
         if label_e is not None:
             filtered_extension_rules = {
                 k: v
                 for k, v in filtered_extension_rules.items()
-                if k[1][2] == label_e
+                if k[2] == label_e
             }
         return filtered_extension_rules
 
