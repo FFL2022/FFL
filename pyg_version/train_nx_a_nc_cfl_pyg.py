@@ -209,7 +209,7 @@ if __name__ == '__main__':
         dataloader=test_nxs,
         meta_data=meta_data,
         ast_enc=None,
-        save_dir="preprocessed/{args.dataset}/",
+        save_dir=f"preprocessed/{args.dataset}/",
         name=f'{args.dataset}_test_pyg_cfl_stmt')
     t2id = {'ast': 0, 'test': 1}
     model = MPNNModel_A_T_L(dim_h=64,
