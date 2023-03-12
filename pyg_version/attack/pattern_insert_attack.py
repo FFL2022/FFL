@@ -13,6 +13,7 @@ from pyg_version.model import MPNNModel_A_T_L
 import tqdm
 import glob
 import argparse
+from typing import List
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -51,17 +52,22 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
 
             # get the top node in the pattern
             has_reverse_edges = [
-                neighbors_out(
-                    n, pattern, lambda u, v, k, e: '_reverse' in e['etype']) for n in pattern.nodes]
+                neighbors_out(n, pattern,
+                              lambda u, v, k, e: '_reverse' in e['etype'])
+                for n in pattern.nodes
+            ]
             has_normal_edges = [
-                neighbors_out(
-                n, pattern, lambda u, v, k, e: '_reverse' not in e['etype']) for n in pattern.nodes]
+                neighbors_out(n, pattern,
+                              lambda u, v, k, e: '_reverse' not in e['etype'])
+                for n in pattern.nodes
+            ]
             top_node = [
-                n for n, has_rev, has_norm in zip(pattern.nodes, has_reverse_edges, has_normal_edges)
+                n for n, has_rev, has_norm in zip(
+                    pattern.nodes, has_reverse_edges, has_normal_edges)
                 if not has_rev and has_norm
             ][0]
             # 4.2. insert the pattern
-            for n, d  in pattern.nodes(data=True):
+            for n, d in pattern.nodes(data=True):
                 if 'graph' not in d:
                     nx_g.add_node(n, graph='ast', **d, status=0)
                 else:
@@ -92,8 +98,7 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
                 min_recs[i] = min(new_rec, curr_rec)
 
             # 4.4. Map back to the nx
-            new_topk_nx = set(
-                [new_nx_stmt_nodes[n] for n in topk_pred])
+            new_topk_nx = set([new_nx_stmt_nodes[n] for n in topk_pred])
             # 4.5. Check if any of the topk changed by iou
             if new_topk_nx != topk_nx:
                 success = True
@@ -122,7 +127,12 @@ def attack(nx_g, nx_stmt_nodes, model, pattern_set, meta_data):
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="codeflaws")
-    parser.add_argument("--pattern_dir", type=str, default='experiments/result/codeflaws_pyc_cfl_stmt_pyg/influential_substructure/*.pkl')
+    parser.add_argument(
+        "--pattern_dir",
+        type=str,
+        default=
+        'experiments/result/codeflaws_pyc_cfl_stmt_pyg/influential_substructure/*.pkl'
+    )
     parser.add_argument("--model_path", type=str, required=True)
     parser.add_argument("--k", type=int, default=10)
     # parser.add_argument("--loss_func",
@@ -131,16 +141,34 @@ def get_args():
     return parser.parse_args()
 
 
+def preprocess_pattern(patterns: List[nx.MultiDiGraph]):
+    processed = []
+    # 1. Remove the reverse edges and replace with original edge if there is not
+    for pattern in patterns:
+        pattern = pattern.copy()
+        for u, v, k, e in pattern.edges(keys=True, data=True):
+            if '_reverse' in e['etype']:
+                pattern.remove_edge(u, v, key=k)
+                if not pattern.has_edge(v, u, key=0):
+                    pattern.add_edge(v, u, key=0, label=e['etype'][:-8])
+        processed.append(pattern)
+    return processed
+
+
 def main():
     args = get_args()
     # 1. load the pattern set
-    pattern_set = [
-        pkl.load(open(fp, 'rb')) for fp in glob.glob(args.pattern_dir)
-    ]
+    pattern_set = preprocess_pattern(
+        [pkl.load(open(fp, 'rb')) for fp in glob.glob(args.pattern_dir)])
     # 2. Load meta data and dataset
     nx_dataset = CodeflawsCFLNxStatementDataset()
     meta_data = AstGraphMetadata(nx_dataset)
-    val_nxs = NxDataloader(nx_dataset, pkl.load(open(f'preprocessed/{args.dataset}/{args.dataset}_val_pyg_cfl_stmt_idxs', 'rb')))
+    val_nxs = NxDataloader(
+        nx_dataset,
+        pkl.load(
+            open(
+                f'preprocessed/{args.dataset}/{args.dataset}_val_pyg_cfl_stmt_idxs',
+                'rb')))
     t2id = {'ast': 0, 'test': 1}
     # 2. load the model
     model = MPNNModel_A_T_L(dim_h=64,
@@ -159,7 +187,8 @@ def main():
     bar = tqdm.trange(len(val_nxs))
     for i in bar:
         nx_g, stmt_nodes = val_nxs[i]
-        success, min_recs = attack(nx_g, stmt_nodes, model, pattern_set, meta_data)
+        success, min_recs = attack(nx_g, stmt_nodes, model, pattern_set,
+                                   meta_data)
         if success:
             attack_success += 1
         top_1_rec.update(min_recs[0])
