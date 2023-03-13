@@ -3,6 +3,7 @@ from typing import List, Dict, Tuple
 from collections import defaultdict
 from graph_algos.nx_shortcuts import neighbors_out
 import random
+TreeGrammarMeta = namedtuple('TreeGrammarMeta', ['node_attr_names', 'edge_attr_names', 'node_types', 'edge_types'])
 
 # implement the following function
 # 1. extract all possible extension rules from parent to child

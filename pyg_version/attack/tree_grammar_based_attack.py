@@ -18,7 +18,7 @@ from utils.data_utils import split_nx_dataset, AstGraphMetadata, NxDataloader
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # define a named tuple
-TreeGrammarMeta = namedtuple('TreeGrammarMeta', ['node_attr_names', 'edge_attr_names', 'node_types', 'edge_types'])
+from tree_grammars.utils import TreeGrammarMeta
 
 
 def attack_independent(nx_g, nx_stmt_nodes, model, tree_grammar, meta_data, tree_grammar_meta: TreeGrammarMeta, max_attempt=4):
