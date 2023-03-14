@@ -26,19 +26,51 @@ def load_graphs_and_labels(
     return graphs, labels
 
 
-def convert_graph_attrs_to_int(graphs: List[nx.MultiDiGraph], *,
-                               node_attr_names, edge_attr_names, node_types,
-                               edge_types, node_attrs=["graph", "ntype", "is_target"], edge_attrs=["etype"]) -> List[nx.MultiDiGraph]:
+def convert_single_graph_attrs_to_int(
+        graph: nx.MultiDiGraph,
+        *,
+        node_attr_names,
+        edge_attr_names,
+        node_types,
+        edge_types,
+        node_attrs=["graph", "ntype", "is_target"],
+        edge_attrs=["etype"]):
+    ntype_mapping = {node_type: i for i, node_type in enumerate(node_types)}
+    etype_mapping = {edge_type: i for i, edge_type in enumerate(edge_types)}
+    converted_graph = nx.MultiDiGraph()
+    ntypes_map = get_node_type_mapping(graph, node_attr_names, node_attrs)
+    etypes_map = get_edge_type_mapping(graph, node_attr_names, edge_attr_names,
+                                       node_attrs, edge_attrs)
+    for node in graph.nodes:
+        node_type = ntypes_map[node]
+        converted_graph.add_node(node, label=ntype_mapping[node_type])
+    for edge in graph.edges:
+        edge_type = etypes_map[edge]
+        converted_graph.add_edge(edge[0],
+                                 edge[1],
+                                 label=etype_mapping[edge_type])
+    # rename all nodes to 0, 1, 2, 3, ...
+    mapping = {node: i for i, node in enumerate(converted_graph.nodes)}
+    converted_graph = nx.relabel_nodes(converted_graph, mapping)
+    return converted_graph, mapping
+
+
+def convert_graph_attrs_to_int(graphs: List[nx.MultiDiGraph],
+                               *,
+                               node_attr_names,
+                               edge_attr_names,
+                               node_types,
+                               edge_types,
+                               node_attrs=["graph", "ntype", "is_target"],
+                               edge_attrs=["etype"]) -> List[nx.MultiDiGraph]:
 
     ntype_mapping = {node_type: i for i, node_type in enumerate(node_types)}
     etype_mapping = {edge_type: i for i, edge_type in enumerate(edge_types)}
     for graph in graphs:
         converted_graph = nx.MultiDiGraph()
-        ntypes_map = get_node_type_mapping(graph, node_attr_names,
-                                           node_attrs)
+        ntypes_map = get_node_type_mapping(graph, node_attr_names, node_attrs)
         etypes_map = get_edge_type_mapping(graph, node_attr_names,
-                                           edge_attr_names,
-                                           node_attrs,
+                                           edge_attr_names, node_attrs,
                                            edge_attrs)
         for node in graph.nodes:
             node_type = ntypes_map[node]
@@ -54,7 +86,8 @@ def convert_graph_attrs_to_int(graphs: List[nx.MultiDiGraph], *,
         yield converted_graph
 
 
-def remove_self_loops(graphs: List[nx.MultiDiGraph], verbose=False) -> List[nx.MultiDiGraph]:
+def remove_self_loops(graphs: List[nx.MultiDiGraph],
+                      verbose=False) -> List[nx.MultiDiGraph]:
     bar = graphs
     if verbose:
         bar = tqdm.tqdm(graphs)
@@ -66,8 +99,8 @@ def remove_self_loops(graphs: List[nx.MultiDiGraph], verbose=False) -> List[nx.M
     return graphs
 
 
-def remove_inverse_edge(
-        graphs: List[nx.MultiDiGraph], verbose=False) -> List[nx.MultiDiGraph]:
+def remove_inverse_edge(graphs: List[nx.MultiDiGraph],
+                        verbose=False) -> List[nx.MultiDiGraph]:
     bar = graphs
     if verbose:
         bar = tqdm.tqdm(graphs)

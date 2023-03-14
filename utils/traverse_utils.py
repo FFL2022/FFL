@@ -306,7 +306,7 @@ def build_nx_ast_full(ast):
     ast2nx = {ast: 0}
 
     g.add_node(0, ntype=ast.__class__.__name__,
-               token=get_token(ast), start_line=-1, n_order=0)
+               token=get_token(ast), start_line=-1, start_column=-1, n_order=0)
     queue = [ast]
 
     while len(queue) > 0:
@@ -328,11 +328,17 @@ def build_nx_ast_full(ast):
                             start_line = node.coord.line
                     except AttributeError:
                         start_line = g.nodes[ast2nx[node]]['start_line']
+                    try:
+                        start_column = node.coord.column
+                    except AttributeError:
+                        start_column = g.nodes[ast2nx[node]]['start_column']
                     ast2nx[child] = g.number_of_nodes()
                     g.add_node(g.number_of_nodes(),
                                ntype=child.__class__.__name__,
                                token=get_token(child),
-                               start_line=start_line, n_order=i)
+                               start_line=start_line,
+                               start_column=start_column,
+                               n_order=i)
                     g.add_edge(ast2nx[node], ast2nx[child], label=etype)
                     '''
                     if i > 0:

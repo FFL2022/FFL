@@ -4,6 +4,8 @@ from collections import defaultdict, deque
 from graph_algos.nx_shortcuts import neighbors_out, neighbors_in
 import random
 from tree_grammars.utils import TreeGrammarMeta
+from miner.gspan_cork_utils import convert_single_graph_attrs_to_int
+from networkx.algorithms import isomorphism
 
 
 def extract_parent_child_probabilistic_rules(nx_gs: List[nx.MultiDiGraph], ctx_level: int = 1) -> Tuple[Dict[Tuple[Tuple[int], Tuple[int]], int], Dict[Tuple[int], int]]:
@@ -174,7 +176,7 @@ def complete_tree_pattern(tree_pattern: nx.MultiDiGraph, clustered_rules: Dict[T
     return tree_pattern
 
 
-def get_tree_pattern_text_pattern(tree_pattern: nx.MultiDiGraph, nx_gs: List[nx.MultiDiGraph]) -> str:
+def get_tree_pattern_text_pattern(tree_pattern: nx.MultiDiGraph, nx_gs: List[nx.MultiDiGraph], grammarMeta: TreeGrammarMeta) -> str:
     """
     Get the text pattern of the tree pattern
     :param tree_pattern: tree pattern
@@ -182,13 +184,30 @@ def get_tree_pattern_text_pattern(tree_pattern: nx.MultiDiGraph, nx_gs: List[nx.
     :return: text pattern
     """
     for nx_g in nx_gs:
+        converted_nx_g, mapping = convert_single_graph_attrs_to_int(nx_g, grammarMeta.node_attr_names, grammarMeta.edge_attr_names, grammarMeta.node_types, grammarMeta.edge_types)
+        # test if subgraph of nx_g is isomorphic to tree_pattern
         # FInd the instance of the tree pattern in the nx graph by isomorphism
-        if nx.algorithms.isomorphism.is_isomorphic(tree_pattern, nx_g):
+        if nx.algorithms.isomorphism.is_isomorphic(converted_nx_g, tree_pattern):
             # found the instance
             break
         else:
             nx_g = None
     if not nx_g:
         raise ValueError("No graph is isomorphic to the tree pattern")
-    # get the text pattern from nx_gs
-    # TODO: Implementation
+    # 1. find the position of the isomorphic instance
+    isomorphic_instance = nx.algorithms.isomorphism.DiGraphMatcher(converted_nx_g, tree_pattern).subgraph_isomorphisms_iter()
+    isomorphic_instance = next(isomorphic_instance)
+    # 2. get the text pattern
+    # 2.0. Find the text of the root
+    root = [n for n in tree_pattern.nodes if not neighbors_in(n, tree_pattern)]
+    assert len(root) == 1
+    root = root[0]
+    root_text = nx_g.nodes[isomorphic_instance[root]]['text']
+    # 2.1. Find the nodes in the subtree of the tree pattern instance's children that are not in the tree pattern instance
+    root_instance = isomorphic_instance[root]
+    # Get all of this subtree
+    subtree = nx.algorithms.dag.descendants(nx_g, root_instance)
+    subtree.add(root_instance)
+    # Get the nodes that are not in the tree pattern instance
+    subtree_not_in_tree_pattern = subtree - set(isomorphic_instance.values())
+    # 2.2. Get the text of the nodes in the subtree that are not in the tree pattern instance
