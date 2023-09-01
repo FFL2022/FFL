@@ -8,6 +8,7 @@ from pycparser.plyparser import ParseError
 from nbl.utils import all_keys, get_nx_ast_stmt_annt_gumtree
 from json import JSONDecodeError
 from graph_algos.nx_shortcuts import nodes_where
+from codeflaws.dataloader_key_only import get_cfg_ast_cov
 
 def test1():
     for i in list(range(50)) + [715]:
