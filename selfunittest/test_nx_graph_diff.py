@@ -12,7 +12,8 @@ from codeflaws.dataloader_key_only import get_cfg_ast_cov, all_codeflaws_keys
 from codeflaws.data_utils import get_nx_ast_stmt_annt_cfl
 
 def test1():
-    for i in list(range(50)) + [715]:
+    bar = tqdm.tqdm(list(range(50)) + [715])
+    for i in bar:
         nx_ast, nx_ast_f, nx_cfg, nx_cfg_f, nx_cfg_ast, nx_cfg_ast_cov\
             = get_cfg_ast_cov(all_codeflaws_keys[i])
         draw_utils.ast_to_agraph(nx_ast,
@@ -24,7 +25,7 @@ def test1():
                                      f"visualize_nx_graphs/cfg_ast_diff_{i}.png")
                                      '''
 def test2():
-    bar = tqdm.tqdm(all_codeflaws_keys)
+    bar = tqdm.tqdm(all_codeflaws_keys[:50])
     count = 0
     for i, key in enumerate(bar):
         if key == '114-A-bug-17914312-17914321':
@@ -45,12 +46,10 @@ def test2():
             except:
                 print(key)
                 raise
-        if i > 49:
-            break
         # break
 
 def test3():
-    bar = tqdm.tqdm(all_keys)
+    bar = tqdm.tqdm(all_keys[:5])
     for i, key in enumerate(bar):
         try:
             filename = "visualize_nx_graphs_new/nbl/{}.png".format(os.path.basename(key['b_fp']))
@@ -62,8 +61,6 @@ def test3():
         except JSONDecodeError:
             print('error:', key)
             raise
-        if i > 5:
-            break
 
         break
 
