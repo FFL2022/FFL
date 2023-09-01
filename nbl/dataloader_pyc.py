@@ -7,7 +7,7 @@ import pickle as pkl
 import tqdm
 from pycparser.plyparser import ParseError
 from utils.data_utils import AstNxDataset, AstGraphMetadata
-from utils.get_bug_localization import get_asts_mapping
+from utils.pyc_parser.pyc_differ import get_asts_mapping
 from nbl.utils import all_keys, eval_set, mapping_eval, most_failed_val_set
 from nbl.data_utils import get_nx_ast_stmt_annt_cfl_nbl
 

@@ -12,7 +12,7 @@ from utils.utils import ConfigClass from utils.preprocess_helpers import get_cov
 from utils.nx_graph_builder import augment_with_reverse_edge
 from graph_algos.nx_shortcuts import nodes_where, where_node, edges_where
 from nbl.utils import all_keys, eval_set, mapping_eval, most_failed_val_set
-from utils.get_bug_localization import get_bug_localization
+from utils.pyc_parser.pyc_differ import get_graph_diff
 from graph_algos.nx_shortcuts import combine_multi, neighbors_out,\
         nodes_where, where_node, edges_where
 
@@ -25,7 +25,7 @@ import random
 
 def get_cfg_ast_cov(key):
     nx_a, nx_a2, nx_c1, nx_c2, nx_ca1, nline_removed1 =\
-        get_bug_localization(key['b_fp'], key['f_fp'])
+        get_graph_diff(key['b_fp'], key['f_fp'])
     pid = key['problem_id']
     vid = key['buggy']
     tests_list = list(test_verdict[pid][vid].keys())

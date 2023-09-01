@@ -204,7 +204,7 @@ def get_asts_mapping(file1, file2):
     return map_dict, nx_ast1, nx_ast2
 
 
-def get_bug_localization(file1, file2):
+def get_graph_diff(file1, file2):
     nline_removed1 = remove_lib(file1)
     graph = cfg.CFG("temp.c")
 

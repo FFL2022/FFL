@@ -4,7 +4,6 @@ from utils.traverse_utils import build_nx_cfg, build_nx_ast_base,\
     build_nx_ast_full
 from graph_algos.nx_shortcuts import neighbors_in, neighbors_out,\
         combine_multi, nodes_where, update_nodes
-from utils.gumtree_utils import GumtreeWrapper
 import networkx as nx
 import json
 import os

@@ -1,6 +1,6 @@
 from graph_algos.nx_shortcuts import neighbors_out, neighbors_in, \
         nodes_where, where_node, edges_where
-from utils.get_bug_localization import get_asts_mapping
+from utils.pyc_parser.pyc_differ import get_asts_mapping
 from utils.traverse_utils import convert_from_arity_to_rel
 
 

@@ -5,7 +5,7 @@ from codeflaws.data_format import key2bug, key2bugfile,\
     key2fixfile, key2test_verdict, get_gcov_file, test_verdict
 from graph_algos.nx_shortcuts import neighbors_out, neighbors_in, \
         nodes_where, where_node, edges_where
-from utils.get_bug_localization import get_bug_localization
+from utils.pyc_parser.pyc_differ import get_graph_diff
 from utils.preprocess_helpers import get_coverage, remove_lib
 from utils.nx_graph_builder import build_nx_graph_cfg_ast
 from utils.gumtree_utils import GumtreeBasedAnnotation, GumtreeASTUtils
@@ -216,8 +216,8 @@ def build_nx_cfg_ast_coverage_codeflaws(key: str):
 
 def get_cfg_ast_cov(key):
     nx_ast, nx_ast2, nx_cfg, nx_cfg2, nx_cfg_ast, nline_removed1 =\
-        get_bug_localization(key2bugfile(key),
-                             key2fixfile(key))
+        get_graph_diff(key2bugfile(key),
+                       key2fixfile(key))
     nx_cfg_ast_cov = get_coverage_graph_cfg_ast(key, nx_cfg_ast,
                                                 nline_removed1)
     return nx_ast, nx_ast2, nx_cfg, nx_cfg2, nx_cfg_ast, nx_cfg_ast_cov
