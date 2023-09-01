@@ -13,7 +13,6 @@ import tqdm
 from collections import defaultdict
 from pycparser.plyparser import ParseError
 
-from utils.embedding_model import embedding_model
 errorneous_keys = json.load(open('error_instance.json', 'r'))
 non_err_keys = [k for k in all_codeflaws_keys if k not in errorneous_keys]
 
