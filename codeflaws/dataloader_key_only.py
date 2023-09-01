@@ -1,6 +1,3 @@
-from dgl.data import DGLDataset
-from dgl import save_graphs, load_graphs
-import dgl
 from utils.utils import ConfigClass
 from codeflaws.data_utils import get_cfg_ast_cov, all_codeflaws_keys
 from utils.nx_graph_builder import augment_with_reverse_edge_cat
