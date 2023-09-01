@@ -26,7 +26,7 @@ def test1():
 def test2():
     bar = tqdm.tqdm(all_codeflaws_keys)
     count = 0
-    for key in bar:
+    for i, key in enumerate(bar):
         if key == '114-A-bug-17914312-17914321':
             try:
                 filename = f"visualize_nx_graphs/cfl/{key}.png"
@@ -45,7 +45,7 @@ def test2():
             except:
                 print(key)
                 raise
-        if key > 49:
+        if i > 49:
             break
         # break
 
