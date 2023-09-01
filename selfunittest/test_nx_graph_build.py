@@ -34,9 +34,3 @@ if __name__ == '__main__':
     draw_utils.cfg_to_agraph(cfg, 'visualize_nx_graphs/cfg.png')
     draw_utils.ast_to_agraph(ast, 'visualize_nx_graphs/ast.png')
     draw_utils.cfg_ast_to_agraph(cfg_ast, 'visualize_nx_graphs/cfg_ast.png')
-    ''' Dont try this shit, it's too dense to see anyway
-    draw_utils.cfg_ast_cov_to_agraph(cfg_cov,
-                                     'visualize_nx_graphs/cfg_cov.png')
-    draw_utils.cfg_ast_cov_to_agraph(cfg_ast_cov,
-                                     'visualize_nx_graphs/cfg_ast_cov.png')
-    '''
