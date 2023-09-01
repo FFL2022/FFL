@@ -45,11 +45,13 @@ def test2():
             except:
                 print(key)
                 raise
+        if key > 49:
+            break
         # break
 
 def test3():
     bar = tqdm.tqdm(all_keys)
-    for key in bar:
+    for i, key in enumerate(bar):
         try:
             filename = "visualize_nx_graphs_new/nbl/{}.png".format(os.path.basename(key['b_fp']))
             print(filename)
@@ -60,6 +62,8 @@ def test3():
         except JSONDecodeError:
             print('error:', key)
             raise
+        if i > 5:
+            break
 
         break
 
