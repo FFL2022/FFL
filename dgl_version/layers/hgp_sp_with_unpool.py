@@ -4,8 +4,8 @@ import torch.nn as nn
 import torch
 import dgl
 import dgl.function as fn
-from layers.sparsemax import Sparsemax
-from layers.layers_mult import MPNNEncBlockNodeOnly, MPNNBlockLabelOnly, \
+from dgl_version.layers.sparsemax import Sparsemax
+from dgl_version.layers.layers_mult import MPNNEncBlockNodeOnly, MPNNBlockLabelOnly, \
     MPNNDecBlockNode
 
 

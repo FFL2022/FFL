@@ -2,7 +2,7 @@ from __future__ import print_function, unicode_literals
 import dgl
 import torch
 import torch.nn as nn
-from layers.layers import WeightedGCN
+from dgl_version.layers.layers import WeightedGCN
 from torch.autograd import Variable
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

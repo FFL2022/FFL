@@ -3,7 +3,7 @@ from __future__ import print_function, unicode_literals
 import dgl
 import torch
 import torch.nn as nn
-from layers.layers import GCNLayer, GCNLayerOld
+from dgl_version.layers.layers import GCNLayer, GCNLayerOld
 
 
 __author__ = "Marc: thanhdatn@student.unimelb.edu.au"
