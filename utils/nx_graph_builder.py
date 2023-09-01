@@ -1,6 +1,6 @@
 from utils.utils import ConfigClass
-from cfg import cfg
-from utils.traverse_utils import build_nx_cfg, build_nx_ast_base,\
+from utils.pyc_parser.cfg import cfg
+from utils.pyc_parser.cfg_ast_building_utils import build_nx_cfg, build_nx_ast_base,\
     build_nx_ast_full
 from graph_algos.nx_shortcuts import neighbors_in, neighbors_out,\
         combine_multi, nodes_where, update_nodes

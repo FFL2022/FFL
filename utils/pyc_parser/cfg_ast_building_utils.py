@@ -1,4 +1,4 @@
-from cfg.cfg_nodes import CFGNode, CFGEntryNode
+from utils.pyc_parser.cfg.cfg_nodes import CFGNode, CFGEntryNode
 import networkx as nx
 from graph_algos.nx_shortcuts import neighbors_out, neighbors_in
 from graph_algos.spanning_tree_conversion import get_elbl

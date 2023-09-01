@@ -1,7 +1,7 @@
 from utils.preprocess_helpers import remove_lib
 from utils.nx_graph_builder import build_nx_graph_cfg_ast, combine_ast_cfg
-from utils.traverse_utils import augment_ast_base_to_full, convert_from_arity_to_rel
-from cfg import cfg
+from utils.pyc_parser.cfg_ast_building_utils import augment_ast_base_to_full, convert_from_arity_to_rel
+from utils.pyc_parser.cfg import cfg
 import networkx as nx
 from graph_algos.cfl_match_general import build_cpi, match_edge, extend_cpi,\
     build_cpi_node_only

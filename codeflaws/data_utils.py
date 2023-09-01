@@ -1,6 +1,5 @@
 import os
 from utils.utils import ConfigClass
-from cfg import cfg
 from codeflaws.data_format import key2bug, key2bugfile,\
     key2fixfile, key2test_verdict, get_gcov_file, test_verdict
 from graph_algos.nx_shortcuts import neighbors_out, neighbors_in, \

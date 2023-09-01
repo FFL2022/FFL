@@ -1,7 +1,7 @@
 from graph_algos.nx_shortcuts import neighbors_out, neighbors_in, \
         nodes_where, where_node, edges_where
 from utils.pyc_parser.pyc_differ import get_asts_mapping
-from utils.traverse_utils import convert_from_arity_to_rel
+from utils.pyc_parser.cfg_ast_building_utils import convert_from_arity_to_rel
 
 
 def pyc_check_is_stmt_cpp(node_dict: dict):
