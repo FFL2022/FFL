@@ -10,6 +10,9 @@ import json
 import os
 
 
+build_nx_ast = build_nx_ast_full
+
+
 def augment_cfg_with_content(nx_cfg: nx.MultiDiGraph, code: list):
     ''' Augment cfg with text content (In place)
     Parameters

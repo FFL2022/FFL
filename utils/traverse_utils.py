@@ -301,7 +301,28 @@ def get_unique_base_arity(children: list, nx_ast):
     return unique_child_map
 
 
+
 def build_nx_ast_full(ast):
+    """
+    Builds a NetworkX MultiDiGraph representation of an abstract syntax tree (AST).
+
+    Parameters:
+    ast (AST): The root node of the AST from PyC Parser
+
+    Returns:
+    tuple: A tuple containing the NetworkX MultiDiGraph representation of the AST and a dictionary mapping AST nodes to their corresponding node indices in the graph.
+
+    Raises:
+    AttributeError: If a node in the AST does not have the expected attributes.
+
+    Description:
+        This function takes an abstract syntax tree (AST) and converts it into a NetworkX MultiDiGraph representation. Each node in the AST is represented as a node in the graph, and the edges represent the relationships between the nodes.
+
+    Example:
+    ast = parse_code(code)
+    graph, node_mapping = build_nx_ast_full(ast)
+    """
+
     g = nx.MultiDiGraph()
     ast2nx = {ast: 0}
 
@@ -347,7 +368,6 @@ def build_nx_ast_full(ast):
                     '''
                     queue.insert(0, child)
     return g, ast2nx
-
 
 def build_nx_ast_base(ast):
     g = nx.MultiDiGraph()

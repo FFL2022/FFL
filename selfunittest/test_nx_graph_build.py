@@ -1,8 +1,9 @@
 from utils import draw_utils
 from utils.utils import ConfigClass
 from utils.nx_graph_builder import build_nx_graph_cfg_ast, build_nx_cfg,\
-    build_nx_ast, build_nx_cfg_ast_coverage_codeflaws,\
-    build_nx_cfg_coverage_codeflaws
+    build_nx_ast
+
+from codeflaws.data_utils import build_nx_cfg_coverage_codeflaws, build_nx_cfg_ast_coverage_codeflaws
 import pickle as pkl
 import os
 import time
@@ -15,19 +16,12 @@ if __name__ == '__main__':
     test_verdict = pkl.load(open(
         ConfigClass.codeflaws_test_verdict_pickle, 'rb'))
     key = list(train_map.keys())[0]
-    info = key.split("-")
-    codeflaws = {}
-    codeflaws['container'] = key
-    codeflaws['c_source'] = "{}-{}-{}".format(info[0], info[1], info[3])
-    codeflaws['test_verdict'] = test_verdict["{}-{}".format(info[0],
-                                                            info[1])][info[3]]
-
     start_time = time.time()
     cfg, ast, cfg_ast, cfg_ast_cov = build_nx_cfg_ast_coverage_codeflaws(
-        codeflaws)
+        key)
     end_time = time.time()
     cfg, ast, cfg_ast, cfg_cov = build_nx_cfg_coverage_codeflaws(
-        codeflaws)
+        key)
     end_time2 = time.time()
     print("Build CFG AST COV took: {}".format(end_time - start_time))
     print("Build CFG COV took: {}".format(end_time2 - end_time))
