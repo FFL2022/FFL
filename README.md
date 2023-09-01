@@ -24,14 +24,14 @@ Extract `jars.zip` into folder `jars`
 ## Training: 
 ```bash
 # Codeflaws node-level
-python3 -m codeflaws.train_nx_a_nc_old
+python3 -m dgl_version.codeflaws.train_nx_a_nc_old
 # NBL node-level
-python3 -m nbl.train_nx_a_nc
+python3 -m dgl_version.nbl.train_nx_a_nc
 
 # Codeflaws statement-level
-python3 -m codeflaws.train_nx_astdiff_nocontent_gumtree
+python3 -m dgl_version.codeflaws.train_nx_astdiff_nocontent_gumtree
 # Prutor statement-level
-python3 -m nbl.train_nx_astdiff_nocontent_gumtree
+python3 -m dgl_version.nbl.train_nx_astdiff_nocontent_gumtree
 ```
 
 ## Evaluation
