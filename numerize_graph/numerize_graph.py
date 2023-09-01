@@ -69,6 +69,64 @@ def convert_graph_attrs_to_int(graphs: List[nx.MultiDiGraph],
         yield converted_graph
 
 
+def convert_graphs_int_to_attr_single(graph: nx.MultiDiGraph,
+                                      node_attr_names, edge_attr_names,
+                                      node_types, edge_types):
+    ntype_mapping = {i: node_type for i, node_type in enumerate(node_types)}
+    etype_mapping = {i: edge_type for i, edge_type in enumerate(edge_types)}
+    converted_graph = nx.MultiDiGraph()
+    for node in graph.nodes:
+        n_attrs = ntype_mapping[graph.nodes[node]['label']]
+        n_attrs = {
+            attr_name: attr_val
+            for attr_name, attr_val, has_attr in n_attrs if has_attr
+        }
+        converted_graph.add_node(node, **n_attrs)
+    for edge in graph.edges:
+        e_attrs = etype_mapping[graph.edges[edge]['label']][0]
+        e_attrs = {
+            attr_name: attr_val
+            for attr_name, attr_val, has_attr in e_attrs if has_attr
+        }
+        e_src_signature = ntype_mapping[graph.nodes[edge[0]]['label']]
+        true_src_signature = etype_mapping[graph.edges[edge]['label']][1]
+        if tuple(e_src_signature) != tuple(true_src_signature):
+            converted_graph.add_edge(edge[1], edge[0], **e_attrs)
+        else:
+            converted_graph.add_edge(edge[0], edge[1], **e_attrs)
+    return converted_graph
+
+
+def convert_graphs_int_to_attr(graphs, node_attr_names, edge_attr_names,
+                               node_types, edge_types):
+    ntype_mapping = {i: node_type for i, node_type in enumerate(node_types)}
+    etype_mapping = {i: edge_type for i, edge_type in enumerate(edge_types)}
+    for graph in graphs:
+        converted_graph = nx.MultiDiGraph()
+        for node in graph.nodes:
+            n_attrs = ntype_mapping[graph.nodes[node]['label']]
+            n_attrs = {
+                attr_name: attr_val
+                for attr_name, attr_val, has_attr in n_attrs if has_attr
+            }
+            converted_graph.add_node(node, **n_attrs)
+        for edge in graph.edges:
+            e_attrs = etype_mapping[graph.edges[edge]['label']][0]
+            e_attrs = {
+                attr_name: attr_val
+                for attr_name, attr_val, has_attr in e_attrs if has_attr
+            }
+            e_src_signature = ntype_mapping[graph.nodes[edge[0]]['label']]
+            true_src_signature = etype_mapping[graph.edges[edge]['label']][1]
+            if tuple(e_src_signature) != tuple(true_src_signature):
+                converted_graph.add_edge(edge[1], edge[0], **e_attrs)
+            else:
+                converted_graph.add_edge(edge[0], edge[1], **e_attrs)
+        yield converted_graph
+
+
+
+
 class AttrEncoder(object):
 
     def __init__(self, encoders):
